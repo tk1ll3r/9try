@@ -16,4 +16,6 @@ export class AppData{
  async startLocation(duration:number,usernames:string[]){const {data,error}=await requireSupabase().rpc("start_location_session",{p_duration_minutes:duration,p_recipient_usernames:usernames});if(error)throw error;return data as string;}
  async publishLocation(sessionId:string,p:GeolocationPosition){const {error}=await requireSupabase().from("location_positions").upsert({session_id:sessionId,latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy_m:p.coords.accuracy,recorded_at:new Date(p.timestamp).toISOString()});if(error)throw error;}
  async stopLocation(id:string){const {error}=await requireSupabase().rpc("stop_location_session",{p_session_id:id});if(error)throw error;}
+ async exportMyData(){const {data,error}=await requireSupabase().rpc("export_my_data");if(error)throw error;return data;}
+ async deleteMyAccount(){const {data,error}=await requireSupabase().functions.invoke("delete-account",{body:{confirm:true}});if(error)throw error;if(data?.error)throw new Error(data.error);}
 } export const appData=new AppData();
