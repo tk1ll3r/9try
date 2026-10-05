@@ -411,7 +411,6 @@ export function CalendarPage() {
             void refresh(info.start, info.end);
           }}
           headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
-          buttonText={{ today: "Hôm nay", month: "Tháng", week: "Tuần" }}
         />
       </Card>
     </div>
