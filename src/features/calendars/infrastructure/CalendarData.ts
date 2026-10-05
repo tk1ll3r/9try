@@ -54,6 +54,15 @@ export interface CreateCalendarEventInput {
   visibility: CalendarVisibility;
   recurrence: RecurrenceRule | null;
   recurrenceUntil: string | null;
+  audienceUserIds?: string[];
+  audienceGroupId?: string | null;
+}
+
+export interface SharedCalendarOccurrence extends CalendarOccurrence {
+  ownerId: string;
+  ownerDisplayName: string;
+  ownerUsername: string | null;
+  description: string;
 }
 
 export class CalendarData {
@@ -112,8 +121,63 @@ export class CalendarData {
           all_day_end_exclusive: Temporal.PlainDate.from(input.end).add({ days: 1 }).toString(),
         };
 
-    const { error } = await db.from("calendar_events").insert(payload);
+    const { data: created, error } = await db
+      .from("calendar_events")
+      .insert(payload)
+      .select("id")
+      .single();
     if (error) throw error;
+
+    const { error: audienceError } = await db.rpc("set_calendar_event_audience", {
+      p_event_id: created.id,
+      p_user_ids: input.audienceUserIds ?? [],
+      p_group_id: input.audienceGroupId ?? null,
+    });
+    if (audienceError) {
+      await db.from("calendar_events").delete().eq("id", created.id);
+      throw audienceError;
+    }
+  }
+
+  async listSharedOccurrences(
+    ownerId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<SharedCalendarOccurrence[]> {
+    const { data, error } = await requireSupabase().rpc("list_shared_calendar_events", {
+      p_owner_id: ownerId,
+      p_from: rangeStart.toISOString(),
+      p_to: rangeEnd.toISOString(),
+    });
+    if (error) throw error;
+
+    const result: SharedCalendarOccurrence[] = [];
+    for (const raw of data ?? []) {
+      const row: CalendarEventRow = {
+        id: raw.id,
+        title: raw.title,
+        event_kind: raw.event_kind,
+        start_at: raw.start_at,
+        end_at: raw.end_at,
+        all_day_start: raw.all_day_start,
+        all_day_end_exclusive: raw.all_day_end_exclusive,
+        timezone: raw.timezone,
+        visibility: raw.visibility,
+        recurrence_rule: raw.recurrence_rule,
+        recurrence_until: raw.recurrence_until,
+        calendar_event_exceptions: Array.isArray(raw.exceptions)
+          ? raw.exceptions as CalendarExceptionRow[]
+          : [],
+      };
+      result.push(...expand(row, rangeStart, rangeEnd).map((occurrence) => ({
+        ...occurrence,
+        ownerId: raw.owner_id,
+        ownerDisplayName: raw.owner_display_name || raw.owner_username || "Người dùng",
+        ownerUsername: raw.owner_username,
+        description: raw.description ?? "",
+      })));
+    }
+    return result.sort((a, b) => a.start.localeCompare(b.start));
   }
 
   async updateWholeEvent(input: {
