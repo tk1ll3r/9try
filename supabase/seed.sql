@@ -1,0 +1,2 @@
+-- Development-only seed. Create auth users first, then replace UUIDs below with those users.
+-- Intentionally contains no production identities or secrets.
