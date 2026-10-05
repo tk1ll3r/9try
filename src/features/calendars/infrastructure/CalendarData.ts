@@ -123,7 +123,7 @@ export class CalendarData {
 
     const { data: created, error } = await db
       .from("calendar_events")
-      .insert(payload)
+      .insert(payload as any)
       .select("id")
       .single();
     if (error) throw error;
