@@ -5,6 +5,7 @@ import { CalendarPage } from "./features/calendars/presentation/CalendarPage";
 import { FriendsPage } from "./features/friends/presentation/FriendsPage";
 import { GroupInvitePage } from "./features/groups/presentation/GroupInvitePage";
 import { GroupsPage } from "./features/groups/presentation/GroupsPage";
+import { GroupManagePage } from "./features/groups/presentation/GroupManagePage";
 import { HomePage } from "./features/home/presentation/HomePage";
 import { LocationSharingPage } from "./features/location-sharing/presentation/LocationSharingPage";
 import { MeetupsPage } from "./features/meetups/presentation/MeetupsPage";
@@ -36,6 +37,7 @@ function AppRoutes() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="groups" element={<GroupsPage />} />
+        <Route path="groups/:groupId" element={<GroupManagePage />} />
         <Route path="invite/group/:token" element={<GroupInvitePage />} />
         <Route path="meetups" element={<MeetupsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
