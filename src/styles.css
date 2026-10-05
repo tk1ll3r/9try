@@ -1,0 +1,4 @@
+@import "tailwindcss";
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light;--paper:#f4f1e8;--surface:#fffdf7;--soft:#eae7dd;--ink:#171a12;--muted:#696c62;--lime:#d9ff79;--lime-strong:#8dbb20;--focus:#507100}
+.dark{color-scheme:dark;--paper:#11130e;--surface:#191c15;--soft:#23271e;--ink:#f5f3e9;--muted:#a9ac9f;--lime:#d9ff79;--lime-strong:#b9eb47;--focus:#d9ff79}
+*{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100dvh;background:var(--paper)}button,input,textarea,select{font:inherit}.field{min-height:44px;border-radius:16px;border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);background:var(--paper);padding:10px 12px;outline:none}.field:focus{box-shadow:0 0 0 2px var(--focus)}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
