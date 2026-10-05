@@ -1,0 +1,7 @@
+import { DomainError } from "../../../shared/domain/DomainError";
+export type GroupRole="owner"|"admin"|"member"; export interface GroupMember{readonly userId:string;readonly role:GroupRole}
+export class Group {
+  constructor(readonly id:string,readonly name:string,private ownerId:string,private members:GroupMember[]){ if(!name.trim()) throw new DomainError("GROUP_NAME_REQUIRED","Tên nhóm không được để trống."); if(members.filter(m=>m.role==="owner").length!==1||!members.some(m=>m.userId===ownerId&&m.role==="owner")) throw new DomainError("INVALID_OWNER","Nhóm phải có đúng một chủ sở hữu."); }
+  transferOwnership(actorId:string,newOwnerId:string){ if(actorId!==this.ownerId) throw new DomainError("OWNER_REQUIRED","Chỉ chủ sở hữu mới có thể chuyển quyền."); if(!this.members.some(m=>m.userId===newOwnerId)) throw new DomainError("MEMBER_REQUIRED","Chủ mới phải là thành viên."); this.members=this.members.map(m=>m.userId===actorId?{...m,role:"admin"}:m.userId===newOwnerId?{...m,role:"owner"}:m); this.ownerId=newOwnerId; }
+  removeMember(actorId:string,targetId:string){ const actor=this.members.find(m=>m.userId===actorId); if(!actor||!["owner","admin"].includes(actor.role)) throw new DomainError("ADMIN_REQUIRED","Bạn không có quyền."); if(targetId===this.ownerId) throw new DomainError("TRANSFER_OWNER_FIRST","Hãy chuyển quyền sở hữu trước."); this.members=this.members.filter(m=>m.userId!==targetId); }
+}
