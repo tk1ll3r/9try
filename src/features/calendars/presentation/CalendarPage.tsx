@@ -134,6 +134,23 @@ export function CalendarPage() {
     }
   }
 
+  async function saveWholeSeries() {
+    if (!selected?.recurring) return;
+    try {
+      await calendarData.updateWholeSeriesFromOccurrence({
+        occurrence: selected,
+        title: editTitle,
+        start: editStart,
+        end: editEnd,
+      });
+      setSelected(null);
+      setMessage("Đã áp dụng tên và giờ/thời lượng cho toàn bộ chuỗi.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể cập nhật toàn bộ chuỗi.");
+    }
+  }
+
   async function skipSelected() {
     if (!selected?.recurring) return;
     try {
@@ -264,7 +281,10 @@ export function CalendarPage() {
 
           <div className="mt-3 flex flex-wrap gap-2">
             {selected.recurring && (
-              <Button variant="ghost" onClick={() => void skipSelected()}><XCircle size={17} /> Bỏ lần này</Button>
+              <>
+                <Button variant="secondary" onClick={() => void saveWholeSeries()}><Repeat2 size={17} /> Áp dụng cho cả chuỗi</Button>
+                <Button variant="ghost" onClick={() => void skipSelected()}><XCircle size={17} /> Bỏ lần này</Button>
+              </>
             )}
             <Button variant="danger" onClick={() => void deleteWholeSeries()}>
               <Trash2 size={17} /> {selected.recurring ? "Xóa cả chuỗi" : "Xóa sự kiện"}
@@ -273,7 +293,7 @@ export function CalendarPage() {
           </div>
           {selected.recurring && (
             <p className="mt-3 text-xs text-[var(--muted)]">
-              “Lưu riêng lần này” tạo exception; các lần còn lại trong chuỗi không bị thay đổi.
+              “Lưu riêng lần này” tạo exception. “Áp dụng cho cả chuỗi” thay tên và giờ/thời lượng cho mọi lần nhưng giữ ngày neo và quy tắc lặp hiện tại.
             </p>
           )}
         </Card>
