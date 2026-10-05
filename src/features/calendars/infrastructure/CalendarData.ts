@@ -39,6 +39,9 @@ export interface CalendarOccurrence {
   end: string;
   recurring: boolean;
   visibility: CalendarVisibility;
+  timezone: string;
+  masterStart: string;
+  masterEnd: string;
 }
 
 export interface CreateCalendarEventInput {
@@ -136,6 +139,74 @@ export class CalendarData {
       .from("calendar_events")
       .update(payload)
       .eq("id", input.eventId);
+    if (error) throw error;
+  }
+
+  async updateWholeSeriesFromOccurrence(input: {
+    occurrence: CalendarOccurrence;
+    title: string;
+    start: string;
+    end: string;
+  }): Promise<void> {
+    const { occurrence } = input;
+    if (!occurrence.recurring) {
+      await this.updateWholeEvent({
+        eventId: occurrence.eventId,
+        title: input.title,
+        allDay: occurrence.allDay,
+        start: input.start,
+        end: input.end,
+      });
+      return;
+    }
+
+    if (occurrence.allDay) {
+      const editedStart = Temporal.PlainDate.from(input.start);
+      const editedEndExclusive = Temporal.PlainDate.from(input.end).add({ days: 1 });
+      const durationDays = editedStart.until(editedEndExclusive).days;
+      if (durationDays < 1) throw new Error("Khoảng ngày không hợp lệ.");
+
+      const masterStart = Temporal.PlainDate.from(occurrence.masterStart);
+      const { error } = await requireSupabase()
+        .from("calendar_events")
+        .update({
+          title: input.title.trim(),
+          all_day_end_exclusive: masterStart.add({ days: durationDays }).toString(),
+        })
+        .eq("id", occurrence.eventId);
+      if (error) throw error;
+      return;
+    }
+
+    const editedStart = Temporal.Instant.from(new Date(input.start).toISOString())
+      .toZonedDateTimeISO(occurrence.timezone);
+    const editedEnd = Temporal.Instant.from(new Date(input.end).toISOString())
+      .toZonedDateTimeISO(occurrence.timezone);
+    if (Temporal.ZonedDateTime.compare(editedEnd, editedStart) <= 0) {
+      throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu.");
+    }
+
+    const duration = editedStart.until(editedEnd);
+    const masterStart = Temporal.Instant.from(occurrence.masterStart)
+      .toZonedDateTimeISO(occurrence.timezone);
+    const nextMasterStart = masterStart.with({
+      hour: editedStart.hour,
+      minute: editedStart.minute,
+      second: editedStart.second,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+    });
+    const nextMasterEnd = nextMasterStart.add(duration);
+
+    const { error } = await requireSupabase()
+      .from("calendar_events")
+      .update({
+        title: input.title.trim(),
+        start_at: nextMasterStart.toInstant().toString(),
+        end_at: nextMasterEnd.toInstant().toString(),
+      })
+      .eq("id", occurrence.eventId);
     if (error) throw error;
   }
 
@@ -259,8 +330,8 @@ function expandAllDay(
   const originalEnd = Temporal.PlainDate.from(row.all_day_end_exclusive!);
   const durationDays = current.until(originalEnd).days;
   const until = row.recurrence_until ? Temporal.PlainDate.from(row.recurrence_until) : null;
-  const rangeStartDate = Temporal.PlainDate.from(rangeStart.toISOString().slice(0, 10));
-  const rangeEndDate = Temporal.PlainDate.from(rangeEnd.toISOString().slice(0, 10));
+  const rangeStartDate = Temporal.PlainDate.from(localDateString(rangeStart));
+  const rangeEndDate = Temporal.PlainDate.from(localDateString(rangeEnd));
   const result: CalendarOccurrence[] = [];
 
   for (let guard = 0; guard < 2000; guard++) {
@@ -303,6 +374,9 @@ function timedOccurrence(
     end: exception?.override_end_at ?? end,
     recurring,
     visibility: row.visibility,
+    timezone: row.timezone,
+    masterStart: row.start_at!,
+    masterEnd: row.end_at!,
   };
 }
 
@@ -326,6 +400,9 @@ function allDayOccurrence(
     end: exception?.override_all_day_end_exclusive ?? endExclusive,
     recurring,
     visibility: row.visibility,
+    timezone: row.timezone,
+    masterStart: row.all_day_start!,
+    masterEnd: row.all_day_end_exclusive!,
   };
 }
 
@@ -360,6 +437,11 @@ function overlaps(
   }
   return Date.parse(occurrence.start) < rangeEnd.getTime()
     && Date.parse(occurrence.end) > rangeStart.getTime();
+}
+
+function localDateString(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export const calendarData = new CalendarData();
