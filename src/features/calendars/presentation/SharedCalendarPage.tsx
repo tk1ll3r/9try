@@ -63,7 +63,6 @@ export function SharedCalendarPage() {
           }))}
           datesSet={(info) => void load(info.start, info.end)}
           headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
-          buttonText={{ today: "Hôm nay", month: "Tháng", week: "Tuần" }}
         />
       </Card>
     </div>
