@@ -3,9 +3,10 @@ import dayGridPlugin from "@fullcalendar/react/daygrid";
 import interactionPlugin from "@fullcalendar/react/interaction";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import themePlugin from "@fullcalendar/react/themes/monarch";
+import viLocale from "@fullcalendar/react/locales/vi";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/monarch/theme.css";
-import "@fullcalendar/react/themes/monarch/palettes/green.css";
+import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { appData } from "../../../shared/infrastructure/AppData";
@@ -54,7 +55,7 @@ export function CalendarPage() {
         <FullCalendar
           plugins={[themePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
-          locale="vi"
+          locale={viLocale}
           firstDay={1}
           height="auto"
           events={events.map((event) => ({
