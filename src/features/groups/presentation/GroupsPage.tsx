@@ -81,7 +81,7 @@ export function GroupsPage() {
           {groups.map((group) => (
             <Card key={group.id}>
               <div className="grid size-12 place-items-center rounded-2xl bg-[var(--soft)] text-xl font-black">{group.name[0]?.toUpperCase()}</div>
-              <h2 className="mt-5 text-xl font-bold">{group.name}</h2>
+              <Link to={`/groups/${group.id}`} className="mt-5 block text-xl font-bold hover:underline">{group.name}</Link>
               <p className="mt-1 min-h-10 text-sm text-[var(--muted)]">{group.description || "Một nơi để lên lịch cùng nhau."}</p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{group.memberCount} thành viên · {role(group.role)}</span>
