@@ -26,6 +26,15 @@ export interface PollOption {
   myVote: boolean | null;
 }
 
+export interface MeetupComment {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorId: string;
+  authorDisplayName: string;
+  authorUsername: string | null;
+}
+
 export class MeetupsData {
   async list(userId: string): Promise<MeetupListItem[]> {
     const { data, error } = await requireSupabase()
@@ -117,6 +126,32 @@ export class MeetupsData {
     const { error } = await requireSupabase().rpc("confirm_meetup_time", {
       p_meetup_id: meetupId,
       p_option_id: optionId,
+    });
+    if (error) throw error;
+  }
+
+  async cancel(meetupId: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("cancel_meetup", { p_meetup_id: meetupId });
+    if (error) throw error;
+  }
+
+  async comments(meetupId: string): Promise<MeetupComment[]> {
+    const { data, error } = await requireSupabase().rpc("list_meetup_comments", { p_meetup_id: meetupId });
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      body: row.body,
+      createdAt: row.created_at,
+      authorId: row.author_id,
+      authorDisplayName: row.author_display_name || row.author_username || "Người dùng",
+      authorUsername: row.author_username,
+    }));
+  }
+
+  async postComment(meetupId: string, body: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("post_meetup_comment", {
+      p_meetup_id: meetupId,
+      p_body: body,
     });
     if (error) throw error;
   }
