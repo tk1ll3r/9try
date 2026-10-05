@@ -19,22 +19,23 @@ export default defineConfig({
         background_color: "#f4f1e8",
         display: "standalone",
         start_url: "/",
-        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }]
+        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
       },
       workbox: {
         cleanupOutdatedCaches: true,
         navigateFallback: "/index.html",
+        importScripts: ["push-handler.js"],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => ["style", "script", "font", "image"].includes(request.destination),
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "gnouht-static-v1",
-              expiration: { maxEntries: 80, maxAgeSeconds: 604800 }
-            }
-          }
-        ]
-      }
-    })
-  ]
+              expiration: { maxEntries: 80, maxAgeSeconds: 604800 },
+            },
+          },
+        ],
+      },
+    }),
+  ],
 });
