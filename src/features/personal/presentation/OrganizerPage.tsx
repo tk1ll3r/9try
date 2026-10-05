@@ -1,4 +1,4 @@
-import { CheckCircle2, NotebookPen, Plus, Trash2 } from "lucide-react";
+import { AlarmClock, CheckCircle2, NotebookPen, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { organizerData, type PersonalNote, type RoutineTask } from "../infrastructure/OrganizerData";
@@ -13,6 +13,9 @@ export function OrganizerPage() {
   const [noteBody, setNoteBody] = useState("");
   const [routineTitle, setRoutineTitle] = useState("");
   const [recurrence, setRecurrence] = useState<"daily" | "weekly">("daily");
+  const [reminderTitle, setReminderTitle] = useState("");
+  const [reminderBody, setReminderBody] = useState("");
+  const [reminderAt, setReminderAt] = useState("");
   const [message, setMessage] = useState("");
 
   async function refresh() {
@@ -24,7 +27,6 @@ export function OrganizerPage() {
       ]);
       setNotes(nextNotes);
       setRoutines(nextRoutines);
-      setMessage("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải dữ liệu cá nhân.");
     }
@@ -47,6 +49,24 @@ export function OrganizerPage() {
     await organizerData.createRoutine(user.id, routineTitle, recurrence);
     setRoutineTitle("");
     await refresh();
+  }
+
+  async function scheduleReminder(event: FormEvent) {
+    event.preventDefault();
+    if (!reminderAt || !reminderTitle.trim()) return;
+    try {
+      await organizerData.scheduleReminder({
+        dueAt: new Date(reminderAt),
+        title: reminderTitle,
+        body: reminderBody,
+      });
+      setReminderTitle("");
+      setReminderBody("");
+      setReminderAt("");
+      setMessage("Đã lên lịch nhắc việc. Việc gửi được xử lý ở máy chủ, không cần mở trình duyệt.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể tạo nhắc việc.");
+    }
   }
 
   return (
@@ -84,33 +104,48 @@ export function OrganizerPage() {
           </div>
         </Card>
 
-        <Card title="Thói quen đơn giản">
-          <form onSubmit={addRoutine} className="flex flex-col gap-3 sm:flex-row">
-            <input className="field min-w-0 flex-1" value={routineTitle} onChange={(e) => setRoutineTitle(e.target.value)} placeholder="Ví dụ: Đọc 20 phút" required />
-            <select className="field" value={recurrence} onChange={(e) => setRecurrence(e.target.value as "daily" | "weekly")}>
-              <option value="daily">Mỗi ngày</option>
-              <option value="weekly">Mỗi tuần</option>
-            </select>
-            <Button type="submit" variant="secondary"><Plus size={17} /> Thêm</Button>
-          </form>
+        <div className="space-y-5">
+          <Card title="Thói quen đơn giản">
+            <form onSubmit={addRoutine} className="flex flex-col gap-3 sm:flex-row">
+              <input className="field min-w-0 flex-1" value={routineTitle} onChange={(e) => setRoutineTitle(e.target.value)} placeholder="Ví dụ: Đọc 20 phút" required />
+              <select className="field" value={recurrence} onChange={(e) => setRecurrence(e.target.value as "daily" | "weekly")}>
+                <option value="daily">Mỗi ngày</option>
+                <option value="weekly">Mỗi tuần</option>
+              </select>
+              <Button type="submit" variant="secondary"><Plus size={17} /> Thêm</Button>
+            </form>
 
-          <div className="mt-5 space-y-2">
-            {routines.map((routine) => (
-              <button
-                key={routine.id}
-                className="flex w-full items-center gap-3 rounded-2xl bg-[var(--soft)] p-3 text-left"
-                onClick={async () => { await organizerData.markRoutineDone(routine.id); await refresh(); }}
-              >
-                <CheckCircle2 size={20} className={routine.completedAt ? "text-emerald-600" : "text-[var(--muted)]"} />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{routine.title}</span>
-                  <span className="text-xs text-[var(--muted)]">{routine.recurrence === "daily" ? "Mỗi ngày" : "Mỗi tuần"}</span>
-                </span>
-              </button>
-            ))}
-            {routines.length === 0 && <p className="py-6 text-center text-sm text-[var(--muted)]">Chưa có thói quen định kỳ.</p>}
-          </div>
-        </Card>
+            <div className="mt-5 space-y-2">
+              {routines.map((routine) => (
+                <button
+                  key={routine.id}
+                  disabled={routine.completedToday}
+                  className="flex w-full items-center gap-3 rounded-2xl bg-[var(--soft)] p-3 text-left disabled:opacity-60"
+                  onClick={async () => { await organizerData.markRoutineDone(routine.id); await refresh(); }}
+                >
+                  <CheckCircle2 size={20} className={routine.completedToday ? "text-emerald-600" : "text-[var(--muted)]"} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold">{routine.title}</span>
+                    <span className="text-xs text-[var(--muted)]">
+                      {routine.completedToday ? "Đã hoàn thành hôm nay" : routine.recurrence === "daily" ? "Mỗi ngày" : "Mỗi tuần"}
+                    </span>
+                  </span>
+                </button>
+              ))}
+              {routines.length === 0 && <p className="py-6 text-center text-sm text-[var(--muted)]">Chưa có thói quen định kỳ.</p>}
+            </div>
+          </Card>
+
+          <Card title="Nhắc việc">
+            <form onSubmit={scheduleReminder} className="space-y-3">
+              <input className="field w-full" value={reminderTitle} onChange={(e) => setReminderTitle(e.target.value)} placeholder="Nội dung nhắc" required />
+              <textarea className="field min-h-20 w-full" value={reminderBody} onChange={(e) => setReminderBody(e.target.value)} placeholder="Ghi chú thêm (tùy chọn)" />
+              <input className="field w-full" type="datetime-local" value={reminderAt} onChange={(e) => setReminderAt(e.target.value)} required />
+              <Button type="submit"><AlarmClock size={17} /> Lên lịch</Button>
+            </form>
+            <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Nhắc việc được xử lý server-side và luôn có bản sao trong trung tâm thông báo. Web push có thể chậm hoặc không tới tùy nền tảng.</p>
+          </Card>
+        </div>
       </div>
     </div>
   );
