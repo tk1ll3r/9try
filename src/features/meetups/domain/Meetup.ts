@@ -1,0 +1,7 @@
+import { DomainError } from "../../../shared/domain/DomainError"; import { TimeRange } from "../../../shared/domain/TimeRange";
+export type MeetupStatus="draft"|"proposed"|"confirmed"|"canceled"|"completed"; export type Rsvp="pending"|"going"|"maybe"|"declined";
+export class Meetup {
+  constructor(readonly id:string,readonly organizerId:string,readonly title:string,private status:MeetupStatus,private participants:{userId:string;rsvp:Rsvp}[],private capacity?:number,private scheduledFor?:TimeRange){ if(!title.trim()) throw new DomainError("TITLE_REQUIRED","Tên hoạt động không được để trống."); if(capacity!==undefined&&capacity<1) throw new DomainError("INVALID_CAPACITY","Sức chứa phải lớn hơn 0."); }
+  respond(userId:string,response:Exclude<Rsvp,"pending">){ if(["canceled","completed"].includes(this.status)) throw new DomainError("CLOSED","Hoạt động đã đóng."); const current=this.participants.find(p=>p.userId===userId); if(!current) throw new DomainError("NOT_INVITED","Bạn chưa được mời."); if(response==="going"&&current.rsvp!=="going"&&this.capacity!==undefined&&this.participants.filter(p=>p.rsvp==="going").length>=this.capacity) throw new DomainError("CAPACITY_REACHED","Hoạt động đã đủ người."); current.rsvp=response; }
+  confirm(actorId:string,slot:TimeRange){ if(actorId!==this.organizerId) throw new DomainError("ORGANIZER_REQUIRED","Chỉ người tổ chức mới được chốt."); this.scheduledFor=slot; this.status="confirmed"; }
+}
