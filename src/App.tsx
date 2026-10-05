@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./bootstrap/AuthProvider";
 import { AuthPage } from "./features/auth/presentation/AuthPage";
 import { CalendarPage } from "./features/calendars/presentation/CalendarPage";
+import { SharedCalendarPage } from "./features/calendars/presentation/SharedCalendarPage";
 import { FriendsPage } from "./features/friends/presentation/FriendsPage";
 import { GroupInvitePage } from "./features/groups/presentation/GroupInvitePage";
 import { GroupsPage } from "./features/groups/presentation/GroupsPage";
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="invite/group/:token" element={<GroupInvitePage />} />
         <Route path="meetups" element={<MeetupsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
+        <Route path="calendar/shared/:ownerId" element={<SharedCalendarPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="me" element={<ProfilePage />} />
         <Route path="me/friends" element={<FriendsPage />} />
