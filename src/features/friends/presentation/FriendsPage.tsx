@@ -1,19 +1,22 @@
-import { Check, Search, UserMinus, UserPlus, X } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { friendsData, type FriendConnection } from "../infrastructure/FriendsData";
+import { Ban, Check, Clock3, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { friendsData, type BusyRange, type FriendConnection } from "../infrastructure/FriendsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 
 export function FriendsPage() {
   const [items, setItems] = useState<FriendConnection[]>([]);
+  const [sharedWith, setSharedWith] = useState<Set<string>>(new Set());
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busyViewer, setBusyViewer] = useState<{ friend: FriendConnection; ranges: BusyRange[] } | null>(null);
 
   async function refresh() {
     try {
-      setItems(await friendsData.list());
-      setMessage("");
+      const [nextItems, nextShares] = await Promise.all([friendsData.list(), friendsData.myAvailabilityShares()]);
+      setItems(nextItems);
+      setSharedWith(nextShares);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải danh sách bạn bè.");
     }
@@ -34,6 +37,16 @@ export function FriendsPage() {
       setMessage(humanize(error));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function showBusy(friend: FriendConnection) {
+    const from = new Date();
+    const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      setBusyViewer({ friend, ranges: await friendsData.busyFor(friend.userId, from, to) });
+    } catch {
+      setMessage("Người này chưa chia sẻ trạng thái bận/rảnh với bạn.");
     }
   }
 
@@ -74,28 +87,71 @@ export function FriendsPage() {
         </Card>
       )}
 
-      <Card title={`Bạn bè · ${accepted.length}`}>
-        {accepted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào. Bạn chỉ cần username chính xác của người muốn kết nối.</p>
-        ) : (
+      {outgoing.length > 0 && (
+        <Card title={`Đã gửi · ${outgoing.length}`}>
           <div className="space-y-2">
-            {accepted.map((item) => (
+            {outgoing.map((item) => (
               <PersonRow key={item.userId} item={item} actions={
-                <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.remove(item.userId); await refresh(); }}><UserMinus size={16} /> Xóa</Button>
+                <Button variant="ghost" onClick={async () => { await friendsData.cancel(item.userId); await refresh(); }}><X size={16} /> Hủy lời mời</Button>
               } />
             ))}
+          </div>
+        </Card>
+      )}
+
+      <Card title={`Bạn bè · ${accepted.length}`}>
+        {accepted.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào.</p>
+        ) : (
+          <div className="space-y-2">
+            {accepted.map((item) => {
+              const sharing = sharedWith.has(item.userId);
+              return (
+                <PersonRow key={item.userId} item={item} actions={
+                  <>
+                    <Button variant="ghost" className="px-3" onClick={() => void showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
+                    <Button
+                      variant={sharing ? "secondary" : "ghost"}
+                      className="px-3"
+                      onClick={async () => { await friendsData.setAvailabilityShare(item.userId, !sharing); await refresh(); }}
+                    >
+                      <Share2 size={16} /> {sharing ? "Đang chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh"}
+                    </Button>
+                    <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.remove(item.userId); await refresh(); }}><UserMinus size={16} /> Xóa</Button>
+                    <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.block(item.userId); await refresh(); }}><Ban size={16} /> Chặn</Button>
+                  </>
+                } />
+              );
+            })}
           </div>
         )}
       </Card>
 
-      {outgoing.length > 0 && <p className="text-sm text-[var(--muted)]">Bạn đang chờ {outgoing.length} lời mời được phản hồi.</p>}
+      {busyViewer && (
+        <Card title={`Bận/rảnh 7 ngày tới · ${busyViewer.friend.displayName}`}>
+          {busyViewer.ranges.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">Không có khoảng bận nào trong 7 ngày tới.</p>
+          ) : (
+            <div className="space-y-2">
+              {busyViewer.ranges.map((range, index) => (
+                <div key={index} className="rounded-2xl bg-[var(--soft)] p-3 text-sm font-semibold">
+                  {range.eventKind === "all_day"
+                    ? `Bận cả ngày · ${range.allDayStart}`
+                    : `Bận · ${new Date(range.startAt!).toLocaleString("vi-VN")} → ${new Date(range.endAt!).toLocaleTimeString("vi-VN")}`}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-3 text-xs text-[var(--muted)]">Gnouht chỉ hiển thị bận/rảnh; tên, mô tả và địa điểm sự kiện không được trả về.</p>
+        </Card>
+      )}
     </div>
   );
 }
 
-function PersonRow({ item, actions }: { item: FriendConnection; actions: React.ReactNode }) {
+function PersonRow({ item, actions }: { item: FriendConnection; actions: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--soft)] p-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--soft)] p-3 lg:flex-row lg:items-center">
       <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--ink)] font-bold text-[var(--paper)]">
         {item.displayName.slice(0, 1).toUpperCase()}
       </div>
