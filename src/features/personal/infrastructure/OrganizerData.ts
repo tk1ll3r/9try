@@ -11,8 +11,16 @@ export interface RoutineTask {
   id: string;
   title: string;
   recurrence: "daily" | "weekly";
-  completedAt: string | null;
-  dueAt: string | null;
+  completedToday: boolean;
+}
+
+function localDateKey(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  }).format(new Date());
 }
 
 export class OrganizerData {
@@ -46,19 +54,31 @@ export class OrganizerData {
   }
 
   async listRoutines(userId: string): Promise<RoutineTask[]> {
-    const { data, error } = await requireSupabase()
+    const db = requireSupabase();
+    const { data: tasks, error: taskError } = await db
       .from("personal_tasks")
-      .select("id,title,recurrence,completed_at,due_at")
+      .select("id,title,recurrence")
       .eq("owner_id", userId)
       .in("recurrence", ["daily", "weekly"])
       .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      recurrence: row.recurrence,
-      completedAt: row.completed_at,
-      dueAt: row.due_at,
+    if (taskError) throw taskError;
+
+    const ids = (tasks ?? []).map((task) => task.id);
+    if (ids.length === 0) return [];
+
+    const { data: completions, error: completionError } = await db
+      .from("routine_completions")
+      .select("task_id")
+      .in("task_id", ids)
+      .eq("completion_date", localDateKey());
+    if (completionError) throw completionError;
+
+    const done = new Set((completions ?? []).map((row) => row.task_id));
+    return (tasks ?? []).map((task) => ({
+      id: task.id,
+      title: task.title,
+      recurrence: task.recurrence as "daily" | "weekly",
+      completedToday: done.has(task.id),
     }));
   }
 
@@ -73,10 +93,17 @@ export class OrganizerData {
   }
 
   async markRoutineDone(id: string): Promise<void> {
-    const { error } = await requireSupabase()
-      .from("personal_tasks")
-      .update({ completed_at: new Date().toISOString() })
-      .eq("id", id);
+    const { error } = await requireSupabase().rpc("complete_routine", { p_task_id: id });
+    if (error) throw error;
+  }
+
+  async scheduleReminder(input: { dueAt: Date; title: string; body: string }): Promise<void> {
+    const { error } = await requireSupabase().rpc("schedule_personal_reminder", {
+      p_due_at: input.dueAt.toISOString(),
+      p_title: input.title.trim(),
+      p_body: input.body.trim(),
+      p_action_path: "/me/organizer",
+    });
     if (error) throw error;
   }
 }
