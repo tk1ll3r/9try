@@ -1,6 +1,8 @@
 alter table public.notifications add column if not exists dedupe_key text;
-create unique index if not exists notifications_dedupe_unique
-on public.notifications(dedupe_key) where dedupe_key is not null;
+alter table public.notifications
+  add constraint notifications_dedupe_key_unique unique(dedupe_key);
+
+alter table public.reminders add column if not exists processing_started_at timestamptz;
 
 create table public.notification_preferences(
   user_id uuid primary key references public.profiles(id) on delete cascade,
