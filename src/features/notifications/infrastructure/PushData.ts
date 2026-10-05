@@ -7,11 +7,12 @@ export interface NotificationPreferences {
   categoryPush: Record<string, boolean>;
 }
 
-function base64UrlToUint8Array(value: string): Uint8Array {
+function base64UrlToArrayBuffer(value: string): ArrayBuffer {
   const padding = "=".repeat((4 - value.length % 4) % 4);
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(base64);
-  return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
+  const bytes = Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
 export class PushData {
@@ -38,7 +39,7 @@ export class PushData {
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: base64UrlToUint8Array(publicKey),
+        applicationServerKey: base64UrlToArrayBuffer(publicKey),
       });
     }
 
