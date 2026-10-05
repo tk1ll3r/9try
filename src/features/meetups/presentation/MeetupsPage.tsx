@@ -1,8 +1,8 @@
-import { CalendarCheck2, Check, Clock3, Plus, Send, UsersRound, X } from "lucide-react";
+import { CalendarCheck2, Check, Clock3, MessageCircle, Plus, Send, UsersRound, X, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
-import { meetupsData, type MeetupListItem, type PollOption } from "../infrastructure/MeetupsData";
+import { meetupsData, type MeetupComment, type MeetupListItem, type PollOption } from "../infrastructure/MeetupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 
@@ -39,7 +39,9 @@ export function MeetupsPage() {
         description,
         capacity: capacity ? Number(capacity) : null,
       });
-      setTitle(""); setDescription(""); setCapacity("");
+      setTitle("");
+      setDescription("");
+      setCapacity("");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tạo hoạt động.");
@@ -69,9 +71,9 @@ export function MeetupsPage() {
       {message && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
 
       <div className="space-y-4">
-        {items.length === 0 ? <Card><p className="py-10 text-center text-[var(--muted)]">Chưa có hoạt động nào.</p></Card> : items.map((item) => (
-          <MeetupCard key={item.id} item={item} userId={user?.id ?? ""} onChanged={refresh} />
-        ))}
+        {items.length === 0
+          ? <Card><p className="py-10 text-center text-[var(--muted)]">Chưa có hoạt động nào.</p></Card>
+          : items.map((item) => <MeetupCard key={item.id} item={item} userId={user?.id ?? ""} onChanged={refresh} />)}
       </div>
     </div>
   );
@@ -80,32 +82,71 @@ export function MeetupsPage() {
 function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId: string; onChanged(): Promise<void> }) {
   const organizer = item.organizerId === userId;
   const [poll, setPoll] = useState<PollOption[]>([]);
+  const [comments, setComments] = useState<MeetupComment[]>([]);
   const [inviteUsername, setInviteUsername] = useState("");
   const [optionStart, setOptionStart] = useState("");
   const [optionEnd, setOptionEnd] = useState("");
+  const [commentBody, setCommentBody] = useState("");
   const [error, setError] = useState("");
 
-  async function loadPoll() {
-    try { setPoll(await meetupsData.poll(item.id)); } catch { setPoll([]); }
+  async function loadDetails() {
+    try {
+      const [nextPoll, nextComments] = await Promise.all([
+        meetupsData.poll(item.id),
+        meetupsData.comments(item.id),
+      ]);
+      setPoll(nextPoll);
+      setComments(nextComments);
+    } catch {
+      setPoll([]);
+      setComments([]);
+    }
   }
-  useEffect(() => { void loadPoll(); }, [item.id]);
+
+  useEffect(() => { void loadDetails(); }, [item.id]);
 
   async function respond(response: "going" | "maybe" | "declined") {
-    try { await meetupsData.respond(item.id, response); await onChanged(); } catch (e) { setError(humanize(e)); }
+    try {
+      await meetupsData.respond(item.id, response);
+      await onChanged();
+    } catch (e) {
+      setError(humanize(e));
+    }
   }
 
   async function invite(event: FormEvent) {
     event.preventDefault();
-    try { await meetupsData.invite(item.id, inviteUsername); setInviteUsername(""); setError("Đã gửi lời mời."); } catch (e) { setError(humanize(e)); }
+    try {
+      await meetupsData.invite(item.id, inviteUsername);
+      setInviteUsername("");
+      setError("Đã gửi lời mời.");
+    } catch (e) {
+      setError(humanize(e));
+    }
   }
 
   async function addOption(event: FormEvent) {
     event.preventDefault();
     try {
       await meetupsData.addOption(item.id, new Date(optionStart), new Date(optionEnd));
-      setOptionStart(""); setOptionEnd("");
-      await loadPoll();
-    } catch (e) { setError(humanize(e)); }
+      setOptionStart("");
+      setOptionEnd("");
+      await loadDetails();
+    } catch (e) {
+      setError(humanize(e));
+    }
+  }
+
+  async function postComment(event: FormEvent) {
+    event.preventDefault();
+    if (!commentBody.trim()) return;
+    try {
+      await meetupsData.postComment(item.id, commentBody.trim());
+      setCommentBody("");
+      await loadDetails();
+    } catch (e) {
+      setError(humanize(e));
+    }
   }
 
   return (
@@ -120,6 +161,7 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
           <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-[var(--muted)]">
             <span className="inline-flex items-center gap-1"><UsersRound size={14} /> {item.capacity ? `Tối đa ${item.capacity}` : "Không giới hạn"}</span>
             <span className="inline-flex items-center gap-1"><Clock3 size={14} /> {item.startAt ? formatTime(item.startAt) : "Chưa chốt giờ"}</span>
+            {item.locationName && <span>{item.locationName}</span>}
           </div>
         </div>
 
@@ -129,6 +171,10 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
             <Button variant={item.rsvp === "maybe" ? "secondary" : "ghost"} onClick={() => void respond("maybe")}>Có thể</Button>
             <Button variant="ghost" onClick={() => void respond("declined")}><X size={16} /> Không</Button>
           </div>
+        )}
+
+        {organizer && item.status !== "canceled" && item.status !== "completed" && (
+          <Button variant="ghost" onClick={async () => { await meetupsData.cancel(item.id); await onChanged(); }}><XCircle size={16} /> Hủy hoạt động</Button>
         )}
       </div>
 
@@ -140,11 +186,11 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
               <div key={option.optionId} className="flex flex-col gap-2 rounded-2xl bg-[var(--soft)] p-3 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold">{formatRange(option.startsAt, option.endsAt)}</p>
-                  <p className="text-xs text-[var(--muted)]">{option.availableCount}/{option.totalVotes || 0} người chọn rảnh</p>
+                  <p className="text-xs text-[var(--muted)]">{option.availableCount}/{option.totalVotes || 0} người đã chọn rảnh</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant={option.myVote === true ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, true); await loadPoll(); }}>Rảnh</Button>
-                  <Button variant={option.myVote === false ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, false); await loadPoll(); }}>Bận</Button>
+                  <Button variant={option.myVote === true ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, true); await loadDetails(); }}>Rảnh</Button>
+                  <Button variant={option.myVote === false ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, false); await loadDetails(); }}>Bận</Button>
                   {organizer && <Button className="px-3" onClick={async () => { await meetupsData.confirm(item.id, option.optionId); await onChanged(); }}><CalendarCheck2 size={15} /> Chốt</Button>}
                 </div>
               </div>
@@ -152,7 +198,7 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
           </div>
         )}
 
-        {organizer && (
+        {organizer && item.status !== "canceled" && item.status !== "completed" && (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <form onSubmit={addOption} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
               <input className="field" type="datetime-local" required value={optionStart} onChange={(e) => setOptionStart(e.target.value)} />
@@ -161,12 +207,35 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
             </form>
             <form onSubmit={invite} className="flex gap-2">
               <input className="field min-w-0 flex-1" value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="Mời bằng username" required />
-              <Button type="submit"><Send size={16} /></Button>
+              <Button type="submit" aria-label="Gửi lời mời"><Send size={16} /></Button>
             </form>
           </div>
         )}
-        {error && <p className="mt-3 text-sm text-[var(--muted)]">{error}</p>}
       </div>
+
+      <div className="mt-5 border-t border-black/8 pt-5 dark:border-white/8">
+        <p className="mb-3 flex items-center gap-2 text-sm font-bold"><MessageCircle size={16} /> Thảo luận</p>
+        <div className="space-y-2">
+          {comments.map((comment) => (
+            <div key={comment.id} className="rounded-2xl bg-[var(--soft)] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <b className="text-sm">{comment.authorDisplayName}</b>
+                <span className="text-xs text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString("vi-VN")}</span>
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+            </div>
+          ))}
+          {comments.length === 0 && <p className="text-sm text-[var(--muted)]">Chưa có tin nhắn nào.</p>}
+        </div>
+        {item.status !== "canceled" && (
+          <form onSubmit={postComment} className="mt-3 flex gap-2">
+            <input className="field min-w-0 flex-1" value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="Nhắn cho mọi người trong hoạt động…" maxLength={4000} />
+            <Button type="submit" aria-label="Gửi bình luận"><Send size={16} /></Button>
+          </form>
+        )}
+      </div>
+
+      {error && <p className="mt-3 text-sm text-[var(--muted)]">{error}</p>}
     </Card>
   );
 }
@@ -174,12 +243,15 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
 function statusLabel(status: MeetupListItem["status"]) {
   return ({ draft: "Nháp", proposed: "Đang đề xuất", confirmed: "Đã chốt", canceled: "Đã hủy", completed: "Đã xong" })[status];
 }
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
+
 function formatRange(start: string, end: string) {
   return `${formatTime(start)} → ${new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(end))}`;
 }
+
 function humanize(error: unknown) {
   const text = error instanceof Error ? error.message : String(error);
   if (text.includes("capacity reached")) return "Hoạt động vừa đủ số người tham gia.";
