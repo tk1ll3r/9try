@@ -1,5 +1,6 @@
-import { Ban, Check, Clock3, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
+import { Ban, CalendarDays, Check, Clock3, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { friendsData, type BusyRange, type FriendConnection } from "../infrastructure/FriendsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
@@ -109,6 +110,7 @@ export function FriendsPage() {
               return (
                 <PersonRow key={item.userId} item={item} actions={
                   <>
+                    <Link to={`/calendar/shared/${item.userId}`}><Button variant="ghost" className="px-3"><CalendarDays size={16} /> Lịch chia sẻ</Button></Link>
                     <Button variant="ghost" className="px-3" onClick={() => void showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
                     <Button
                       variant={sharing ? "secondary" : "ghost"}
