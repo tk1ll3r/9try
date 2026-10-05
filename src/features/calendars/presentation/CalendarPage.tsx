@@ -2,9 +2,10 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import interactionPlugin from "@fullcalendar/react/interaction";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
+import themePlugin from "@fullcalendar/react/themes/monarch";
 import "@fullcalendar/react/skeleton.css";
-import "@fullcalendar/react/themes/shadcn/theme.css";
-import themePlugin from "@fullcalendar/react/themes/shadcn";
+import "@fullcalendar/react/themes/monarch/theme.css";
+import "@fullcalendar/react/themes/monarch/palettes/green.css";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { appData } from "../../../shared/infrastructure/AppData";
@@ -29,7 +30,9 @@ export function CalendarPage() {
     event.preventDefault();
     if (!user) return;
     await appData.createEvent(user.id, title, new Date(start).toISOString(), new Date(end).toISOString());
-    setTitle(""); setStart(""); setEnd("");
+    setTitle("");
+    setStart("");
+    setEnd("");
     await refresh();
   }
 
@@ -50,7 +53,6 @@ export function CalendarPage() {
       <Card>
         <FullCalendar
           plugins={[themePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          themeSystem="shadcn"
           initialView="dayGridMonth"
           locale="vi"
           firstDay={1}
@@ -59,7 +61,7 @@ export function CalendarPage() {
             id: event.id,
             title: event.title,
             start: event.start_at ?? event.all_day_start,
-            allDay: !event.start_at
+            allDay: !event.start_at,
           }))}
           headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
           buttonText={{ today: "Hôm nay", month: "Tháng", week: "Tuần" }}
