@@ -8,14 +8,17 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/monarch/theme.css";
 import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { CalendarPlus, Repeat2, Trash2, XCircle } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import {
   calendarData,
   type CalendarOccurrence,
+  type CalendarVisibility,
   type RecurrenceRule,
 } from "../infrastructure/CalendarData";
+import { friendsData, type FriendConnection } from "../../friends/infrastructure/FriendsData";
+import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 
@@ -31,11 +34,29 @@ export function CalendarPage() {
   const [end, setEnd] = useState("");
   const [recurrence, setRecurrence] = useState<"" | RecurrenceRule>("");
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
+  const [visibility, setVisibility] = useState<CalendarVisibility>("only_me");
+  const [friends, setFriends] = useState<FriendConnection[]>([]);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  const [audienceGroupId, setAudienceGroupId] = useState("");
   const [selected, setSelected] = useState<CalendarOccurrence | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    void Promise.all([friendsData.list(), groupsData.list(user.id)])
+      .then(([connections, nextGroups]) => {
+        setFriends(connections.filter((connection) => connection.status === "accepted"));
+        setGroups(nextGroups);
+      })
+      .catch(() => {
+        setFriends([]);
+        setGroups([]);
+      });
+  }, [user?.id]);
 
   async function refresh(startDate = range?.start, endDate = range?.end) {
     if (!user || !startDate || !endDate) return;
@@ -63,6 +84,14 @@ export function CalendarPage() {
       setMessage("Sự kiện lặp cần ngày kết thúc chuỗi.");
       return;
     }
+    if (visibility === "selected_friends" && selectedFriendIds.length === 0) {
+      setMessage("Hãy chọn ít nhất một người bạn được xem sự kiện.");
+      return;
+    }
+    if (visibility === "group" && !audienceGroupId) {
+      setMessage("Hãy chọn nhóm được xem sự kiện.");
+      return;
+    }
 
     try {
       await calendarData.create({
@@ -72,15 +101,20 @@ export function CalendarPage() {
         start,
         end,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        visibility: "only_me",
+        visibility,
         recurrence: recurrence || null,
         recurrenceUntil: recurrenceUntil || null,
+        audienceUserIds: visibility === "selected_friends" ? selectedFriendIds : [],
+        audienceGroupId: visibility === "group" ? audienceGroupId : null,
       });
       setTitle("");
       setStart("");
       setEnd("");
       setRecurrence("");
       setRecurrenceUntil("");
+      setVisibility("only_me");
+      setSelectedFriendIds([]);
+      setAudienceGroupId("");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tạo sự kiện.");
@@ -211,6 +245,24 @@ export function CalendarPage() {
           </select>
 
           <label>
+            <span className="mb-1.5 block text-xs font-bold text-[var(--muted)]">Ai được xem?</span>
+            <select
+              className="field w-full"
+              value={visibility}
+              onChange={(event) => {
+                setVisibility(event.target.value as CalendarVisibility);
+                setSelectedFriendIds([]);
+                setAudienceGroupId("");
+              }}
+            >
+              <option value="only_me">Chỉ mình tôi</option>
+              <option value="selected_friends">Bạn bè được chọn</option>
+              <option value="group">Một nhóm được chọn</option>
+              <option value="public">Công khai</option>
+            </select>
+          </label>
+
+          <label>
             <span className="mb-1.5 block text-xs font-bold text-[var(--muted)]">{kind === "all_day" ? "Ngày bắt đầu" : "Bắt đầu"}</span>
             <input
               className="field w-full"
@@ -244,6 +296,46 @@ export function CalendarPage() {
                 onChange={(event) => setRecurrenceUntil(event.target.value)}
               />
             </label>
+          )}
+
+          {visibility === "selected_friends" && (
+            <fieldset className="rounded-2xl bg-[var(--soft)] p-3 md:col-span-2 xl:col-span-4">
+              <legend className="px-1 text-xs font-bold text-[var(--muted)]">Bạn bè được xem nội dung sự kiện</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {friends.length === 0 && <span className="text-sm text-[var(--muted)]">Chưa có bạn bè để chọn.</span>}
+                {friends.map((friend) => {
+                  const checked = selectedFriendIds.includes(friend.userId);
+                  return (
+                    <label key={friend.userId} className="flex items-center gap-2 rounded-xl bg-[var(--surface)] px-3 py-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setSelectedFriendIds((current) =>
+                          checked ? current.filter((id) => id !== friend.userId) : [...current, friend.userId]
+                        )}
+                      />
+                      {friend.displayName}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+
+          {visibility === "group" && (
+            <label className="md:col-span-2">
+              <span className="mb-1.5 block text-xs font-bold text-[var(--muted)]">Nhóm được xem</span>
+              <select className="field w-full" value={audienceGroupId} onChange={(event) => setAudienceGroupId(event.target.value)} required>
+                <option value="">Chọn nhóm</option>
+                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </label>
+          )}
+
+          {visibility === "public" && (
+            <div className="rounded-2xl bg-amber-100 p-3 text-sm text-amber-950 md:col-span-2 xl:col-span-4">
+              Công khai là lựa chọn chủ động. Projection chia sẻ vẫn không trả địa chỉ chính xác hay ghi chú riêng tư.
+            </div>
           )}
 
           <div className="flex items-end">
