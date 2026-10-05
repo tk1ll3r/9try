@@ -8,18 +8,27 @@ export interface GroupSummary {
   memberCount: number;
 }
 
+export interface GroupMember {
+  userId: string;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
+}
+
 export class GroupsData {
   async list(userId: string): Promise<GroupSummary[]> {
     const { data, error } = await requireSupabase()
       .from("group_memberships")
-      .select("role,group:groups(id,name,description,member_count)")
+      .select("role,group:groups(id,name,description,member_count,archived_at)")
       .eq("user_id", userId)
       .order("joined_at", { ascending: false });
     if (error) throw error;
 
     return (data ?? []).flatMap((row: any) => {
       const group = Array.isArray(row.group) ? row.group[0] : row.group;
-      if (!group) return [];
+      if (!group || group.archived_at) return [];
       return [{
         id: group.id,
         name: group.name,
@@ -28,6 +37,19 @@ export class GroupsData {
         memberCount: group.member_count ?? 1,
       }];
     });
+  }
+
+  async members(groupId: string): Promise<GroupMember[]> {
+    const { data, error } = await requireSupabase().rpc("list_group_members", { p_group_id: groupId });
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      userId: row.user_id,
+      displayName: row.display_name || row.username || "Người dùng",
+      username: row.username,
+      avatarUrl: row.avatar_url,
+      role: row.role,
+      joinedAt: row.joined_at,
+    }));
   }
 
   async create(name: string, description: string): Promise<void> {
@@ -54,6 +76,32 @@ export class GroupsData {
     const { data, error } = await requireSupabase().rpc("claim_group_invite", { p_token: token });
     if (error) throw error;
     return data as string;
+  }
+
+  async transferOwnership(groupId: string, newOwnerId: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("transfer_group_ownership", {
+      p_group_id: groupId,
+      p_new_owner_id: newOwnerId,
+    });
+    if (error) throw error;
+  }
+
+  async removeMember(groupId: string, userId: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("remove_group_member", {
+      p_group_id: groupId,
+      p_user_id: userId,
+    });
+    if (error) throw error;
+  }
+
+  async leave(groupId: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("leave_group", { p_group_id: groupId });
+    if (error) throw error;
+  }
+
+  async archive(groupId: string): Promise<void> {
+    const { error } = await requireSupabase().rpc("archive_group", { p_group_id: groupId });
+    if (error) throw error;
   }
 }
 
