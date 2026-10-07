@@ -65,8 +65,8 @@ test("login communicates acceptance, preserves email and prevents repeated reque
   await page.goto("/invite/group/sample-token");
   await page.getByLabel("Email của bạn").fill("an@example.test");
   await page.getByRole("button", { name: "Gửi liên kết", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Yêu cầu đã được tiếp nhận");
-  await expect(page.getByText("Phản hồi này chưa xác nhận email đã đến Gmail.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Đã gửi thư tới");
+  await expect(page.getByText("Mở thư để lấy mã 6 số", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: /Có thể gửi lại sau/ })).toBeDisabled();
   await page.getByLabel("Email của bạn").fill("binh@example.test");
   expect(calls).toBe(1); expect(submitted.email).toBe("an@example.test");

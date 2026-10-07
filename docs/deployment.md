@@ -28,6 +28,27 @@ Known on the live site:
 - A request for a file that does not exist under `/assets/` is answered with the app's HTML and status 200, as every unknown path is.
 - Push notifications are off: `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` is empty.
 
+## Sign-in email (SMTP)
+
+`gnouht.space` receives mail through Cloudflare Email Routing (its MX records point to `route*.mx.cloudflare.net`). That service forwards mail; it has no SMTP for sending. Supabase's built-in mailer is for testing only and allows a few messages an hour. Sign-in emails need a sending service that is allowed to send as `@gnouht.space`. Two fit:
+
+| | Resend | Cloudflare Email Service |
+|---|---|---|
+| Cost | Free plan: 3,000 emails a month, 100 a day | Needs the Workers Paid plan; 3,000 a month included, then $0.35 per 1,000. In beta |
+| SMTP host and port | `smtp.resend.com`, 465 | `smtp.mx.cloudflare.net`, 465 (implicit TLS) |
+| Username | `resend` | `api_token` |
+| Password | a Resend API key | a Cloudflare API token with "Email Sending: Edit" |
+| DNS | Resend lists the records (DKIM, SPF and MX on a `send` subdomain); it can add them to Cloudflare for you | Added when the domain is onboarded for Email Sending |
+
+Steps, the same for both:
+
+1. In the sending service, add the domain `gnouht.space` and wait until it shows as verified. The records for sending live next to the Email Routing records; receiving keeps working. Do not change the records of `mcp.gnouht.space`.
+2. Supabase dashboard → Authentication → Emails → SMTP Settings: turn on custom SMTP and enter the host, port, username and password above. Sender email `no-reply@gnouht.space`, sender name `Gnouht Together`. The password is a secret: type it into the dashboard, never into a file of this repository. Resend can also fill these fields itself through its Supabase integration.
+3. Authentication → Emails → Templates, for both "Magic Link" and "Confirm signup": subject `Mã đăng nhập Gnouht Together`, body from `supabase/templates/magic_link.html`. The code in that template is what lets an installed app sign in.
+4. Authentication → Rate Limits: raise "emails per hour" from the default to what a class needs, for example 100.
+5. Add a DMARC record so mailboxes trust the domain: TXT `_dmarc.gnouht.space` = `v=DMARC1; p=none; rua=mailto:<an address you read>`.
+6. Sign in once from `https://9try.gnouht.space` with an address outside your own accounts, and check that the mail arrives, is not in Spam, shows the 6-digit code, and that the link returns to `9try.gnouht.space`.
+
 The sections below are the full checklist for a production launch.
 
 ## 1. Supabase project

@@ -75,7 +75,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
           <input id="login-email" className="field w-full" type="email" autoComplete="email" inputMode="email" required disabled={pending} value={email} onChange={event => setEmail(event.target.value)} placeholder="ban@gmail.com" aria-describedby="email-help" />
           {error && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{error}</p>}
-          {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Yêu cầu đã được tiếp nhận.</b><p>Kiểm tra hộp thư của {acceptedEmail}, kể cả Spam và Tất cả thư. Phản hồi này chưa xác nhận email đã đến Gmail.</p></div>}
+          {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Đã gửi thư tới {acceptedEmail}.</b><p>Mở thư để lấy mã 6 số hoặc bấm liên kết đăng nhập. Chưa thấy thì xem mục Spam.</p></div>}
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
           <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Bạn sẽ nhận một thư có liên kết và mã đăng nhập.</p>
         </form>}
@@ -87,7 +87,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
       </form>}
       <details className="mt-5 rounded-2xl border border-[var(--border)] p-4 text-sm">
         <summary className="min-h-6 cursor-pointer font-semibold">Không nhận được thư?</summary>
-        <p className="mt-3 leading-6 text-[var(--muted)]">{local ? "Bạn đang dùng Supabase local. Email thử nghiệm vào Mailpit, không được gửi tới Gmail." : "Kiểm tra địa chỉ, Spam và Tất cả thư. Nếu vẫn không có thư, quản trị viên cần kiểm tra Auth logs, SMTP, quota và delivery logs. SMTP mặc định của Supabase hạn chế người nhận; không thể sửa bằng cách bấm gửi liên tục."}</p>
+        <p className="mt-3 leading-6 text-[var(--muted)]">{local ? "Bạn đang dùng Supabase local. Email thử nghiệm vào Mailpit, không được gửi tới Gmail." : "Xem lại địa chỉ email, rồi tìm trong mục Spam và Tất cả thư. Thư thường tới trong một phút. Hết thời gian chờ, bạn bấm gửi lại được."}</p>
         {local && <a className="mt-2 inline-block min-h-11 py-2 font-semibold underline" href="http://127.0.0.1:55324" target="_blank" rel="noreferrer">Mở Mailpit (máy chạy Supabase local)</a>}
       </details>
       {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO === "true") && <Link className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-semibold hover:bg-[var(--soft)]" to="/demo/location"><MapPin size={18} /> Xem bản đồ thử với An & Bình</Link>}
