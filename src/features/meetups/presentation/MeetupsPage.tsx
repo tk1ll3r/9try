@@ -1,8 +1,9 @@
 import { CalendarCheck2, Check, Clock3, MessageCircle, Plus, Send, UsersRound, X, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
+import { PeoplePicker } from "../../../modules/friends";
 import { useMyGroups } from "../../../modules/groups";
-import { meetupsData, type MeetupComment, type MeetupListItem, type PollOption } from "../infrastructure/MeetupsData";
+import { meetupsData, type MeetupComment, type MeetupListItem, type MeetupParticipant, type PollOption } from "../infrastructure/MeetupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 import { ActivityModesCard } from "./ActivityModesCard";
@@ -101,7 +102,8 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
   const organizer = item.organizerId === userId;
   const [poll, setPoll] = useState<PollOption[]>([]);
   const [comments, setComments] = useState<MeetupComment[]>([]);
-  const [inviteUsername, setInviteUsername] = useState("");
+  const [participants, setParticipants] = useState<MeetupParticipant[]>([]);
+  const [inviteIds, setInviteIds] = useState<string[]>([]);
   const [optionStart, setOptionStart] = useState("");
   const [optionEnd, setOptionEnd] = useState("");
   const [commentBody, setCommentBody] = useState("");
@@ -118,8 +120,8 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
     if (!current()) return;
     setDetailLoading(true); setDetailError("");
     try {
-      const [nextPoll, nextComments] = await Promise.all([meetupsData.poll(item.id), meetupsData.comments(item.id)]);
-      if (current()) { setPoll(nextPoll); setComments(nextComments); }
+      const [nextPoll, nextComments, nextParticipants] = await Promise.all([meetupsData.poll(item.id), meetupsData.comments(item.id), meetupsData.participants(item.id)]);
+      if (current()) { setPoll(nextPoll); setComments(nextComments); setParticipants(nextParticipants); }
     } catch (cause) {
       if (current()) setDetailError(humanize(cause));
     } finally { if (current()) setDetailLoading(false); }
@@ -127,7 +129,7 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
 
   useEffect(() => {
     scope.current.activate(userId); lock.current = false;
-    setPoll([]); setComments([]); setDetailLoading(true); setDetailError(""); setError(""); setFeedback(""); setBusy(false);
+    setPoll([]); setComments([]); setParticipants([]); setInviteIds([]); setDetailLoading(true); setDetailError(""); setError(""); setFeedback(""); setBusy(false);
     void loadDetails();
     return () => scope.current.dispose();
   }, [item.id, userId]);
@@ -153,7 +155,8 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
 
   function invite(event: FormEvent) {
     event.preventDefault();
-    return mutate(() => meetupsData.invite(item.id, inviteUsername), () => setInviteUsername(""), "Đã gửi lời mời.");
+    if (!inviteIds.length) return;
+    return mutate(() => meetupsData.inviteUsers(item.id, inviteIds).then(() => undefined), async () => { setInviteIds([]); await loadDetails(); }, "Đã gửi lời mời.");
   }
 
   function addOption(event: FormEvent) {
@@ -206,6 +209,12 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
         )}
       </div>
 
+      {participants.length > 0 && (
+        <ul aria-label="Người được mời" className="mt-4 flex flex-wrap gap-2">
+          {participants.map(person => <li key={person.userId} className="rounded-full bg-[var(--soft)] px-3 py-1.5 text-xs font-semibold">{person.displayName} · {rsvpLabel[person.rsvp]}</li>)}
+        </ul>
+      )}
+
       <div className="mt-5 border-t border-black/8 pt-5 dark:border-white/8">
         <p className="mb-3 text-sm font-bold">Bình chọn thời gian</p>
         {detailLoading && <p role="status" className="text-sm text-[var(--muted)]">Đang tải bình chọn và thảo luận…</p>}
@@ -235,9 +244,9 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
               <label className="grid gap-1 text-sm font-semibold">Kết thúc<input className="field min-w-0" type="datetime-local" required value={optionEnd} onChange={(e) => setOptionEnd(e.target.value)} /></label>
               <Button type="submit" variant="secondary" disabled={busy} className="self-end"><Plus size={16} /> Giờ</Button>
             </form>
-            <form onSubmit={invite} aria-busy={busy} className="flex items-end gap-2">
-              <label className="grid min-w-0 flex-1 gap-1 text-sm font-semibold">Tên người mời<input className="field min-w-0" value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="Username" required /></label>
-              <Button type="submit" disabled={busy} aria-label="Gửi lời mời"><Send size={16} /></Button>
+            <form onSubmit={invite} aria-busy={busy} className="space-y-2">
+              <PeoplePicker legend="Mời thêm bạn bè" value={inviteIds} onChange={setInviteIds} />
+              <Button type="submit" disabled={busy || !inviteIds.length}><Send size={16} /> Gửi lời mời</Button>
             </form>
           </div>
         )}
@@ -270,6 +279,8 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
     </Card>
   );
 }
+
+const rsvpLabel = { going: "Đi", maybe: "Có thể", pending: "Chưa trả lời", declined: "Không đi" } as const;
 
 function statusLabel(status: MeetupListItem["status"]) {
   return ({ draft: "Nháp", proposed: "Đang đề xuất", confirmed: "Đã chốt", canceled: "Đã hủy", completed: "Đã xong" })[status];

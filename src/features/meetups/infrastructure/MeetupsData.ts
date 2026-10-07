@@ -35,6 +35,12 @@ export interface MeetupComment {
   authorUsername: string | null;
 }
 
+export interface MeetupParticipant {
+  userId: string;
+  displayName: string;
+  rsvp: Rsvp;
+}
+
 export class MeetupsData {
   async list(userId: string): Promise<MeetupListItem[]> {
     const { data, error } = await requireSupabase()
@@ -82,6 +88,19 @@ export class MeetupsData {
       p_username: username.trim(),
     });
     if (error) throw error;
+  }
+
+  /** Invites the chosen people and returns how many were newly invited. */
+  async inviteUsers(meetupId: string, userIds: string[]): Promise<number> {
+    const { data, error } = await requireSupabase().rpc("invite_users_to_meetup", { p_meetup_id: meetupId, p_user_ids: userIds });
+    if (error) throw error;
+    return Number(data ?? 0);
+  }
+
+  async participants(meetupId: string): Promise<MeetupParticipant[]> {
+    const { data, error } = await requireSupabase().rpc("list_meetup_participants", { p_meetup_id: meetupId });
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({ userId: row.user_id, displayName: row.display_name || row.username || "Người dùng", rsvp: row.rsvp_status }));
   }
 
   async respond(meetupId: string, response: Exclude<Rsvp, "pending">): Promise<void> {
