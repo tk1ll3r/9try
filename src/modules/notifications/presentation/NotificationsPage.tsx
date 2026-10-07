@@ -1,12 +1,13 @@
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { Bell, BellOff, Check, Moon, Smartphone } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../bootstrap/AuthProvider";
-import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
-import { notificationDestination, notificationsData, type NotificationRow } from "../infrastructure/NotificationsData";
-import { pushData, type NotificationPreferences } from "../infrastructure/PushData";
+import { errorMessage } from "../../../kernel/errors";
+import { useModule, useRegistry } from "../../../kernel/session";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
+import { notificationTarget, type AppNotification, type NotificationPreferences } from "../domain/Notification";
+import { notificationsModule } from "../notifications.module";
 
 const categories = [
   ["friend_request", "Lời mời kết bạn"],
@@ -19,120 +20,80 @@ const categories = [
   ["personal_reminder", "Nhắc việc cá nhân"],
 ] as const;
 
+const pageSize = 20;
+const listKey = ["notifications", "list"] as const;
+const pushKey = ["notifications", "push"] as const;
+const noPreferences: NotificationPreferences = { pushEnabled: false, quietStart: "", quietEnd: "", categoryPush: {} };
+
 export function NotificationsPage() {
-  const { user } = useAuth();
+  const { inbox, push } = useModule(notificationsModule);
+  const { safePath } = useRegistry();
   const navigate = useNavigate();
-  const scope = useRef(new AsyncOwnerScope());
-  const [items, setItems] = useState<NotificationRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState("");
-  const [hasMore, setHasMore] = useState(false);
-  const [opening, setOpening] = useState<string | null>(null);
-  const [prefs, setPrefs] = useState<NotificationPreferences>({
-    pushEnabled: false,
-    quietStart: "",
-    quietEnd: "",
-    categoryPush: {},
-  });
-  const [browserSubscribed, setBrowserSubscribed] = useState(false);
+  const queries = useQueryClient();
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
 
-  async function loadNotifications(offset = 0) {
-    if (!user) return;
-    const current = scope.current.beginRequest(user.id);
-    if (!current()) return;
-    setLoading(true);
-    setListError("");
-    try {
-      const rows = await notificationsData.list(user.id, offset);
-      if (current()) {
-        setItems(previous => offset ? [...previous, ...rows] : rows);
-        setHasMore(rows.length === 20);
-      }
-    } catch (error) {
-      if (current()) setListError(error instanceof Error ? error.message : "Không thể tải thông báo.");
-    } finally { if (current()) setLoading(false); }
-  }
+  const list = useInfiniteQuery({
+    queryKey: listKey,
+    queryFn: ({ pageParam }) => inbox.list(pageParam, pageSize),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => last.length === pageSize ? pages.length * pageSize : undefined,
+  });
+  const items = list.data?.pages.flat() ?? [];
 
-  async function refreshPreferences() {
-    if (!user) return;
-    const current = scope.current.capture(user.id);
-    if (!current()) return;
-    try {
-      const [nextPrefs, subscribed] = await Promise.all([
-        pushData.preferences(user.id),
-        pushData.isSubscribed(),
-      ]);
-      if (current()) { setPrefs(nextPrefs); setBrowserSubscribed(subscribed); }
-    } catch (error) {
-      if (current()) setMessage(error instanceof Error ? error.message : "Không thể tải cài đặt thông báo.");
-    }
-  }
+  const open = useMutation({
+    mutationFn: async (item: AppNotification) => {
+      if (!item.readAt) await inbox.markRead(item.id);
+      return item;
+    },
+    onSuccess: item => {
+      queries.setQueryData<InfiniteData<AppNotification[]>>(listKey, data => data && {
+        ...data,
+        pages: data.pages.map(page => page.map(row => row.id === item.id ? { ...row, readAt: row.readAt ?? new Date().toISOString() } : row)),
+      });
+      const target = notificationTarget(item.actionPath, safePath);
+      if (target) navigate(target);
+    },
+  });
 
-  useEffect(() => {
-    scope.current.activate(user?.id);
-    setItems([]); setHasMore(false); setOpening(null); setListError(""); setMessage(""); setBusy(false);
-    setPrefs({ pushEnabled: false, quietStart: "", quietEnd: "", categoryPush: {} }); setBrowserSubscribed(false);
-    void loadNotifications();
-    void refreshPreferences();
-    return () => scope.current.dispose();
-  }, [user?.id]);
+  const settings = useQuery({
+    queryKey: pushKey,
+    queryFn: async () => ({ prefs: await push.preferences(), subscribed: await push.isSubscribed() }),
+  });
+  // Editable copy: the quiet-hours fields change it before "Lưu giờ yên tĩnh" saves it.
+  const [prefs, setPrefs] = useState(noPreferences);
+  useEffect(() => { if (settings.data) setPrefs(settings.data.prefs); }, [settings.data]);
+  const browserSubscribed = settings.data?.subscribed ?? false;
 
-  async function openNotification(item: NotificationRow) {
-    if (!user || opening) return;
-    const current = scope.current.capture(user.id);
-    if (!current()) return;
-    setOpening(item.id);
-    setListError("");
-    try {
-      if (!item.read_at) await notificationsData.markRead(user.id, item.id);
-      if (!current()) return;
-      setItems(previous => previous.map(row => row.id === item.id ? { ...row, read_at: row.read_at ?? new Date().toISOString() } : row));
-      const destination = notificationDestination(item.action_path);
-      if (destination) navigate(destination);
-    } catch (error) {
-      if (current()) setListError(error instanceof Error ? error.message : "Không thể mở thông báo.");
-    } finally { if (current()) setOpening(null); }
-  }
+  const change = useMutation({
+    mutationFn: (job: () => Promise<string>) => job(),
+    onSuccess: setMessage,
+    onError: cause => {
+      setMessage(errorMessage(cause, "Không thể lưu thay đổi. Hãy thử lại."));
+      if (settings.data) setPrefs(settings.data.prefs);
+    },
+    onSettled: () => queries.invalidateQueries({ queryKey: pushKey }),
+  });
+  const busy = change.isPending;
 
-  async function togglePush() {
-    if (!user || busy) return;
-    const current = scope.current.capture(user.id);
-    if (!current()) return;
-    setBusy(true);
+  function togglePush() {
+    if (busy) return;
     setMessage("");
-    try {
-      if (browserSubscribed || prefs.pushEnabled) {
-        await pushData.disable(user.id);
-        if (current()) setMessage("Đã tắt web push trên thiết bị này.");
-      } else {
-        await pushData.enable(user.id);
-        if (current()) setMessage("Đã bật web push trên thiết bị này.");
-      }
-      if (current()) await refreshPreferences();
-    } catch (error) {
-      if (current()) setMessage(error instanceof Error ? error.message : "Không thể thay đổi web push.");
-    } finally {
-      if (current()) setBusy(false);
-    }
+    change.mutate(async () => {
+      if (browserSubscribed || prefs.pushEnabled) { await push.disable(); return "Đã tắt web push trên thiết bị này."; }
+      await push.enable(); return "Đã bật web push trên thiết bị này.";
+    });
   }
 
-  async function savePreferences(next: NotificationPreferences) {
-    if (!user || busy) return;
-    const current = scope.current.capture(user.id);
-    if (!current()) return;
-    const previous = prefs;
-    setPrefs(next); setBusy(true);
-    try {
-      await pushData.savePreferences(user.id, next);
-      if (current()) setMessage("Đã lưu tùy chọn thông báo.");
-    } catch (error) {
-      if (current()) { setPrefs(previous); setMessage(error instanceof Error ? error.message : "Không thể lưu tùy chọn."); }
-    } finally { if (current()) setBusy(false); }
+  function savePreferences(next: NotificationPreferences) {
+    if (busy) return;
+    setPrefs(next);
+    change.mutate(async () => { await push.savePreferences(next); return "Đã lưu tùy chọn thông báo."; });
   }
 
   const pushActive = prefs.pushEnabled && browserSubscribed;
+  const notice = message || (settings.isError ? errorMessage(settings.error, "Không thể tải cài đặt thông báo.") : "");
+  const listProblem = open.isError ? errorMessage(open.error, "Không thể mở thông báo.")
+    : list.isError ? errorMessage(list.error, "Không thể tải thông báo.") : "";
 
   return (
     <div className="space-y-5">
@@ -141,7 +102,7 @@ export function NotificationsPage() {
         <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Thông báo</h1>
       </header>
 
-      {message && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
+      {notice && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{notice}</div>}
 
       <Card title="Web push">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -156,13 +117,13 @@ export function NotificationsPage() {
           </div>
           <Button
             variant={pushActive ? "ghost" : "secondary"}
-            disabled={busy || !pushData.supported()}
-            onClick={() => void togglePush()}
+            disabled={busy || !push.supported()}
+            onClick={togglePush}
           >
             <Smartphone size={17} /> {pushActive ? "Tắt push" : "Bật push"}
           </Button>
         </div>
-        {!pushData.supported() && (
+        {!push.supported() && (
           <p className="mt-3 text-sm text-amber-700">Trình duyệt hiện tại không hỗ trợ Web Push.</p>
         )}
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
@@ -195,76 +156,63 @@ export function NotificationsPage() {
               />
             </label>
           </div>
-          <Button
-            className="mt-3"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => void savePreferences(prefs)}
-          >
+          <Button className="mt-3" variant="ghost" disabled={busy} onClick={() => savePreferences(prefs)}>
             Lưu giờ yên tĩnh
           </Button>
         </Card>
 
         <Card title="Push theo loại">
           <div className="space-y-2">
-            {categories.map(([key, label]) => {
-              const enabled = prefs.categoryPush[key] ?? true;
-              return (
-                <label key={key} className="flex min-h-11 items-center gap-3 rounded-2xl bg-[var(--soft)] px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={enabled}
-                    disabled={!prefs.pushEnabled || busy}
-                    onChange={(event) => {
-                      const next = {
-                        ...prefs,
-                        categoryPush: { ...prefs.categoryPush, [key]: event.target.checked },
-                      };
-                      void savePreferences(next);
-                    }}
-                  />
-                  <span className="text-sm font-semibold">{label}</span>
-                </label>
-              );
-            })}
+            {categories.map(([key, label]) => (
+              <label key={key} className="flex min-h-11 items-center gap-3 rounded-2xl bg-[var(--soft)] px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={prefs.categoryPush[key] ?? true}
+                  disabled={!prefs.pushEnabled || busy}
+                  onChange={(event) => savePreferences({ ...prefs, categoryPush: { ...prefs.categoryPush, [key]: event.target.checked } })}
+                />
+                <span className="text-sm font-semibold">{label}</span>
+              </label>
+            ))}
           </div>
         </Card>
       </div>
 
-      <Card title={`Trung tâm thông báo · ${items.filter((item) => !item.read_at).length} chưa đọc`}>
-        {listError && <p role="alert" className="mb-3 text-sm text-[var(--danger)]">{listError} <Button variant="ghost" disabled={loading} onClick={() => void loadNotifications(items.length)}>Thử lại</Button></p>}
-        {loading && !items.length && <p role="status">Đang tải thông báo…</p>}
+      <Card title={`Trung tâm thông báo · ${items.filter((item) => !item.readAt).length} chưa đọc`}>
+        {listProblem && <p role="alert" className="mb-3 text-sm text-[var(--danger)]">{listProblem} <Button variant="ghost" disabled={list.isFetching}
+          onClick={() => void (list.isFetchNextPageError ? list.fetchNextPage() : list.refetch())}>Thử lại</Button></p>}
+        {list.isPending && <p role="status">Đang tải thông báo…</p>}
         {items.length ? (
           <div className="divide-y divide-black/8 dark:divide-white/8">
             {items.map((item) => (
               <button
                 key={item.id}
-                onClick={() => void openNotification(item)}
-                disabled={opening !== null}
-                aria-label={`${item.title}. ${notificationDestination(item.action_path) ? "Mở nội dung" : "Đánh dấu đã đọc"}`}
+                onClick={() => open.mutate(item)}
+                disabled={open.isPending}
+                aria-label={`${item.title}. ${notificationTarget(item.actionPath, safePath) ? "Mở nội dung" : "Đánh dấu đã đọc"}`}
                 className="flex w-full gap-3 py-4 text-left disabled:opacity-60"
               >
-                <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.read_at ? "bg-black/10 dark:bg-white/10" : "bg-[var(--lime-strong)]"}`} />
+                <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.readAt ? "bg-black/10 dark:bg-white/10" : "bg-[var(--lime-strong)]"}`} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start justify-between gap-3">
                     <b>{item.title}</b>
                     <span className="shrink-0 text-xs text-[var(--muted)]">
-                      {new Date(item.created_at).toLocaleString("vi-VN")}
+                      {new Date(item.createdAt).toLocaleString("vi-VN")}
                     </span>
                   </span>
                   <span className="mt-1 block text-sm leading-6 text-[var(--muted)]">{item.body}</span>
                 </span>
-                {item.read_at && <Check size={16} className="mt-1 text-[var(--muted)]" />}
+                {item.readAt && <Check size={16} className="mt-1 text-[var(--muted)]" />}
               </button>
             ))}
           </div>
-        ) : !loading && !listError ? (
+        ) : !list.isPending && !listProblem ? (
           <div className="py-12 text-center text-[var(--muted)]">
             <Bell className="mx-auto mb-2" />
             Chưa có thông báo mới.
           </div>
         ) : null}
-        {hasMore && <Button className="mt-3" variant="ghost" disabled={loading} onClick={() => void loadNotifications(items.length)}>{loading ? "Đang tải…" : "Xem thêm"}</Button>}
+        {list.hasNextPage && <Button className="mt-3" variant="ghost" disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>{list.isFetchingNextPage ? "Đang tải…" : "Xem thêm"}</Button>}
       </Card>
     </div>
   );

@@ -3,9 +3,10 @@ import { ArrowRight, LockKeyhole, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../shared/ui/Button";
 import { isSupabaseConfigured, supabase } from "../../../shared/infrastructure/supabase";
-import { isLocalBackend, loginError, loginRedirect, returnPathKey, safeReturnPath } from "../domain/login";
+import { isLocalBackend, loginError, loginRedirect, returnPathKey } from "../domain/login";
 
-export function AuthPage() {
+/** `returnPath` is the checked in-app path to open after sign-in. */
+export function AuthPage({ returnPath }: { returnPath: string }) {
   const [email, setEmail] = useState("");
   const [acceptedEmail, setAcceptedEmail] = useState("");
   const [pending, setPending] = useState(false);
@@ -29,7 +30,7 @@ export function AuthPage() {
     if (!normalized) return;
     lock.current = true; setPending(true); setError("");
     try {
-      const path = safeReturnPath(location.pathname);
+      const path = returnPath;
       try { sessionStorage.setItem(returnPathKey, path); } catch { /* Storage may be disabled; redirect still carries the safe route. */ }
       const { error: authError } = await supabase.auth.signInWithOtp({ email: normalized, options: { emailRedirectTo: loginRedirect(location.origin, path) } });
       if (!mounted.current) return;

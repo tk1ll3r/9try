@@ -4,7 +4,7 @@ import { useAuth } from "../../../bootstrap/AuthProvider";
 import { organizerData, type PersonalNote, type RoutineTask } from "../infrastructure/OrganizerData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
-import { TaskListCard } from "./TaskListCard";
+import { TaskListCard } from "../../../modules/tasks";
 import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 
 export function OrganizerPage() {

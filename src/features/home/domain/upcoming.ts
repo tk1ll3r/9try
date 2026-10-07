@@ -1,8 +1,5 @@
+import { localDateKey } from "../../../kernel/dates";
 import type { CalendarOccurrence } from "../../calendars/infrastructure/CalendarData";
-
-export function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 // Date-only events belong to local calendar days, not UTC midnight.
 export function selectUpcoming(events: CalendarOccurrence[], now: Date): CalendarOccurrence[] {

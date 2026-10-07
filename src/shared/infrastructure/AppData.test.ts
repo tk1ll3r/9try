@@ -12,30 +12,7 @@ beforeEach(() => {
   mock.query.then = (resolve: (value: unknown) => unknown) => Promise.resolve(mock.result).then(resolve);
   mock.from.mockReset().mockReturnValue(mock.query);
 });
-describe("owner-scoped tasks and GPS recovery", () => {
-  it("lists all one-off tasks including future/completed without completion filtering", async () => {
-    mock.result.data = [{ id: "future", due_at: "2099-01-01", completed_at: null }, { id: "done", completed_at: "2026-01-01" }];
-    expect(await app.listTasks("owner")).toHaveLength(2);
-    expect(mock.query.eq).toHaveBeenCalledWith("owner_id", "owner"); expect(mock.query.eq).toHaveBeenCalledWith("recurrence", "none");
-    expect(mock.query.is).not.toHaveBeenCalledWith("completed_at", null);
-  });
-  it("preserves unchanged due timestamp on edit and scopes every mutation", async () => {
-    const original = new Date(2026,9,5,13,30).toISOString();
-    await app.updateTask("owner", "task", "  edited  ", "2026-10-05", "high", original);
-    expect(mock.query.update).toHaveBeenCalledWith({ title: "edited", priority: "high", due_at: original });
-    expect(mock.query.eq).toHaveBeenCalledWith("id", "task"); expect(mock.query.eq).toHaveBeenCalledWith("owner_id", "owner"); expect(mock.query.eq).toHaveBeenCalledWith("recurrence", "none");
-    await app.deleteTask("owner", "task"); expect(mock.query.delete).toHaveBeenCalled(); expect(mock.query.single).toHaveBeenCalledTimes(2);
-  });
-  it("completion Undo only matches the completion it created", async () => {
-    const timestamp = await app.setTaskCompleted("owner", "task", true);
-    expect(timestamp).toBeTruthy(); await app.undoTaskCompletion("owner", "task", timestamp!);
-    expect(mock.query.eq).toHaveBeenCalledWith("completed_at", timestamp); expect(mock.query.update).toHaveBeenLastCalledWith({ completed_at: null });
-  });
-  it("reports update/undo failure instead of claiming success", async () => {
-    mock.result.error = new Error("denied");
-    await expect(app.setTaskCompleted("owner", "task", false)).rejects.toThrow("denied");
-    await expect(app.undoTaskCompletion("owner", "task", "old")).rejects.toThrow(/đã thay đổi/);
-  });
+describe("calendar occurrences and GPS recovery", () => {
   it("calendar recurrence shares cancellations and overrides with Home", async () => {
     mock.result.data = [{
       id: "series", title: "Original", event_kind: "timed", start_at: "2026-10-05T01:00:00Z", end_at: "2026-10-05T02:00:00Z",

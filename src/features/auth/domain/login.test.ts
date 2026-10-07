@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isLocalBackend, loginError, loginRedirect, safeReturnPath } from "./login";
+import { isLocalBackend, loginError, loginRedirect } from "./login";
 
 describe("login safety and feedback", () => {
-  it("preserves known same-origin invitations and excludes redirects/tokens", () => {
+  it("builds the email link from an already-checked in-app path", () => {
     expect(loginRedirect("https://gnouht.space", "/invite/group/test_token-1")).toBe("https://gnouht.space/invite/group/test_token-1");
-    for (const path of ["//evil.test", "https://evil.test", "/calendar?access_token=secret", "/unknown", "/invite/group/../../evil"]) expect(safeReturnPath(path)).toBe("/");
   });
   it("maps quota and unauthorized recipients without pretending delivery", () => {
     expect(loginError({ status: 429 })).toContain("giới hạn");

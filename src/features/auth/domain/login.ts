@@ -1,11 +1,7 @@
-const destinations = new Set(["/", "/groups", "/meetups", "/calendar", "/notifications", "/me", "/me/friends", "/me/organizer", "/me/location"]);
 export const returnPathKey = "gnouht-login-return-path";
-export function safeReturnPath(value: string): string {
-  if (destinations.has(value) || /^\/invite\/group\/[a-zA-Z0-9_-]+$/.test(value) || /^\/groups\/[a-zA-Z0-9_-]+$/.test(value)) return value;
-  return "/";
-}
-export function loginRedirect(origin: string, pathname: string): string {
-  return new URL(safeReturnPath(pathname), origin).href;
+/** `path` must already have passed `ModuleRegistry.safePath`. */
+export function loginRedirect(origin: string, path: string): string {
+  return new URL(path, origin).href;
 }
 export function loginError(error: unknown): string {
   const detail = error && typeof error === "object" ? error as { status?: number; code?: string; message?: string } : {};

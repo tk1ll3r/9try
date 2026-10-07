@@ -192,6 +192,49 @@ test("mobile Today exposes planner and coordination without extra tabs", async (
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test("tasks: add once on Today, complete, undo, then edit and delete in the full list", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  let tasks: Record<string, unknown>[] = []; let inserts = 0;
+  await page.route("**/rest/v1/**", async route => {
+    const request = route.request(); const url = new URL(request.url());
+    if (!url.pathname.endsWith("/personal_tasks")) return route.fulfill({ json: [] });
+    if (request.method() === "POST") {
+      inserts++; await new Promise(resolve => setTimeout(resolve, 200));
+      tasks = [{ id: "t1", ...request.postDataJSON(), completed_at: null }];
+      return route.fulfill({ status: 201, body: "" });
+    }
+    if (request.method() === "PATCH") { tasks = tasks.map(task => ({ ...task, ...request.postDataJSON() })); return route.fulfill({ json: { id: "t1" } }); }
+    if (request.method() === "DELETE") { tasks = []; return route.fulfill({ json: { id: "t1" } }); }
+    if (url.searchParams.get("recurrence")?.startsWith("in.")) return route.fulfill({ json: [] }); // routines, not one-off tasks
+    return route.fulfill({ json: url.searchParams.get("completed_at") === "is.null" ? tasks.filter(task => !task.completed_at) : tasks });
+  });
+  await page.goto("/");
+  await page.getByLabel("Nội dung công việc").fill("Mua sách");
+  await page.getByRole("button", { name: "Thêm việc", exact: true }).dblclick();
+  const complete = page.getByRole("button", { name: "Hoàn thành: Mua sách" });
+  await expect(complete).toBeVisible();
+  expect(inserts).toBe(1);
+  await expect(page.getByLabel("Nội dung công việc")).toHaveValue("");
+  await complete.click();
+  await expect(page.getByRole("status").filter({ hasText: "Đã hoàn thành việc." })).toBeVisible();
+  await expect(complete).toHaveCount(0);
+  await page.getByRole("button", { name: "Hoàn tác", exact: true }).click();
+  await expect(complete).toBeVisible();
+
+  await page.goto("/me/organizer");
+  await page.getByRole("button", { name: "Sửa", exact: true }).click();
+  await page.getByLabel("Tên việc").fill("Mua vở");
+  await page.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Mua vở" })).toBeVisible();
+  await page.getByRole("button", { name: "Xóa: Mua vở" }).click();
+  await page.getByRole("button", { name: "Xóa vĩnh viễn", exact: true }).click();
+  await expect(page.getByText("Không có công việc phù hợp bộ lọc.")).toBeVisible();
+});
+
 test("friend removal requires confirmation", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {
