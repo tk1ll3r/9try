@@ -46,16 +46,21 @@ See:
 - `docs/deployment.md`
 - `docs/backup-restore.md`
 - `docs/cost-and-limits.md`
+- `docs/roadmap.md` (priorities, acceptance criteria, outstanding checks)
+- `docs/system-development-plan.md` (researched English implementation roadmap)
+- `docs/implementation-progress.md` (implemented scope, browser evidence and remaining release gates)
 
 ## Run locally
 
 ```bash
 cp .env.example .env.local
-npm install
+npm ci
 npm run dev
 ```
 
-Apply every migration in `supabase/migrations/` in order before running against a new Supabase project.
+For an isolated **local** backend (Docker required), run `npx supabase@2.119.0 start --exclude realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor` in another terminal (lightweight mode; account-deletion Edge Function, reminders and realtime are not available in this mode). All migrations are applied automatically. Set `VITE_SUPABASE_URL=http://127.0.0.1:54321` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the local **PUBLISHABLE_KEY** from `npx supabase@2.119.0 status --output env`. Open `http://127.0.0.1:5173` for the app; magic-link emails arrive in Mailpit at `http://127.0.0.1:55324` (configured port). Restart Vite after editing `.env.local`. Never put SECRET_KEY, SERVICE_ROLE_KEY or JWT_SECRET in `VITE_*` variables; never paste CLI status output in public logs.
+
+To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; activity modes need migrations 0011–0012 and direct location publishing requires policy fix 0013. Migration 0013 was applied to the disposable local database only; **it has not been applied to cloud**. Do not run `supabase db reset --linked` on the cloud project.
 
 ## Validate
 
@@ -63,9 +68,20 @@ Apply every migration in `supabase/migrations/` in order before running against 
 npm run typecheck
 npm test
 npm run build
+npm run test:e2e          # isolated mocked-browser UI tests; needs Playwright Chromium
+npm run test:e2e:preview  # same suite against the production build
 ```
 
-The repository has also been validated on GitHub Actions with Node 24: typecheck, unit tests and production build all passed.
+For a **fictional two-person map demo** in development, open `/demo/location` (An and Bình, public-place markers). It requires no Auth/GPS and never writes to Supabase; it does not verify real user privacy. The production build omits this route unless `VITE_ENABLE_DEMO=true` is deliberately set at build time. See `docs/implementation-progress.md` for the separate disposable **real-Auth two-browser-context** local test and its strict local-only safety guard.
+
+SQL privacy tests require a disposable local Supabase Postgres and Docker access:
+
+```bash
+npx supabase@2.119.0 db start
+npx supabase@2.119.0 test db supabase/tests/database
+```
+
+Do not run database tests against production. GitHub Actions now has a separate DB job; the new job has not yet been verified on CI. Earlier commits passed the typecheck, unit tests and build workflow on Node 24.
 
 ## Production
 
