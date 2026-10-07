@@ -3,10 +3,15 @@ import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import { SupabaseCalendarRepository } from "./infrastructure/SupabaseCalendarRepository";
+import { CalendarPrivacy } from "./presentation/CalendarPrivacy";
 
 export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {
   id: "calendar",
   create: ({ userId }) => new SupabaseCalendarRepository(requireSupabase(), userId),
+  privacy: CalendarPrivacy,
+  searchItems: async calendar => (await calendar.listEvents()).map(event => event.category === "class"
+    ? { title: event.title, kind: "Lớp học", to: "/timetable", keywords: event.place ?? "" }
+    : { title: event.title, kind: "Sự kiện", to: "/calendar", keywords: event.place ?? "" }),
   navigation: [
     { tab: "plan", to: "/calendar", label: "Lịch", icon: CalendarDays, order: 10 },
     { tab: "plan", to: "/timetable", label: "Thời khóa biểu", icon: GraduationCap, order: 15 },

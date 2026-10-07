@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Beer, BookOpen, CircleDot, Gamepad2, GraduationCap, Moon, Radio, X } from "lucide-react";
+import { Radio, X } from "lucide-react";
 import { useState } from "react";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
@@ -9,17 +9,7 @@ import { Card } from "../../../kernel/ui/Card";
 import { useAcceptedFriends } from "../../friends";
 import { activityModes } from "../domain/ActivityMode";
 import { presenceModule } from "../presence.module";
-
-const presenceKey = ["presence"] as const;
-
-const choices = [
-  { id: "studying", label: "Học bài", Icon: BookOpen, color: "text-blue-700 bg-blue-100" },
-  { id: "school", label: "Đi học", Icon: GraduationCap, color: "text-violet-700 bg-violet-100" },
-  { id: "gaming", label: "Chơi game", Icon: Gamepad2, color: "text-emerald-700 bg-emerald-100" },
-  { id: "billiards", label: "Chơi Bi a", Icon: CircleDot, color: "text-teal-700 bg-teal-100" },
-  { id: "drinks", label: "Nhậu", Icon: Beer, color: "text-orange-700 bg-orange-100" },
-  { id: "sleeping", label: "Ngủ", Icon: Moon, color: "text-indigo-700 bg-indigo-100" },
-] as const;
+import { choices, presenceKey } from "./modes";
 
 /** Pick what you are doing for a while, and see what your friends picked. */
 export function ActivityModesCard() {

@@ -1,8 +1,11 @@
-import { Bell, CalendarDays, CircleUserRound, Home, MessageCircle, UsersRound, WifiOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bell, CalendarDays, CircleUserRound, Home, MessageCircle, Search, UsersRound, WifiOff } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import type { NavContribution, NavTab } from "../kernel/module";
 import { useRegistry } from "../kernel/session";
+
+// Opened rarely, so its dialog code stays out of the first download.
+const SearchDialog = lazy(() => import("./SearchDialog").then(m => ({ default: m.SearchDialog })));
 
 const tabs: { id: NavTab; label: string; icon: NavContribution["icon"] }[] = [
   { id: "today", label: "Hôm nay", icon: Home },
@@ -34,17 +37,23 @@ function Badges({ items }: { items: readonly NavContribution[] }) {
 /** Navigation comes from the modules: bottom tabs with a row of sub-screens on a phone, a sidebar on a desktop. */
 export function AppShell() {
   const [online, setOnline] = useState(navigator.onLine);
+  const [searching, setSearching] = useState(false);
   const { navigation, modules } = useRegistry();
   const { pathname } = useLocation();
 
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
+    const key = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearching(true); }
+    };
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
+    window.addEventListener("keydown", key);
     return () => {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
+      window.removeEventListener("keydown", key);
     };
   }, []);
 
@@ -57,6 +66,14 @@ export function AppShell() {
   const inbox = groups.find(tab => tab.id === "inbox");
   const siblings = groups.find(tab => tab.id === current?.tab)?.items ?? [];
 
+  // On a phone the row of sub-screens scrolls sideways; keep the current one in the middle of it.
+  const pills = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const row = pills.current;
+    const active = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (row && active) row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
+  }, [current?.to]);
+
   return (
     <div className="min-h-dvh bg-[var(--paper)] text-[var(--ink)]">
       {!online && (
@@ -67,7 +84,10 @@ export function AppShell() {
 
       <aside className="fixed inset-y-0 left-0 hidden w-64 overflow-y-auto border-r border-black/8 bg-[var(--surface)] p-5 lg:block dark:border-white/8">
         <Brand />
-        <nav aria-label="Điều hướng chính" className="mt-8 space-y-5">
+        <button type="button" onClick={() => setSearching(true)} className="mt-6 flex min-h-11 w-full items-center gap-3 rounded-2xl bg-[var(--soft)] px-3 text-sm text-[var(--muted)]">
+          <Search size={17} /> Tìm kiếm <kbd className="ml-auto text-xs">Ctrl K</kbd>
+        </button>
+        <nav aria-label="Điều hướng chính" className="mt-5 space-y-5">
           {groups.map(group => (
             <div key={group.id} className="space-y-1">
               {group.items.length > 1 && <p className="px-3 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{group.label}</p>}
@@ -83,16 +103,18 @@ export function AppShell() {
         </nav>
       </aside>
 
-      {hasChat && inbox && (
-        <Link to={inbox.items[0].to} aria-label={inbox.label} className="fixed right-3 top-3 z-40 grid size-11 place-items-center rounded-full border border-black/8 bg-[var(--surface)] shadow-lg lg:hidden dark:border-white/8">
-          <span className="relative"><Bell size={20} /><Badges items={inbox.items} /></span>
-        </Link>
-      )}
-
       <main className="mx-auto min-h-dvh max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:ml-64 lg:px-8 lg:pb-10 lg:pt-8">
+        <div className="mb-4 flex items-center gap-2 lg:hidden">
+          <button type="button" onClick={() => setSearching(true)} className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full bg-[var(--soft)] px-4 text-sm text-[var(--muted)]"><Search size={17} /> Tìm kiếm</button>
+          {hasChat && inbox && (
+            <Link to={inbox.items[0].to} aria-label={inbox.label} aria-current={current?.tab === "inbox" ? "page" : undefined} className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--soft)]">
+              <span className="relative"><Bell size={20} /><Badges items={inbox.items} /></span>
+            </Link>
+          )}
+        </div>
         {modules.map(({ id, indicator: Indicator }) => Indicator && <Indicator key={id} />)}
         {siblings.length > 1 && (
-          <nav aria-label="Trong mục này" className={`-mx-4 mb-4 flex gap-2 overflow-x-auto pb-1 pl-4 sm:-mx-6 sm:pl-6 lg:hidden ${hasChat ? "pr-16" : "pr-4 sm:pr-6"}`}>
+          <nav ref={pills} aria-label="Trong mục này" className="relative -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:hidden">
             {siblings.map(item => (
               <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
                 className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold ${item === current ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
@@ -103,6 +125,8 @@ export function AppShell() {
         )}
         <Outlet />
       </main>
+
+      {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
       <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${phoneTabs.length}, minmax(0, 1fr))` }}
         className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/8">

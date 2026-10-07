@@ -8,6 +8,7 @@ import { SupabaseGroupRepository } from "./infrastructure/SupabaseGroupRepositor
 export const groupsModule: FeatureModule<GroupRepository> = {
   id: "groups",
   create: ({ userId }) => new SupabaseGroupRepository(requireSupabase(), userId),
+  searchItems: async groups => (await groups.list()).map(group => ({ title: group.name, kind: "Nhóm", to: `/groups/${group.id}`, keywords: group.description })),
   navigation: [{ tab: "together", to: "/groups", label: "Nhóm", icon: UsersRound, order: 20 }],
   routes: [
     { path: "groups", component: lazy(() => import("./presentation/GroupsPage").then(m => ({ default: m.GroupsPage }))) },

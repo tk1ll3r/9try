@@ -304,6 +304,74 @@ test("habits: mark done, see the streak, take it back; notes: found without Viet
   await expect(page.getByRole("heading", { name: "Mua sách" })).toHaveCount(0);
 });
 
+test("privacy screen gathers what each feature shares and stops it in place", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const kha = "22222222-2222-4222-8222-222222222222";
+  const later = new Date(Date.now() + 3_600_000).toISOString();
+  let busyShared = true, modeOn = true, sessionOpen = true;
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [{ user_id: kha, display_name: "Kha", username: "kha", status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" }] });
+    if (path.endsWith("/availability_shares")) return route.fulfill({ json: busyShared ? [{ user_id: kha }] : [] });
+    if (path.endsWith("/rpc/set_user_availability_share")) { busyShared = false; return route.fulfill({ json: null }); }
+    if (path.endsWith("/rpc/list_blocked_users")) return route.fulfill({ json: [{ user_id: "33333333-3333-4333-8333-333333333333", display_name: "Spam", username: "spam" }] });
+    if (path.endsWith("/activity_modes")) return route.fulfill({ json: modeOn ? [{ user_id: user.id, mode: "studying", expires_at: later }] : [] });
+    if (path.endsWith("/rpc/set_my_activity_mode")) { modeOn = false; return route.fulfill({ json: null }); }
+    if (path.endsWith("/location_sessions")) return route.fulfill({ json: sessionOpen ? [{ id: "s1", expires_at: later, approximate: true }] : [] });
+    if (path.endsWith("/rpc/stop_location_session")) { sessionOpen = false; return route.fulfill({ json: null }); }
+    if (path.endsWith("/calendar_events")) return route.fulfill({ json: [{ id: "e1", visibility: "selected_friends" }, { id: "e2", visibility: "only_me" }] });
+    return route.fulfill({ json: [] });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/me/privacy");
+  await expect(page.getByText("1 sự kiện đang hiện cho những người bạn bạn đã chọn")).toBeVisible();
+  await expect(page.getByText("Đã chặn 1 người.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Ngừng chia sẻ", exact: true }).click();
+  await expect(page.getByText("Bạn không chia sẻ lịch bận/rảnh với ai.")).toBeVisible();
+  await page.getByRole("button", { name: "Tắt mode", exact: true }).click();
+  await expect(page.getByText("Bạn không bật mode nào.")).toBeVisible();
+  const location = page.locator("section", { hasText: "Mở bản đồ" });
+  await expect(location.getByText("thấy vị trí gần đúng của bạn")).toBeVisible();
+  await location.getByRole("button", { name: "Dừng chia sẻ" }).click();
+  await expect(page.getByText("Bạn không chia sẻ vị trí với ai.")).toBeVisible();
+  expect([busyShared, modeOn, sessionOpen]).toEqual([false, false, false]);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("search finds a note by its body without marks, and a screen by name", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await page.route("**/rest/v1/**", route => new URL(route.request().url()).pathname.endsWith("/personal_notes")
+    ? route.fulfill({ json: [{ id: "n1", title: "Họp nhóm đồ án", body: "Phòng B4.14, mang máy chiếu", updated_at: "2026-10-01T00:00:00Z" }] })
+    : route.fulfill({ json: [] }));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+  await page.keyboard.press("Control+k");
+  const dialog = page.getByRole("dialog", { name: "Tìm kiếm" });
+  const field = dialog.getByLabel("Từ khóa");
+  await expect(field).toBeFocused();
+  await field.fill("may chieu");
+  await expect(dialog.getByRole("button", { name: /Họp nhóm đồ án/ })).toBeVisible();
+  await field.fill("khong co gi nhu the");
+  await expect(dialog.getByText("Không thấy gì khớp.")).toBeVisible();
+  await field.fill("thoi quen");
+  await field.press("Enter");
+  await expect(page).toHaveURL(/\/habits$/);
+  await expect(dialog).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Tìm kiếm" }).click();
+  await expect(page.getByRole("dialog", { name: "Tìm kiếm" })).toBeVisible();
+});
+
 test("friend removal requires confirmation", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {

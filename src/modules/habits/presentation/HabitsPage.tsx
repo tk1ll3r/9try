@@ -41,20 +41,23 @@ export function HabitsPage() {
       {list.isPending && <p role="status">Đang tải thói quen…</p>}
       {list.isSuccess && !list.data.length && <p className="py-6 text-center text-sm text-[var(--muted)]">Chưa có thói quen nào. Thêm một việc bạn muốn làm đều ở bên dưới.</p>}
       <ul className="space-y-2">
-        {list.data?.map(habit => <li key={habit.id} className="flex items-center gap-2 rounded-2xl bg-[var(--soft)] p-2">
+        {list.data?.map(habit => <li key={habit.id} className="flex items-center gap-1 rounded-2xl bg-[var(--soft)] p-2">
           <button type="button" aria-pressed={habit.done} disabled={pending} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-2 text-left disabled:opacity-60"
             onClick={() => run(() => habit.done ? habits.undoDone(habit.id) : habits.markDone(habit.id))}>
             {habit.done ? <CheckCircle2 size={24} className="shrink-0 text-emerald-600" /> : <Circle size={24} className="shrink-0 text-[var(--muted)]" />}
             <span className="min-w-0">
-              <span className="block truncate font-semibold">{habit.title}</span>
-              <span className="block text-xs text-[var(--muted)]">{habit.done ? habit.repeat === "weekly" ? "Đã xong tuần này · chạm để bỏ đánh dấu" : "Đã xong hôm nay · chạm để bỏ đánh dấu" : habit.repeat === "weekly" ? "Mỗi tuần" : "Mỗi ngày"}</span>
+              <span className="block break-words font-semibold">{habit.title}</span>
+              <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
+                {habit.done ? habit.repeat === "weekly" ? "Đã xong tuần này" : "Đã xong hôm nay" : habit.repeat === "weekly" ? "Mỗi tuần" : "Mỗi ngày"}
+                {habit.streak > 0 && <span className="inline-flex items-center gap-1 font-semibold text-[var(--ink)]"><Flame size={13} className="text-orange-500" />{streakText(habit)}</span>}
+              </span>
             </span>
           </button>
-          {habit.streak > 0 && <span className="flex shrink-0 items-center gap-1 text-xs font-semibold"><Flame size={15} className="text-orange-500" />{streakText(habit)}</span>}
           <button type="button" disabled={pending} aria-label={`Xóa thói quen ${habit.title}`} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10"
             onClick={() => { if (window.confirm(`Xóa thói quen “${habit.title}” cùng lịch sử của nó?`)) run(() => habits.remove(habit.id)); }}><Trash2 size={16} /></button>
         </li>)}
       </ul>
+      {!!list.data?.length && <p className="mt-3 text-xs text-[var(--muted)]">Chạm vào một thói quen để đánh dấu đã làm. Chạm lần nữa để bỏ đánh dấu.</p>}
     </Card>
 
     <Card title="Thêm thói quen">

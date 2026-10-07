@@ -1,4 +1,4 @@
-import { CircleUserRound } from "lucide-react";
+import { CircleUserRound, ShieldCheck } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
@@ -8,6 +8,12 @@ import { SupabaseProfileRepository } from "./infrastructure/SupabaseProfileRepos
 export const identityModule: FeatureModule<ProfileRepository> = {
   id: "identity",
   create: ({ userId }) => new SupabaseProfileRepository(requireSupabase(), userId),
-  navigation: [{ tab: "me", to: "/me", label: "Hồ sơ", icon: CircleUserRound, order: 10 }],
-  routes: [{ path: "me", component: lazy(() => import("./presentation/ProfilePage").then(m => ({ default: m.ProfilePage }))) }],
+  navigation: [
+    { tab: "me", to: "/me", label: "Hồ sơ", icon: CircleUserRound, order: 10 },
+    { tab: "me", to: "/me/privacy", label: "Quyền riêng tư", icon: ShieldCheck, order: 20 },
+  ],
+  routes: [
+    { path: "me", component: lazy(() => import("./presentation/ProfilePage").then(m => ({ default: m.ProfilePage }))) },
+    { path: "me/privacy", component: lazy(() => import("./presentation/PrivacyPage").then(m => ({ default: m.PrivacyPage }))) },
+  ],
 };

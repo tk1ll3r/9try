@@ -12,6 +12,7 @@ const OpenChatPage = lazy(() => import("./presentation/OpenChatPage").then(m => 
 export const chatModule: FeatureModule<ChatRepository> = {
   id: "chat",
   create: () => new SupabaseChatRepository(requireSupabase()),
+  searchItems: async chat => (await chat.conversations()).map(conversation => ({ title: conversation.title, kind: "Trò chuyện", to: `/chat/${conversation.id}` })),
   navigation: [{ tab: "chat", to: "/chat", label: "Trò chuyện", icon: MessageCircle, order: 10, badge: ChatUnreadBadge }],
   routes: [
     { path: "chat", component: ChatPage },

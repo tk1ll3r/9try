@@ -5,6 +5,7 @@ import { requireSupabase } from "../../kernel/supabase";
 import { LocationController } from "./application/LocationController";
 import type { LocationRepository } from "./domain/Location";
 import { SupabaseLocationRepository } from "./infrastructure/SupabaseLocationRepository";
+import { LocationPrivacy } from "./presentation/LocationPrivacy";
 import { SharingIndicator } from "./presentation/SharingIndicator";
 
 export interface LocationServices {
@@ -28,6 +29,7 @@ export const locationModule: FeatureModule<LocationServices> = {
     return { locations, sharing, dispose: () => sharing.dispose() };
   },
   indicator: SharingIndicator,
+  privacy: LocationPrivacy,
   navigation: [{ tab: "together", to: "/me/location", label: "Vị trí", icon: MapPin, order: 40 }],
   routes: [{ path: "me/location", component: lazy(() => import("./presentation/LocationPage").then(m => ({ default: m.LocationPage }))) }],
 };

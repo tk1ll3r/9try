@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { FeatureModule, ModuleRegistry } from "./module";
+import type { FeatureModule, ModuleRegistry, SearchItem } from "./module";
 
 /** Everything that belongs to one signed-in user. */
 class Session {
@@ -53,4 +53,11 @@ export function useRegistry(): ModuleRegistry {
 
 export function useUserId(): string {
   return useSession().userId;
+}
+
+/** Loads what every module offers to the global search. A module that fails is left out. */
+export function useSearchItems(): () => Promise<SearchItem[]> {
+  const session = useSession();
+  return async () => (await Promise.all(session.registry.modules.map(async module =>
+    module.searchItems ? module.searchItems(session.get(module)).catch(() => []) : []))).flat();
 }

@@ -27,6 +27,16 @@ export interface NavContribution {
   readonly badge?: ComponentType;
 }
 
+/** One thing the global search can find. */
+export interface SearchItem {
+  readonly title: string;
+  /** What kind of thing it is, shown next to the title: "Việc", "Ghi chú". */
+  readonly kind: string;
+  readonly to: string;
+  /** More text to match against, such as the body of a note. It is not shown. */
+  readonly keywords?: string;
+}
+
 /**
  * A feature plugs into the app by exporting one of these and being listed in `app/modules.ts`.
  * `Services` is whatever the module's own screens need: an application service, a repository.
@@ -38,6 +48,10 @@ export interface FeatureModule<Services = unknown> {
   readonly navigation?: readonly NavContribution[];
   /** A banner shown on every screen while it has something to say, such as "sharing location". */
   readonly indicator?: ComponentType;
+  /** A section of the privacy screen: what this module shows to other people right now, and how to stop it. */
+  readonly privacy?: ComponentType;
+  /** Everything of this module that a person may look for by name. The search filters it as they type. */
+  searchItems?(services: Services): Promise<readonly SearchItem[]>;
 }
 
 export class ModuleRegistry {

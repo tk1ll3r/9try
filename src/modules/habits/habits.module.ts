@@ -8,6 +8,7 @@ import { SupabaseHabitRepository } from "./infrastructure/SupabaseHabitRepositor
 export const habitsModule: FeatureModule<HabitRepository> = {
   id: "habits",
   create: ({ userId }) => new SupabaseHabitRepository(requireSupabase(), userId),
+  searchItems: async habits => (await habits.list()).map(habit => ({ title: habit.title, kind: "Thói quen", to: "/habits" })),
   navigation: [{ tab: "plan", to: "/habits", label: "Thói quen", icon: Repeat, order: 22 }],
   routes: [{ path: "habits", component: lazy(() => import("./presentation/HabitsPage").then(m => ({ default: m.HabitsPage }))) }],
 };
