@@ -5,7 +5,7 @@ import { useAuth } from "../../../kernel/auth";
 import { Button } from "../../../kernel/ui/Button";
 import { isLocalBackend, loginError, loginRedirect, returnPathKey } from "../domain/login";
 
-/** `returnPath` is the checked in-app path to open after sign-in. */
+/** `returnPath` is a plain in-app path to open after sign-in. */
 export function AuthPage({ returnPath }: { returnPath: string }) {
   const auth = useAuth();
   const [email, setEmail] = useState("");

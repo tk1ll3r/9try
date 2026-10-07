@@ -1,5 +1,5 @@
 export const returnPathKey = "gnouht-login-return-path";
-/** `path` must already have passed `ModuleRegistry.safePath`. */
+/** `path` must be a plain in-app path (`isPlainPath`), or the link could lead to another site. */
 export function loginRedirect(origin: string, path: string): string {
   return new URL(path, origin).href;
 }

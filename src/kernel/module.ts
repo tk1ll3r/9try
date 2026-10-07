@@ -54,6 +54,9 @@ export interface FeatureModule<Services = unknown> {
   searchItems?(services: Services): Promise<readonly SearchItem[]>;
 }
 
+/** A path of plain segments. Used in a link, it cannot lead outside the app. */
+export const isPlainPath = (path: string) => /^\/[A-Za-z0-9_\-/]*$/.test(path) && !path.includes("//");
+
 export class ModuleRegistry {
   readonly routes: readonly RouteContribution[];
   readonly navigation: readonly NavContribution[];
@@ -69,7 +72,7 @@ export class ModuleRegistry {
    * to after sign-in and the links stored with notifications.
    */
   safePath = (path: string): string => {
-    if (!/^\/[A-Za-z0-9_\-/]*$/.test(path) || path.includes("//")) return "/";
+    if (!isPlainPath(path)) return "/";
     return this.routes.some(route => matchPath(`/${route.path}`, path)) ? path : "/";
   };
 }
