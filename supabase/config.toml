@@ -244,6 +244,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Sign-in emails carry the 6-digit code as well as the link. An installed PWA on iOS cannot
+# finish a link sign-in, because the link opens Safari. The cloud project needs the same
+# template set in its dashboard.
+[auth.email.template.magic_link]
+subject = "Mã đăng nhập Gnouht Together"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Mã đăng nhập Gnouht Together"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

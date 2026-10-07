@@ -82,6 +82,27 @@ test("login quota failures are actionable, not successful delivery", async ({ pa
   await expect(page.getByRole("button", { name: /Có thể gửi lại sau/ })).toBeDisabled();
 });
 
+test("sign-in works with the 6-digit code from the email", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  let verified: Record<string, unknown> = {};
+  await page.route("**/auth/v1/**", route => {
+    const url = route.request().url();
+    if (url.includes("/auth/v1/verify")) {
+      verified = route.request().postDataJSON();
+      return route.fulfill({ json: { access_token: "mock-token", refresh_token: "mock-refresh", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer", user } });
+    }
+    return route.fulfill({ json: url.includes("/auth/v1/user") ? user : {} });
+  });
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
+  await page.goto("/");
+  await page.getByLabel("Email của bạn").fill("vy@example.test");
+  await page.getByRole("button", { name: "Gửi liên kết", exact: true }).click();
+  await page.getByLabel("Mã 6 số trong email (nếu có)").fill("123456");
+  await page.getByRole("button", { name: "Đăng nhập bằng mã", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+  expect(verified).toMatchObject({ email: "vy@example.test", token: "123456", type: "email" });
+});
+
 test("authenticated calendar uses a keyboard-accessible compact create dialog", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "an@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {

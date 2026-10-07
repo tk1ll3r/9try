@@ -104,7 +104,7 @@ export function AppShell() {
       </main>
 
       <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${phoneTabs.length}, minmax(0, 1fr))` }}
-        className="fixed inset-x-3 bottom-3 z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/8">
+        className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/8">
         {phoneTabs.map(tab => {
           const active = tab.id === current?.tab;
           return (

@@ -12,6 +12,9 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState("");
   const [now, setNow] = useState(Date.now());
   const lock = useRef(false);
   const mounted = useRef(true);
@@ -43,6 +46,17 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
     } catch (cause) { if (mounted.current) setError(loginError(cause)); }
     finally { lock.current = false; if (mounted.current) setPending(false); }
   }
+  // The code works inside an installed app, where the emailed link would open the browser instead.
+  async function verify(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase || verifying) return;
+    setVerifying(true); setCodeError("");
+    try {
+      const { error: authError } = await supabase.auth.verifyOtp({ email: acceptedEmail, token: code, type: "email" });
+      if (authError && mounted.current) setCodeError("Mã không đúng hoặc đã hết hạn. Kiểm tra lại mã, hoặc gửi lại liên kết.");
+    } catch { if (mounted.current) setCodeError("Chưa kiểm tra được mã. Kiểm tra kết nối rồi thử lại."); }
+    finally { if (mounted.current) setVerifying(false); }
+  }
   return <main className="grid min-h-dvh bg-[var(--paper)] p-5 text-[var(--ink)] lg:grid-cols-[1.1fr_.9fr]">
     <section className="hidden rounded-[36px] bg-[#171a12] p-12 text-[#f4f1e8] lg:flex lg:flex-col">
       <p className="font-bold text-[#d9ff79]">GNOUHT TOGETHER</p>
@@ -53,7 +67,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
       <p className="mb-6 text-sm font-bold lg:hidden">GNOUHT TOGETHER</p>
       <span className="mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--lime)] text-[#1d230e]"><Mail size={24} /></span>
       <h2 className="text-4xl font-black tracking-[-.04em]">Chào bạn.</h2>
-      <p className="mt-3 leading-6 text-[var(--muted)]">Đăng nhập bằng liên kết qua email, không cần nhớ mật khẩu.</p>
+      <p className="mt-3 leading-6 text-[var(--muted)]">Đăng nhập bằng liên kết hoặc mã gửi qua email, không cần nhớ mật khẩu.</p>
       {!isSupabaseConfigured ? <div role="alert" className="mt-8 rounded-3xl bg-amber-100 p-5 text-sm text-amber-950">Supabase chưa cấu hình. Thêm URL và publishable key vào <code>.env.local</code>.</div>
         : <form onSubmit={submit} className="mt-6 space-y-4" aria-busy={pending}>
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
@@ -63,6 +77,12 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
           <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Có thể sửa email rồi gửi lại khi hết thời gian chờ. Giới hạn ở máy chủ có thể dài hơn; app không tự gửi lại.</p>
         </form>}
+      {acceptedEmail && <form onSubmit={verify} className="mt-5 space-y-3" aria-busy={verifying}>
+        <label className="block text-sm font-semibold" htmlFor="login-code">Mã 6 số trong email (nếu có)</label>
+        <input id="login-code" className="field w-full tracking-[.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ""))} placeholder="000000" />
+        {codeError && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{codeError}</p>}
+        <Button className="w-full" type="submit" variant="secondary" disabled={verifying || code.length !== 6}>{verifying ? "Đang kiểm tra…" : "Đăng nhập bằng mã"}</Button>
+      </form>}
       <details className="mt-5 rounded-2xl border border-[var(--border)] p-4 text-sm">
         <summary className="min-h-6 cursor-pointer font-semibold">Không nhận được thư?</summary>
         <p className="mt-3 leading-6 text-[var(--muted)]">{local ? "Bạn đang dùng Supabase local. Email thử nghiệm vào Mailpit, không được gửi tới Gmail." : "Kiểm tra địa chỉ, Spam và Tất cả thư. Nếu vẫn không có thư, quản trị viên cần kiểm tra Auth logs, SMTP, quota và delivery logs. SMTP mặc định của Supabase hạn chế người nhận; không thể sửa bằng cách bấm gửi liên tục."}</p>
