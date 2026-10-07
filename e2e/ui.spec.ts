@@ -211,7 +211,9 @@ test("mobile Today exposes planner and coordination without extra tabs", async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Đề xuất cuộc hẹn" })).toHaveAttribute("href", "/meetups");
-  await expect(page.getByRole("link", { name: "Việc, ghi chú và thói quen" })).toHaveAttribute("href", "/me/organizer");
+  await expect(page.getByRole("link", { name: "Việc cần làm và nhắc việc" })).toHaveAttribute("href", "/me/organizer");
+  await expect(page.getByRole("link", { name: "Thói quen", exact: true })).toHaveAttribute("href", "/habits");
+  await expect(page.getByRole("link", { name: "Ghi chú", exact: true })).toHaveAttribute("href", "/notes");
   await expect(page.getByRole("link", { name: "Bạn bè và lời mời" })).toHaveAttribute("href", "/me/friends");
   await expect(page.getByRole("link", { name: "Chia sẻ vị trí có thời hạn" })).toHaveAttribute("href", "/me/location");
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -258,6 +260,48 @@ test("tasks: add once on Today, complete, undo, then edit and delete in the full
   await page.getByRole("button", { name: "Xóa: Mua vở" }).click();
   await page.getByRole("button", { name: "Xóa vĩnh viễn", exact: true }).click();
   await expect(page.getByText("Không có công việc phù hợp bộ lọc.")).toBeVisible();
+});
+
+test("habits: mark done, see the streak, take it back; notes: found without Vietnamese marks", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10); // the profile below is on UTC
+  let done = [day(-1), day(-2)];
+  const calls: string[] = [];
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/personal_tasks")) return route.fulfill({ json: [{ id: "h1", title: "Đọc 20 phút", recurrence: "daily" }] });
+    if (path.endsWith("/profiles")) return route.fulfill({ json: { timezone: "UTC" } });
+    if (path.endsWith("/routine_completions")) return route.fulfill({ json: done.map(date => ({ task_id: "h1", completion_date: date })) });
+    if (path.endsWith("/rpc/complete_routine")) { calls.push("done"); done = [day(0), ...done]; return route.fulfill({ json: day(0) }); }
+    if (path.endsWith("/rpc/undo_routine_completion")) { calls.push("undo"); done = done.filter(date => date !== day(0)); return route.fulfill({ json: null }); }
+    if (path.endsWith("/personal_notes")) return route.fulfill({ json: [
+      { id: "n1", title: "Họp nhóm đồ án", body: "Phòng B4.14", updated_at: "2026-10-01T00:00:00Z" },
+      { id: "n2", title: "Mua sách", body: "", updated_at: "2026-09-30T00:00:00Z" },
+    ] });
+    return route.fulfill({ json: [] });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/habits");
+  const habit = page.getByRole("button", { name: /^Đọc 20 phút/ });
+  await expect(habit).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText("2 ngày liên tiếp")).toBeVisible();
+  await habit.click();
+  await expect(habit).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("3 ngày liên tiếp")).toBeVisible();
+  await habit.click();
+  await expect(habit).toHaveAttribute("aria-pressed", "false");
+  expect(calls).toEqual(["done", "undo"]);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await page.getByRole("link", { name: "Ghi chú", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Mua sách" })).toBeVisible();
+  await page.getByLabel("Tìm ghi chú").fill("hop nhom");
+  await expect(page.getByRole("heading", { name: "Họp nhóm đồ án" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mua sách" })).toHaveCount(0);
 });
 
 test("friend removal requires confirmation", async ({ page }) => {

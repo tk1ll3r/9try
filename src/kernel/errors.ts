@@ -14,6 +14,7 @@ const known: [code: string, text: string][] = [
   ["invite not found", "Liên kết không còn hiệu lực. Hãy xin một liên kết mới."],
   ["link unavailable", "Liên kết này không dùng được."],
   ["not a participant", "Bạn không ở trong cuộc trò chuyện này."],
+  ["routine not found", "Không tìm thấy thói quen này."],
 ];
 
 /** Text to show for a failed operation. Supabase errors can be plain objects with a `message`. */

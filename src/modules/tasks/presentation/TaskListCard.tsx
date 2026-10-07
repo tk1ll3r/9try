@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
+import { matchesSearch } from "../../../kernel/text";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 import { DialogPanel } from "../../../shared/ui/DialogPanel";
@@ -19,9 +20,8 @@ export function TaskListCard() {
   const [undo, setUndo] = useState<{ id: string; completedAt: string } | null>(null);
   const loading = list.isPending;
   const problem = error || (list.isError ? errorMessage(list.error, "Không tải được công việc.") : "");
-  const needle = search.toLocaleLowerCase("vi-VN");
   const visible = (list.data ?? []).filter(task => (filter === "all" || (filter === "done") === task.done)
-    && task.title.toLocaleLowerCase("vi-VN").includes(needle));
+    && matchesSearch(task.title, search));
 
   function edit(task: Task) {
     setEditing(task);
@@ -40,7 +40,7 @@ export function TaskListCard() {
   }
 
   return <Card title="Tất cả công việc" action={<Link to="/" className="text-sm font-semibold underline">Thêm ở Hôm nay</Link>}>
-    <p className="mb-3 text-sm text-[var(--muted)]">Việc một lần, gồm cả tương lai. Thói quen nằm ở mục riêng bên dưới.</p>
+    <p className="mb-3 text-sm text-[var(--muted)]">Việc một lần, gồm cả tương lai. Việc lặp lại nằm ở màn hình Thói quen.</p>
     <div className="flex flex-wrap gap-2">
       <input className="field min-w-0 flex-1" aria-label="Tìm công việc" placeholder="Tìm công việc…" value={search} onChange={e => setSearch(e.target.value)} />
       <select className="field" aria-label="Lọc công việc" value={filter} onChange={e => setFilter(e.target.value)}><option value="open">Chưa xong</option><option value="done">Đã xong</option><option value="all">Tất cả</option></select>

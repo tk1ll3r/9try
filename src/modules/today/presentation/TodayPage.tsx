@@ -1,4 +1,4 @@
-import { Check, MapPin, Users, UsersRound } from "lucide-react";
+import { Check, MapPin, NotebookPen, Repeat, Users, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "../../../shared/ui/Card";
 import { UpcomingCard } from "../../calendar";
@@ -21,7 +21,9 @@ export function TodayPage() {
       <div className="grid gap-2 sm:grid-cols-2">
         <Link to="/meetups" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><UsersRound size={19} /> Đề xuất cuộc hẹn</Link>
         <Link to="/me/friends" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Users size={19} /> Bạn bè và lời mời</Link>
-        <Link to="/me/organizer" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Check size={19} /> Việc, ghi chú và thói quen</Link>
+        <Link to="/me/organizer" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Check size={19} /> Việc cần làm và nhắc việc</Link>
+        <Link to="/habits" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Repeat size={19} /> Thói quen</Link>
+        <Link to="/notes" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><NotebookPen size={19} /> Ghi chú</Link>
         <Link to="/me/location" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><MapPin size={19} /> Chia sẻ vị trí có thời hạn</Link>
       </div>
     </Card>

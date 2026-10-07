@@ -28,4 +28,11 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .update({ read_at: new Date().toISOString() }).eq("user_id", this.userId).eq("id", id).select("id").single();
     if (error) throw error;
   }
+
+  async scheduleReminder(reminder: { dueAt: Date; title: string; body: string; actionPath: string }): Promise<void> {
+    const { error } = await this.db.rpc("schedule_personal_reminder", {
+      p_due_at: reminder.dueAt.toISOString(), p_title: reminder.title.trim(), p_body: reminder.body.trim(), p_action_path: reminder.actionPath,
+    });
+    if (error) throw error;
+  }
 }
