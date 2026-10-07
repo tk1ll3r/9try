@@ -26,7 +26,8 @@ export default defineConfig({
           { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
         ],
         shortcuts: [
-          { name: "Việc hôm nay", url: "/" },
+          { name: "Mode của bạn bè", url: "/" },
+          { name: "Việc hôm nay", url: "/today" },
           { name: "Lịch", url: "/calendar" },
           { name: "Vị trí bạn bè", url: "/me/location" },
           { name: "Thông báo", url: "/notifications" },

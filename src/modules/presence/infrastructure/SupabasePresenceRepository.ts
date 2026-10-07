@@ -6,9 +6,9 @@ export class SupabasePresenceRepository implements PresenceRepository {
   constructor(private readonly db: SupabaseClient) {}
 
   async list(): Promise<ActiveMode[]> {
-    const { data, error } = await this.db.from("activity_modes").select("user_id,mode,expires_at").gt("expires_at", new Date().toISOString());
+    const { data, error } = await this.db.from("activity_modes").select("user_id,mode,updated_at,expires_at").gt("expires_at", new Date().toISOString());
     if (error) throw error;
-    return (data ?? []).map(row => ({ userId: row.user_id, mode: row.mode as ActivityMode, expiresAt: row.expires_at }));
+    return (data ?? []).map(row => ({ userId: row.user_id, mode: row.mode as ActivityMode, startedAt: row.updated_at, expiresAt: row.expires_at }));
   }
 
   async set(mode: ActivityMode | null, minutes: number): Promise<void> {

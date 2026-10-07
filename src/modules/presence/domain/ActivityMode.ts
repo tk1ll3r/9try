@@ -5,7 +5,15 @@ export type ActivityMode = typeof activityModes[number];
 export interface ActiveMode {
   userId: string;
   mode: ActivityMode;
+  /** When the mode was set, and when it ends by itself. */
+  startedAt: string;
   expiresAt: string;
+}
+
+/** How much of a mode's time is left at `now`, from 1 (just set) down to 0 (over). */
+export function remainingShare(mode: ActiveMode, now: number): number {
+  const total = Date.parse(mode.expiresAt) - Date.parse(mode.startedAt);
+  return total > 0 ? Math.min(1, Math.max(0, (Date.parse(mode.expiresAt) - now) / total)) : 0;
 }
 
 export interface PresenceRepository {

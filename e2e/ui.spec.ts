@@ -99,7 +99,7 @@ test("sign-in works with the 6-digit code from the email", async ({ page }) => {
   await page.getByRole("button", { name: "Gửi liên kết", exact: true }).click();
   await page.getByLabel("Mã 6 số trong email (nếu có)").fill("123456");
   await page.getByRole("button", { name: "Đăng nhập bằng mã", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mọi người đang làm gì?" })).toBeVisible();
   expect(verified).toMatchObject({ email: "vy@example.test", token: "123456", type: "email" });
 });
 
@@ -217,7 +217,7 @@ test("mobile Today exposes planner and coordination without extra tabs", async (
   await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
   await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/today");
   await expect(page.getByRole("link", { name: "Đề xuất cuộc hẹn" })).toHaveAttribute("href", "/meetups");
   await expect(page.getByRole("link", { name: "Việc cần làm và nhắc việc" })).toHaveAttribute("href", "/me/organizer");
   await expect(page.getByRole("link", { name: "Thói quen", exact: true })).toHaveAttribute("href", "/habits");
@@ -247,7 +247,7 @@ test("tasks: add once on Today, complete, undo, then edit and delete in the full
     if (url.searchParams.get("recurrence")?.startsWith("in.")) return route.fulfill({ json: [] }); // routines, not one-off tasks
     return route.fulfill({ json: url.searchParams.get("completed_at") === "is.null" ? tasks.filter(task => !task.completed_at) : tasks });
   });
-  await page.goto("/");
+  await page.goto("/today");
   await page.getByLabel("Nội dung công việc").fill("Mua sách");
   await page.getByRole("button", { name: "Thêm việc", exact: true }).dblclick();
   const complete = page.getByRole("button", { name: "Hoàn thành: Mua sách" });
@@ -360,7 +360,7 @@ test("search finds a note by its body without marks, and a screen by name", asyn
   await page.route("**/rest/v1/**", route => new URL(route.request().url()).pathname.endsWith("/personal_notes")
     ? route.fulfill({ json: [{ id: "n1", title: "Họp nhóm đồ án", body: "Phòng B4.14, mang máy chiếu", updated_at: "2026-10-01T00:00:00Z" }] })
     : route.fulfill({ json: [] }));
-  await page.goto("/");
+  await page.goto("/today");
   await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Tìm kiếm" });
@@ -434,7 +434,7 @@ test("Today gathers what needs an answer, what comes next and the day's habits, 
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/today");
 
   const next = page.locator("section", { hasText: "Sắp tới" });
   await expect(next.getByRole("link", { name: /Học nhóm/ })).toContainText("Hoạt động");
@@ -469,7 +469,7 @@ test("a task typed with a hashtag gets a label, and the full list groups and fil
     if (request.method() === "POST") { tasks.push({ id: "t1", completed_at: null, ...request.postDataJSON() }); return route.fulfill({ status: 201, body: "" }); }
     return route.fulfill({ json: tasks });
   });
-  await page.goto("/");
+  await page.goto("/today");
   await page.getByLabel("Nội dung công việc").fill("Nộp bài tập #GiảiTích");
   await page.getByLabel("Giờ (tùy chọn)").fill("23:58");
   await page.getByRole("button", { name: "Thêm việc", exact: true }).click();
@@ -525,7 +525,7 @@ test("Today offers to install the app when the browser can, once, and stays quie
     const event = Object.assign(new Event("beforeinstallprompt"), { prompt: () => { (window as unknown as { asked: number }).asked = ((window as unknown as { asked?: number }).asked ?? 0) + 1; return Promise.resolve(); } });
     window.dispatchEvent(event);
   });
-  await page.goto("/");
+  await page.goto("/today");
   const card = page.getByRole("heading", { name: "Cài ứng dụng lên màn hình chính" });
   await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
   await expect(card).toHaveCount(0);
@@ -543,6 +543,74 @@ test("Today offers to install the app when the browser can, once, and stays quie
   await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
   await offer();
   await expect(card).toHaveCount(0);
+});
+
+test("Mode is the home screen: each friend's status at a glance, and setting your own", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const kha = "22222222-2222-4222-8222-222222222222", lan = "33333333-3333-4333-8333-333333333333";
+  const at = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
+  const friend = (id: string, name: string) => ({ user_id: id, display_name: name, username: name.toLowerCase(), status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" });
+  let mine: string | null = null; const calls: { p_mode: string | null; p_minutes: number }[] = [];
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [friend(kha, "Kha"), friend(lan, "Lan")] });
+    if (path.endsWith("/activity_modes")) return route.fulfill({ json: [
+      { user_id: kha, mode: "studying", updated_at: at(-30), expires_at: at(30) },
+      ...(mine ? [{ user_id: user.id, mode: mine, updated_at: at(0), expires_at: at(60) }] : []),
+    ] });
+    if (path.endsWith("/rpc/set_my_activity_mode")) { calls.push(route.request().postDataJSON()); mine = calls.at(-1)!.p_mode; return route.fulfill({ json: null }); }
+    return route.fulfill({ json: [] });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Mọi người đang làm gì?" })).toBeVisible();
+  await expect(page.getByText("1/2 bạn đang bật mode")).toBeVisible();
+  // Mode is the first tab of the bar and the one that is open.
+  const firstTab = page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link").first();
+  await expect(firstTab).toHaveText("Mode");
+  await expect(firstTab).toHaveAttribute("aria-current", "page");
+
+  await expect(page.getByRole("heading", { name: "Học bài · 1" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Kha: Học bài. Nhắn tin" })).toHaveAttribute("href", `/chat/with/${kha}`);
+  await expect(page.locator("section", { hasText: "Chưa bật mode · 1" }).getByText("Lan")).toBeVisible();
+
+  const myMode = page.getByRole("region", { name: "Mode của bạn" });
+  await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
+  await myMode.getByRole("button", { name: "1 giờ", exact: true }).click();
+  await myMode.getByRole("button", { name: "Chơi game", exact: true }).click();
+  await expect(myMode.getByRole("status")).toHaveText("Chơi game");
+  await expect(myMode.getByRole("button", { name: "Chơi game", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await myMode.getByRole("button", { name: "Tắt mode" }).click();
+  await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
+  expect(calls).toEqual([{ p_mode: "gaming", p_minutes: 60 }, { p_mode: null, p_minutes: 60 }]);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Hôm nay" }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+});
+
+test("screens animate in, and stay still for people who ask for reduced motion", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Mọi người đang làm gì?" })).toBeVisible();
+  const motion = () => page.evaluate(() => {
+    const style = getComputedStyle(document.querySelector(".page-slot > * > *")!);
+    return { name: style.animationName, seconds: parseFloat(style.animationDuration) };
+  });
+  expect(await motion()).toEqual({ name: "rise", seconds: 0.5 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect((await motion()).seconds).toBeLessThan(0.001);
 });
 
 test("friend removal requires confirmation", async ({ page }) => {

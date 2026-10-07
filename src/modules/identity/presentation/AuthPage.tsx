@@ -59,12 +59,13 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
     finally { if (mounted.current) setVerifying(false); }
   }
   return <main className="grid min-h-dvh bg-[var(--paper)] p-5 text-[var(--ink)] lg:grid-cols-[1.1fr_.9fr]">
-    <section className="hidden rounded-[36px] bg-[#171a12] p-12 text-[#f4f1e8] lg:flex lg:flex-col">
-      <p className="font-bold text-[#d9ff79]">GNOUHT TOGETHER</p>
-      <h1 className="my-auto max-w-xl text-6xl font-black leading-[.94] tracking-[-.055em]">Ít nhắn “khi nào rảnh?” hơn. Gặp nhau nhiều hơn.</h1>
+    <section className="relative hidden overflow-hidden rounded-[36px] bg-[#171a12] p-12 text-[#f4f1e8] lg:flex lg:flex-col">
+      <div className="aurora !absolute opacity-60" aria-hidden><i /><i /><i /></div>
+      <p className="animate-rise relative font-bold text-[#d9ff79]">GNOUHT TOGETHER</p>
+      <h1 className="animate-rise relative my-auto max-w-xl [animation-delay:120ms] text-6xl font-black leading-[.94] tracking-[-.055em]">Ít nhắn “khi nào rảnh?” hơn. Gặp nhau nhiều hơn.</h1>
       <p className="flex gap-2 text-sm text-white/70"><LockKeyhole size={17} /> Riêng tư mặc định. Chia sẻ khi bạn chủ động chọn.</p>
     </section>
-    <section className="mx-auto flex w-full max-w-md flex-col justify-center py-10 lg:px-10">
+    <section className="animate-rise mx-auto flex w-full max-w-md flex-col justify-center py-10 [animation-delay:200ms] lg:px-10">
       <p className="mb-6 text-sm font-bold lg:hidden">GNOUHT TOGETHER</p>
       <span className="mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--lime)] text-[#1d230e]"><Mail size={24} /></span>
       <h2 className="text-4xl font-black tracking-[-.04em]">Chào bạn.</h2>

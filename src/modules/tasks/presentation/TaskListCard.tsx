@@ -49,7 +49,7 @@ export function TaskListCard() {
     });
   }
 
-  return <Card title="Tất cả công việc" action={<Link to="/" className="text-sm font-semibold underline">Thêm ở Hôm nay</Link>}>
+  return <Card title="Tất cả công việc" action={<Link to="/today" className="text-sm font-semibold underline">Thêm ở Hôm nay</Link>}>
     <p className="mb-3 text-sm text-[var(--muted)]">Việc một lần, gồm cả tương lai. Việc lặp lại nằm ở màn hình Thói quen.</p>
     <div className="flex flex-wrap gap-2">
       <input className="field min-w-0 flex-1" aria-label="Tìm công việc" placeholder="Tìm công việc…" value={search} onChange={e => setSearch(e.target.value)} />

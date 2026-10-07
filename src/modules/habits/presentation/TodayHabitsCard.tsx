@@ -17,12 +17,12 @@ function streakText(habit: Habit) {
 /** The check row of one habit. Tapping a habit that is done takes the completion back. */
 export function HabitToggle({ habit, disabled, onToggle }: { habit: Habit; disabled: boolean; onToggle(): void }) {
   return <button type="button" aria-pressed={habit.done} disabled={disabled} onClick={onToggle} className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-xl px-2 text-left disabled:opacity-60">
-    {habit.done ? <CheckCircle2 size={24} className="shrink-0 text-emerald-600" /> : <Circle size={24} className="shrink-0 text-[var(--muted)]" />}
+    {habit.done ? <CheckCircle2 size={24} className="animate-pop shrink-0 text-emerald-600" /> : <Circle size={24} className="shrink-0 text-[var(--muted)]" />}
     <span className="min-w-0">
       <span className="block break-words font-semibold">{habit.title}</span>
       <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
         {habit.done ? habit.repeat === "weekly" ? "Đã xong tuần này" : "Đã xong hôm nay" : habit.repeat === "weekly" ? "Mỗi tuần" : "Mỗi ngày"}
-        {habit.streak > 0 && <span className="inline-flex items-center gap-1 font-semibold text-[var(--ink)]"><Flame size={13} className="text-orange-500" />{streakText(habit)}</span>}
+        {habit.streak > 0 && <span className="inline-flex items-center gap-1 font-semibold text-[var(--ink)]"><Flame size={13} className="animate-flicker text-orange-500" />{streakText(habit)}</span>}
       </span>
     </span>
   </button>;

@@ -13,7 +13,7 @@ export interface RouteContribution {
 }
 
 /** The app's main destinations. A phone shows five of them as bottom tabs. */
-export type NavTab = "today" | "plan" | "chat" | "together" | "inbox" | "me";
+export type NavTab = "today" | "mode" | "plan" | "chat" | "together" | "inbox" | "me";
 
 /** One screen in the navigation. */
 export interface NavContribution {

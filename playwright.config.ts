@@ -9,7 +9,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: [["list"]],
-  use: { baseURL: `http://127.0.0.1:${port}`, trace: "retain-on-failure", screenshot: "only-on-failure" },
+  // Tests ask for reduced motion, so nothing waits for an animation. One test turns motion back on.
+  use: { baseURL: `http://127.0.0.1:${port}`, trace: "retain-on-failure", screenshot: "only-on-failure", contextOptions: { reducedMotion: "reduce" } },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], launchOptions: { args: ["--enable-unsafe-swiftshader"] } } }],
   webServer: {
     command: preview ? `npm run build && npm run preview -- --host 127.0.0.1 --port ${port} --strictPort` : `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,

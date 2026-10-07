@@ -55,9 +55,84 @@
     padding: 10px 12px;
     outline: none;
   }
-  .field:focus { box-shadow: 0 0 0 2px var(--focus); }
+  .field { transition: box-shadow .2s var(--ease-out), border-color .2s; }
+  .field:focus { box-shadow: 0 0 0 2px var(--focus), 0 0 0 6px color-mix(in srgb, var(--focus) 18%, transparent); }
 }
 
+/* Motion. Two curves for the whole app: one that settles, one that overshoots a little. */
+:root {
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes sheet-up { from { opacity: 0; transform: translateY(28px) scale(.97); } }
+@keyframes sheet-down { to { opacity: 0; transform: translateY(16px) scale(.98); } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(16px); } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes spin { to { transform: rotate(1turn); } }
+@keyframes pulse-ring { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(4%, -6%, 0) scale(1.12); } }
+@keyframes flicker { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.14) rotate(4deg); } }
+@keyframes loading-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+
+@layer components {
+  /* A screen's parts arrive one after the other when the screen opens. */
+  .page-slot > * > * { animation: rise .5s var(--ease-out) both; }
+  .page-slot > * > *:nth-child(2) { animation-delay: 50ms; }
+  .page-slot > * > *:nth-child(3) { animation-delay: 100ms; }
+  .page-slot > * > *:nth-child(4) { animation-delay: 150ms; }
+  .page-slot > * > *:nth-child(5) { animation-delay: 200ms; }
+  .page-slot > * > *:nth-child(n + 6) { animation-delay: 250ms; }
+
+  .animate-rise { animation: rise .5s var(--ease-out) both; }
+  .animate-pop { animation: pop .4s var(--ease-spring) both; }
+  .animate-slide-up { animation: slide-up .4s var(--ease-out) both; }
+  .animate-flicker { animation: flicker 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+
+  /* A row or tile that reacts to the pointer and to a press. */
+  .pressable { transition: transform .2s var(--ease-out), background-color .2s, box-shadow .2s; }
+  .pressable:hover { transform: translateY(-2px); }
+  .pressable:active { transform: scale(.97); }
+
+  /* Frosted surfaces let the page show through the bars that float over it. */
+  .glass { background: color-mix(in srgb, var(--surface) 72%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
+
+  /* Soft lights that drift slowly behind every screen. */
+  .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .aurora i { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .5; animation: drift 18s ease-in-out infinite; }
+  .aurora i:nth-child(1) { left: -10%; top: -12%; width: 46vmax; height: 46vmax; background: color-mix(in srgb, var(--lime) 55%, transparent); }
+  .aurora i:nth-child(2) { right: -14%; top: 22%; width: 40vmax; height: 40vmax; background: color-mix(in srgb, #7dd3fc 38%, transparent); animation-duration: 24s; animation-direction: reverse; }
+  .aurora i:nth-child(3) { left: 18%; bottom: -22%; width: 44vmax; height: 44vmax; background: color-mix(in srgb, #fdba74 34%, transparent); animation-duration: 30s; }
+
+  /* Placeholder bars while a screen is loading. */
+  .skeleton { border-radius: 20px; background: linear-gradient(100deg, var(--soft) 40%, color-mix(in srgb, var(--surface) 80%, var(--soft)) 50%, var(--soft) 60%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
+
+  /* A thin moving bar at the top while data is being fetched for longer than a moment. */
+  .loading-bar { position: fixed; inset: 0 0 auto 0; z-index: 60; height: 3px; overflow: hidden; opacity: 0; animation: fade-in .2s .4s forwards; }
+  .loading-bar::after { content: ""; position: absolute; inset: 0; width: 30%; border-radius: 9999px; background: linear-gradient(90deg, transparent, var(--lime-strong), transparent); animation: loading-bar 1.1s ease-in-out infinite; }
+
+  /* Dialogs fade their backdrop and rise into place; they leave the same way, faster. */
+  .dialog-overlay[data-state="open"] { animation: fade-in .25s ease-out; }
+  .dialog-overlay[data-state="closed"] { animation: fade-out .18s ease-in; }
+  .dialog-content[data-state="open"] { animation: sheet-up .35s var(--ease-out); }
+  .dialog-content[data-state="closed"] { animation: sheet-down .18s ease-in; }
+
+  /* A person's picture with a turning ring in the color of what they are doing. `--mode` is that color. */
+  .mode-ring { position: relative; display: grid; place-items: center; border-radius: 9999px; isolation: isolate; }
+  .mode-ring::before { content: ""; position: absolute; inset: -4px; z-index: -1; border-radius: inherit; background: conic-gradient(from 0turn, var(--mode), color-mix(in srgb, var(--mode) 15%, transparent) 35%, var(--mode) 70%, color-mix(in srgb, var(--mode) 30%, white) 85%, var(--mode)); animation: spin 5s linear infinite; }
+  .mode-ring::after { content: ""; position: absolute; inset: -4px; z-index: -2; border-radius: inherit; background: var(--mode); animation: pulse-ring 2.4s var(--ease-out) infinite; }
+  .mode-glow { box-shadow: 0 18px 50px -18px var(--mode), 0 0 0 1px color-mix(in srgb, var(--mode) 35%, transparent); }
+
+  /* A live position on the map breathes; an old one stays still. */
+  .marker-live::after { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 9999px; background: var(--lime-strong); animation: pulse-ring 2s var(--ease-out) infinite; }
+}
+
+/* Motion is decoration here. People who ask for less get none of it. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .aurora i, .mode-ring::after, .marker-live::after { animation: none !important; }
 }

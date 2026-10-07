@@ -8,7 +8,6 @@ import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { useMyGroups } from "../../groups";
-import { ActivityModesCard } from "../../presence";
 import { MeetupPolicy, type MeetupSummary } from "../domain/Meetup";
 import { meetupsModule } from "../meetups.module";
 import { formatTime, meetupsKey, rsvpLabel, statusLabel } from "./labels";
@@ -39,8 +38,6 @@ export function MeetupsPage() {
         <p className="text-sm font-semibold text-[var(--muted)]">Đề xuất → bình chọn → chốt lịch</p>
         <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Hoạt động</h1>
       </header>
-
-      <ActivityModesCard />
 
       <Card title="Đề xuất hoạt động" action={<Button variant="secondary" aria-expanded={showCreate} onClick={() => setShowCreate(value => !value)}><Plus size={17} /> {showCreate ? "Đóng" : "Tạo hoạt động"}</Button>}>
         {showCreate && <form onSubmit={create} aria-busy={pending} className="grid gap-3 md:grid-cols-2">

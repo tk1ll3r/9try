@@ -74,7 +74,7 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
       // A round badge with the person's initial; grey once the position is old.
       const element = document.createElement("div");
       element.textContent = point.name.slice(0, 1).toUpperCase();
-      element.className = `grid size-9 place-items-center rounded-full border-2 border-white font-bold text-white shadow-lg ${point.stale ? "bg-gray-500" : "bg-[#171a12]"}`;
+      element.className = `grid size-9 place-items-center rounded-full border-2 border-white font-bold text-white shadow-lg ${point.stale ? "bg-gray-500" : "marker-live bg-[#171a12]"}`;
       const marker = new Marker({ element })
         .setLngLat([point.longitude, point.latitude]).setPopup(popup).addTo(map.current);
       marker.getElement().setAttribute("aria-label", `Vị trí ${point.name}`);

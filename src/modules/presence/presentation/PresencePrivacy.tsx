@@ -4,7 +4,7 @@ import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { presenceModule } from "../presence.module";
-import { choices, presenceKey } from "./modes";
+import { choiceOf, presenceKey } from "./modes";
 
 export function PresencePrivacy() {
   const presence = useModule(presenceModule);
@@ -12,7 +12,7 @@ export function PresencePrivacy() {
   const list = useQuery({ queryKey: presenceKey, queryFn: () => presence.list() });
   const { run, pending, error } = useAction(presenceKey);
   const mine = list.data?.find(item => item.userId === userId && Date.parse(item.expiresAt) > Date.now());
-  const label = choices.find(choice => choice.id === mine?.mode)?.label;
+  const label = choiceOf(mine?.mode)?.label;
 
   return <Card title="Mode của bạn">
     {mine ? <div className="flex flex-wrap items-center justify-between gap-3">
