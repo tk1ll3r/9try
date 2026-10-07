@@ -1,0 +1,16 @@
+{
+  // The web app is static files served by Cloudflare. No server code runs here; the backend is Supabase.
+  // Deploy with `npm run deploy` after `npx wrangler login`.
+  "name": "gnouht-together",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    // The app routes in the browser, so an address such as /calendar is answered with index.html.
+    "not_found_handling": "single-page-application"
+  },
+  // Reachable at its own host only, not at a workers.dev address.
+  "workers_dev": false,
+  "preview_urls": false,
+  // Creates the DNS record and the certificate for this one host. Other records of the zone are not touched.
+  "routes": [{ "pattern": "9try.gnouht.space", "custom_domain": true }]
+}
