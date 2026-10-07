@@ -3,6 +3,7 @@ import { CalendarClock, Check, MapPin, Users, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { useMyGroups } from "../../../modules/groups";
+import { ProfileReminder } from "../../../modules/identity";
 import { TodayTasksCard } from "../../../modules/tasks";
 import { appData } from "../../../shared/infrastructure/AppData";
 import { Button } from "../../../shared/ui/Button";
@@ -38,6 +39,7 @@ export function HomePage() {
   return <div className="space-y-5">
     <header><p className="text-sm font-semibold text-[var(--muted)]">{new Intl.DateTimeFormat("vi-VN",{ weekday:"long",day:"numeric",month:"long" }).format(new Date())}</p>
       <h1 className="mt-1 text-4xl font-black tracking-[-.045em] sm:text-5xl">Hôm nay mình có gì?</h1></header>
+    <ProfileReminder />
     {error && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-[var(--danger)]">{error} <Button variant="ghost" onClick={() => void refresh()} disabled={loading}>Thử lại</Button></div>}
     {loading && <p role="status">Đang tải hôm nay…</p>}
     <div aria-busy={loading} className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">

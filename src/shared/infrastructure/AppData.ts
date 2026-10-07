@@ -31,17 +31,6 @@ export class AppData {
     return { events: selectUpcoming(events, now).slice(0, 6) };
   }
 
-  async profile(userId: string) {
-    const { data, error } = await requireSupabase().from("profiles").select("*").eq("id", userId).single();
-    if (error) throw error;
-    return data;
-  }
-
-  async saveProfile(userId: string, value: { display_name: string; username: string; bio: string; timezone: string }) {
-    const { error } = await requireSupabase().from("profiles").update(value).eq("id", userId);
-    if (error) throw error;
-  }
-
   async startLocation(duration: number, usernames: string[], approximate: boolean) {
     const { data, error } = await requireSupabase().rpc("start_location_session", {
       p_duration_minutes: duration,
@@ -96,18 +85,6 @@ export class AppData {
   async stopLocation(id: string) {
     const { error } = await requireSupabase().rpc("stop_location_session", { p_session_id: id });
     if (error) throw error;
-  }
-
-  async exportMyData() {
-    const { data, error } = await requireSupabase().rpc("export_my_data");
-    if (error) throw error;
-    return data;
-  }
-
-  async deleteMyAccount() {
-    const { data, error } = await requireSupabase().functions.invoke("delete-account", { body: { confirm: true } });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
   }
 }
 

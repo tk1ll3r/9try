@@ -6,6 +6,8 @@ const known: [code: string, text: string][] = [
   ["invite unavailable", "Chỉ mời được bạn bè hoặc thành viên của nhóm gắn với hoạt động."],
   ["no valid recipients", "Chỉ chia sẻ được với bạn bè đã kết nối."],
   ["capacity reached", "Hoạt động vừa đủ số người tham gia."],
+  ["transfer ownership of groups", "Bạn đang là chủ nhóm có thành viên khác. Hãy chuyển quyền chủ nhóm trước khi xóa tài khoản."],
+  ["profiles_username", "Username này đã có người dùng. Hãy chọn username khác."],
   ["transfer ownership first", "Hãy chuyển quyền chủ nhóm cho người khác trước."],
   ["availability not shared", "Người này chưa chia sẻ trạng thái bận/rảnh với bạn."],
   ["own invite", "Đây là liên kết của chính bạn. Hãy gửi nó cho người bạn muốn kết bạn."],
