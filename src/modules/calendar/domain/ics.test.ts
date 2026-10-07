@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseIcs } from "./icsImport";
+import { parseIcs } from "./ics";
 
 const wrap = (body: string) => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${body}END:VCALENDAR\r\n`;
 const event = (props: string) => `BEGIN:VEVENT\r\n${props}END:VEVENT\r\n`;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CalendarOccurrence } from "../../calendars/infrastructure/CalendarData";
+import type { CalendarOccurrence } from "./Occurrence";
 import { localDateKey } from "../../../kernel/dates";
 import { formatOccurrence, selectUpcoming } from "./upcoming";
 function event(id: string, start: string, end: string, allDay = false): CalendarOccurrence {

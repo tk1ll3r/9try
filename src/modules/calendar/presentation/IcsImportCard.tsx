@@ -1,11 +1,13 @@
 import { FileUp } from "lucide-react";
 import { useState } from "react";
-import { calendarData } from "../infrastructure/CalendarData";
-import { parseIcs, type IcsEvent } from "../infrastructure/icsImport";
+import { useModule } from "../../../kernel/session";
+import { calendarModule } from "../calendar.module";
+import { parseIcs, type IcsEvent } from "../domain/ics";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 
-export function IcsImportCard({ userId, onImported }: { userId: string; onImported(): Promise<void> }) {
+export function IcsImportCard({ onImported }: { onImported(): Promise<void> }) {
+  const calendar = useModule(calendarModule);
   const [preview, setPreview] = useState<{ events: IcsEvent[]; skipped: number } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,8 +32,8 @@ export function IcsImportCard({ userId, onImported }: { userId: string; onImport
     let imported = 0;
     try {
       for (const event of preview.events) {
-        await calendarData.create({
-          userId, title: event.title, kind: event.kind, start: event.start, end: event.end,
+        await calendar.create({
+          title: event.title, kind: event.kind, start: event.start, end: event.end,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           visibility: "only_me", recurrence: null, recurrenceUntil: null,
         });

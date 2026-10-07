@@ -1,5 +1,5 @@
 import { localDateKey } from "../../../kernel/dates";
-import type { CalendarOccurrence } from "../../calendars/infrastructure/CalendarData";
+import type { CalendarOccurrence } from "./Occurrence";
 
 // Date-only events belong to local calendar days, not UTC midnight.
 export function selectUpcoming(events: CalendarOccurrence[], now: Date): CalendarOccurrence[] {

@@ -1,6 +1,7 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import interactionPlugin from "@fullcalendar/react/interaction";
+import listPlugin from "@fullcalendar/react/list";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import themePlugin from "@fullcalendar/react/themes/monarch";
 import viLocale from "@fullcalendar/react/locales/vi";
@@ -10,15 +11,11 @@ import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { CalendarPlus, Repeat2, Trash2, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Temporal } from "temporal-polyfill";
-import { useAuth } from "../../../bootstrap/AuthProvider";
-import {
-  calendarData,
-  type CalendarOccurrence,
-  type CalendarVisibility,
-  type RecurrenceRule,
-} from "../infrastructure/CalendarData";
-import { PeoplePicker } from "../../../modules/friends";
-import { useMyGroups } from "../../../modules/groups";
+import { useModule } from "../../../kernel/session";
+import { calendarModule } from "../calendar.module";
+import type { CalendarOccurrence, CalendarVisibility, RecurrenceRule } from "../domain/Occurrence";
+import { PeoplePicker } from "../../friends";
+import { useMyGroups } from "../../groups";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 import { lazy, Suspense } from "react";
@@ -28,7 +25,7 @@ const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default:
 type EventKind = "timed" | "all_day";
 
 export function CalendarPage() {
-  const { user } = useAuth();
+  const calendar = useModule(calendarModule);
   const [events, setEvents] = useState<CalendarOccurrence[]>([]);
   const [range, setRange] = useState<{ start: Date; end: Date } | null>(null);
   const [kind, setKind] = useState<EventKind>("timed");
@@ -52,9 +49,9 @@ export function CalendarPage() {
   const createLock = useRef(false);
 
   async function refresh(startDate = range?.start, endDate = range?.end) {
-    if (!user || !startDate || !endDate) return;
+    if (!startDate || !endDate) return;
     try {
-      setEvents(await calendarData.listOccurrences(user.id, startDate, endDate));
+      setEvents(await calendar.listOccurrences(startDate, endDate));
       setMessage("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải lịch.");
@@ -63,7 +60,7 @@ export function CalendarPage() {
 
   async function create(event: FormEvent) {
     event.preventDefault();
-    if (!user || createLock.current) return;
+    if (createLock.current) return;
 
     if (kind === "timed" && new Date(end) <= new Date(start)) {
       setMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
@@ -89,8 +86,7 @@ export function CalendarPage() {
     createLock.current = true;
     setCreating(true);
     try {
-      await calendarData.create({
-        userId: user.id,
+      await calendar.create({
         title,
         kind,
         start,
@@ -138,7 +134,7 @@ export function CalendarPage() {
 
     try {
       if (selected.recurring) {
-        await calendarData.editOccurrence({
+        await calendar.editOccurrence({
           eventId: selected.eventId,
           occurrenceDate: selected.occurrenceDate,
           title: editTitle,
@@ -148,7 +144,7 @@ export function CalendarPage() {
         });
         setMessage("Đã sửa riêng occurrence này.");
       } else {
-        await calendarData.updateWholeEvent({
+        await calendar.updateWholeEvent({
           eventId: selected.eventId,
           title: editTitle,
           allDay: selected.allDay,
@@ -167,7 +163,7 @@ export function CalendarPage() {
   async function saveWholeSeries() {
     if (!selected?.recurring) return;
     try {
-      await calendarData.updateWholeSeriesFromOccurrence({
+      await calendar.updateWholeSeriesFromOccurrence({
         occurrence: selected,
         title: editTitle,
         start: editStart,
@@ -184,7 +180,7 @@ export function CalendarPage() {
   async function skipSelected() {
     if (!selected?.recurring) return;
     try {
-      await calendarData.skipOccurrence(selected.eventId, selected.occurrenceDate);
+      await calendar.skipOccurrence(selected.eventId, selected.occurrenceDate);
       setSelected(null);
       setMessage("Đã bỏ riêng occurrence này khỏi chuỗi.");
       await refresh();
@@ -196,7 +192,7 @@ export function CalendarPage() {
   async function deleteWholeSeries() {
     if (!selected) return;
     try {
-      await calendarData.deleteWholeEvent(selected.eventId);
+      await calendar.deleteWholeEvent(selected.eventId);
       setSelected(null);
       setMessage(selected.recurring ? "Đã xóa toàn bộ chuỗi." : "Đã xóa sự kiện.");
       await refresh();
@@ -332,7 +328,7 @@ export function CalendarPage() {
         </p>
       </DialogPanel>
 
-      {showImport && user && <Suspense fallback={<p role="status">Đang tải công cụ nhập lịch…</p>}><IcsImportCard userId={user.id} onImported={refresh} /></Suspense>}
+      {showImport && <Suspense fallback={<p role="status">Đang tải công cụ nhập lịch…</p>}><IcsImportCard onImported={refresh} /></Suspense>}
 
       {selected && (
         <Card
@@ -380,8 +376,8 @@ export function CalendarPage() {
 
       <Card className="overflow-hidden p-3 sm:p-5">
         <FullCalendar
-          plugins={[themePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={window.matchMedia("(max-width: 640px)").matches ? "timeGridWeek" : "dayGridMonth"}
+          plugins={[themePlugin, dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+          initialView={window.matchMedia("(max-width: 640px)").matches ? "listWeek" : "dayGridMonth"}
           locale={viLocale}
           firstDay={1}
           height="auto"
@@ -403,7 +399,7 @@ export function CalendarPage() {
             setRange({ start: info.start, end: info.end });
             void refresh(info.start, info.end);
           }}
-          headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
+          headerToolbar={{ left: "prev,next today", center: "title", right: "listWeek,dayGridMonth,timeGridWeek" }}
         />
       </Card>
     </div>

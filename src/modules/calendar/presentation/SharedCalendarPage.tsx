@@ -9,11 +9,14 @@ import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { ArrowLeft, Eye } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { calendarData, type SharedCalendarOccurrence } from "../infrastructure/CalendarData";
+import { useModule } from "../../../kernel/session";
+import { calendarModule } from "../calendar.module";
+import type { SharedCalendarOccurrence } from "../domain/Occurrence";
 import { Card } from "../../../shared/ui/Card";
 
 export function SharedCalendarPage() {
   const { ownerId = "" } = useParams();
+  const calendar = useModule(calendarModule);
   const [events, setEvents] = useState<SharedCalendarOccurrence[]>([]);
   const [name, setName] = useState("Lịch được chia sẻ");
   const [message, setMessage] = useState("");
@@ -21,7 +24,7 @@ export function SharedCalendarPage() {
   async function load(start: Date, end: Date) {
     if (!ownerId) return;
     try {
-      const next = await calendarData.listSharedOccurrences(ownerId, start, end);
+      const next = await calendar.listSharedOccurrences(ownerId, start, end);
       setEvents(next);
       if (next[0]) setName(next[0].ownerDisplayName);
       setMessage("");
