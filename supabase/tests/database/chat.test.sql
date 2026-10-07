@@ -2,7 +2,7 @@
 -- a = 901, b = 902 (friend of a), c = 903 (stranger), d = 904 (in a's group, not a friend).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(22);
 
 insert into auth.users(id, instance_id, aud, role, email)
 values
@@ -71,6 +71,15 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000904'
 select is((select count(*) from public.list_messages(current_setting('test.group')::uuid)),1::bigint,'a group member reads the group conversation');
 select public.leave_group('00000000-0000-4000-8000-0000000009a1');
 select throws_ok($$ select * from public.list_messages(current_setting('test.group')::uuid) $$,'P0001','not a participant','leaving the group ends access');
+reset role;
+
+-- Activity counts the last 14 days only.
+insert into public.messages(id, conversation_id, sender_id, body, created_at)
+values ('00000000-0000-4000-8000-0000000009e9', current_setting('test.group')::uuid, '00000000-0000-4000-8000-000000000901', 'Tin từ tháng trước', now() - interval '20 days');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',true);
+select is((select recent_messages from public.list_conversations() where id = current_setting('test.group')::uuid), 1, 'activity counts the messages of the last 14 days');
+select is((select count(*) from public.list_messages(current_setting('test.group')::uuid)), 2::bigint, 'the older message is still in the history');
 reset role;
 
 select * from finish();
