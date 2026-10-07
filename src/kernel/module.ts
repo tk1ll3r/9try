@@ -1,4 +1,4 @@
-import type { ComponentType, LazyExoticComponent } from "react";
+import type { ComponentType, LazyExoticComponent, ReactNode } from "react";
 import { matchPath } from "react-router-dom";
 
 /** What a module's services are built from: one signed-in user. */
@@ -12,6 +12,21 @@ export interface RouteContribution {
   readonly component: ComponentType | LazyExoticComponent<ComponentType>;
 }
 
+/** The app's main destinations. A phone shows five of them as bottom tabs. */
+export type NavTab = "today" | "plan" | "chat" | "together" | "inbox" | "me";
+
+/** One screen in the navigation. */
+export interface NavContribution {
+  readonly tab: NavTab;
+  readonly to: string;
+  readonly label: string;
+  readonly icon: (props: { size?: number }) => ReactNode;
+  /** Position inside the tab. The lowest one is where the tab lands. */
+  readonly order: number;
+  /** A small counter drawn on the icon, such as unread notifications. */
+  readonly badge?: ComponentType;
+}
+
 /**
  * A feature plugs into the app by exporting one of these and being listed in `app/modules.ts`.
  * `Services` is whatever the module's own screens need: an application service, a repository.
@@ -20,13 +35,16 @@ export interface FeatureModule<Services = unknown> {
   readonly id: string;
   readonly create?: (session: SessionContext) => Services;
   readonly routes?: readonly RouteContribution[];
+  readonly navigation?: readonly NavContribution[];
 }
 
 export class ModuleRegistry {
   readonly routes: readonly RouteContribution[];
+  readonly navigation: readonly NavContribution[];
 
   constructor(readonly modules: readonly FeatureModule[]) {
     this.routes = modules.flatMap(module => module.routes ?? []);
+    this.navigation = modules.flatMap(module => module.navigation ?? []).sort((a, b) => a.order - b.order);
   }
 
   /**
