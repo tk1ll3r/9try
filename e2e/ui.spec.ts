@@ -398,6 +398,31 @@ test("timetable: paste two classes and see them by weekday", async ({ page }) =>
   expect(stored[0]).toMatchObject({ title: "Cấu trúc dữ liệu", category: "class", place: "B1.02", recurrence_rule: "weekly", visibility: "only_me" });
 });
 
+test("free time: shows common slots and names friends whose busy times are unknown", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  const kha = "22222222-2222-4222-8222-222222222222", minhAnh = "33333333-3333-4333-8333-333333333333";
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await page.route("**/rest/v1/**", route => {
+    const request = route.request(); const path = new URL(request.url()).pathname;
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [
+      { user_id: kha, display_name: "Kha", username: "kha", status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" },
+      { user_id: minhAnh, display_name: "Minh Anh", username: "minhanh", status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" }] });
+    if (path.endsWith("/rpc/list_shared_busy")) return request.postDataJSON().p_owner_id === kha
+      ? route.fulfill({ json: [] })
+      : route.fulfill({ status: 400, json: { message: "availability not shared" } });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/free-time");
+  await page.getByLabel("Kha", { exact: true }).check();
+  await page.getByLabel("Minh Anh", { exact: true }).check();
+  await page.getByRole("button", { name: "Tìm giờ rảnh" }).click();
+  await expect(page.getByText("Chưa rõ lịch của Minh Anh")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Giờ cùng rảnh · [1-9]/ })).toBeVisible();
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`demo and login fit viewport ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await mockStyle(page); await loggedOut(page);
