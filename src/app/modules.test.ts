@@ -5,7 +5,7 @@ import { registry } from "./modules";
 
 describe("module registry", () => {
   it("accepts only plain routes of registered modules as outside-supplied paths", () => {
-    for (const path of ["/", "/groups", "/groups/1234", "/invite/group/test_token-1", "/invite/friend/abc123", "/me/friends", "/notifications", "/calendar/shared/abc", "/habits", "/notes", "/me/privacy", "/me/organizer", "/meetups"]) expect(registry.safePath(path)).toBe(path);
+    for (const path of ["/", "/groups", "/groups/1234", "/invite/group/test_token-1", "/invite/friend/abc123", "/me/friends", "/notifications", "/calendar/shared/abc", "/habits", "/notes", "/me/privacy", "/me/organizer", "/meetups", "/meetups/22222222-2222-4222-8222-222222222222"]) expect(registry.safePath(path)).toBe(path);
     for (const path of ["//evil.test", "//groups", "https://evil.test", "/calendar?access_token=secret", "/unknown", "/invite/group/../../evil", "/groups/a/b"]) expect(registry.safePath(path)).toBe("/");
   });
   it("lets only a plain path into the emailed sign-in link, before the modules are loaded", () => {

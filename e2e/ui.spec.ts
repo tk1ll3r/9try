@@ -161,18 +161,26 @@ test("meetup detail errors offer retry and creating is serialized", async ({ pag
     if (pathname.endsWith("/rpc/create_meetup")) { createCalls++; await new Promise(resolve => setTimeout(resolve, 250)); return route.fulfill({ json: "33333333-3333-4333-8333-333333333333" }); }
     return route.fulfill({ json: [] });
   });
+  // The list shows each meetup briefly; its poll, invitations and discussion are on its own page.
   await page.goto("/meetups");
+  await expect(page.getByText("Bình chọn thời gian")).toHaveCount(0);
+  await page.getByRole("link", { name: /Ăn tối/ }).click();
+  await expect(page).toHaveURL(/\/meetups\/22222222-2222-4222-8222-222222222222$/);
+  await expect(page.getByRole("heading", { name: "Ăn tối", level: 1 })).toBeVisible();
   await expect(page.getByRole("alert")).toContainText("Poll temporarily unavailable");
   await expect(page.getByText("Chưa có khung giờ nào được đề xuất.")).toHaveCount(0);
   pollUnavailable = false;
   await page.getByRole("button", { name: "Thử lại", exact: true }).click();
   await expect(page.getByText("Chưa có khung giờ nào được đề xuất.")).toBeVisible();
+  await page.getByRole("link", { name: "Tất cả hoạt động" }).click();
   await page.getByRole("button", { name: "Tạo hoạt động" }).click();
   await page.getByRole("textbox", { name: "Tên hoạt động" }).fill("Đi dạo");
   const submit = page.getByRole("button", { name: "Tạo đề xuất", exact: true });
   await submit.dblclick();
   await expect(submit).toHaveCount(0);
   expect(createCalls).toBe(1);
+  // The new meetup opens on its own page.
+  await expect(page).toHaveURL(/\/meetups\/33333333-3333-4333-8333-333333333333$/);
 });
 
 test("group creation retains input on failure and prevents duplicate requests", async ({ page }) => {

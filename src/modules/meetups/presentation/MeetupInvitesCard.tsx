@@ -7,8 +7,7 @@ import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { MeetupPolicy } from "../domain/Meetup";
 import { meetupsModule } from "../meetups.module";
-
-export const meetupsKey = ["meetups"] as const;
+import { meetupsKey } from "./labels";
 
 /** Today's card: meetups the user is invited to and has not answered yet, answered in place. */
 export function MeetupInvitesCard() {
@@ -22,7 +21,7 @@ export function MeetupInvitesCard() {
   return <Card title={`Lời mời hoạt động · ${waiting.length}`} action={<Link to="/meetups" className="text-sm font-semibold underline">Hoạt động</Link>}>
     <ul className="space-y-2">
       {waiting.map(item => <li key={item.id} className="rounded-2xl bg-[var(--soft)] p-3">
-        <b className="block break-words">{item.title}</b>
+        <Link to={`/meetups/${item.id}`} className="block break-words font-bold hover:underline">{item.title}</Link>
         <p className="text-xs text-[var(--muted)]">{item.startAt ? new Date(item.startAt).toLocaleString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "Chưa chốt giờ"}{item.locationName ? ` · ${item.locationName}` : ""}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           <Button className="px-3" disabled={pending} aria-label={`Đi: ${item.title}`} onClick={() => run(() => meetups.respond(item.id, "going"))}><Check size={16} /> Đi</Button>
