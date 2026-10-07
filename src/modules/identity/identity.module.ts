@@ -11,7 +11,7 @@ export const identityModule: FeatureModule<ProfileRepository> = {
   create: ({ userId }) => new SupabaseProfileRepository(requireSupabase(), userId),
   navigation: [
     { tab: "me", to: "/me", label: "Hồ sơ", icon: CircleUserRound, order: 10 },
-    { tab: "me", to: "/me/privacy", label: "Quyền riêng tư", icon: ShieldCheck, order: 20 },
+    { tab: "me", to: "/me/privacy", label: "Quyền riêng tư", icon: ShieldCheck, order: 20, parent: "/me" },
   ],
   today: { order: 2, card: InstallCard },
   routes: [

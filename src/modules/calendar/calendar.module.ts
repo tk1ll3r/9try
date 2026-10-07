@@ -16,8 +16,8 @@ export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {
     : { title: event.title, kind: "Sự kiện", to: "/calendar", keywords: event.place ?? "" }),
   navigation: [
     { tab: "plan", to: "/calendar", label: "Lịch", icon: CalendarDays, order: 10 },
-    { tab: "plan", to: "/timetable", label: "Thời khóa biểu", icon: GraduationCap, order: 15 },
-    { tab: "together", to: "/free-time", label: "Rảnh lúc nào?", icon: CalendarSearch, order: 35 },
+    { tab: "plan", to: "/timetable", label: "Thời khóa biểu", icon: GraduationCap, order: 15, parent: "/calendar" },
+    { tab: "together", to: "/free-time", label: "Rảnh lúc nào?", icon: CalendarSearch, order: 35, parent: "/meetups" },
   ],
   routes: [
     { path: "calendar", component: lazy(() => import("./presentation/CalendarPage").then(m => ({ default: m.CalendarPage }))) },

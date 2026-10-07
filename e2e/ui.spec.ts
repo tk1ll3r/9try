@@ -209,24 +209,6 @@ test("group creation retains input on failure and prevents duplicate requests", 
   expect(attempts).toBe(2);
 });
 
-test("mobile Today exposes planner and coordination without extra tabs", async ({ page }) => {
-  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
-  await page.addInitScript(account => {
-    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
-  }, user);
-  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
-  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/today");
-  await expect(page.getByRole("link", { name: "Đề xuất cuộc hẹn" })).toHaveAttribute("href", "/meetups");
-  await expect(page.getByRole("link", { name: "Việc cần làm và nhắc việc" })).toHaveAttribute("href", "/me/organizer");
-  await expect(page.getByRole("link", { name: "Thói quen", exact: true })).toHaveAttribute("href", "/habits");
-  await expect(page.getByRole("link", { name: "Ghi chú", exact: true })).toHaveAttribute("href", "/notes");
-  await expect(page.getByRole("link", { name: "Bạn bè và lời mời" })).toHaveAttribute("href", "/me/friends");
-  await expect(page.getByRole("link", { name: "Chia sẻ vị trí có thời hạn" })).toHaveAttribute("href", "/me/location");
-  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
-
 test("tasks: add once on Today, complete, undo, then edit and delete in the full list", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {
@@ -449,9 +431,8 @@ test("Today gathers what needs an answer, what comes next and the day's habits, 
   await page.getByRole("button", { name: /^Đọc 20 phút/ }).click();
   await expect(page.getByRole("heading", { name: "Thói quen · xong hết" })).toBeVisible();
 
-  const now = page.locator("section", { hasText: "Bạn bè lúc này" });
-  await expect(now.getByText("Kha")).toBeVisible();
-  await expect(now.getByText("Học bài")).toBeVisible();
+  // Today keeps to what needs doing: no shortcuts, no groups, no friends' modes (those are on Mode and in the menu).
+  for (const gone of ["Lên kế hoạch cùng nhau", "Nhóm của bạn", "Bạn bè lúc này"]) await expect(page.getByText(gone)).toHaveCount(0);
   expect([friendship, coffee, habitDone]).toEqual(["accepted", "going", true]);
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -644,6 +625,42 @@ test("screens animate in, and stay still for people who ask for reduced motion",
   expect(await motion()).toEqual({ name: "rise", seconds: 0.5 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect((await motion()).seconds).toBeLessThan(0.001);
+});
+
+test("the menu has eleven entries; the other screens are tabs on their parent", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
+  await page.goto("/habits");
+  const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Điều hướng chính" });
+  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Hôm nay", "Lịch", "Việc", "Trò chuyện", "Bạn bè", "Nhóm", "Hoạt động", "Vị trí", "Thông báo", "Tôi"]);
+  // "Thói quen" is open: its parent is marked in the menu, and the family is a strip of tabs.
+  await expect(sidebar.getByRole("link", { name: "Việc" })).toHaveAttribute("aria-current", "true");
+  const strip = page.getByRole("navigation", { name: "Trong màn này" });
+  await expect(strip.getByRole("link")).toHaveText(["Việc", "Thói quen", "Ghi chú"]);
+  await expect(strip.getByRole("link", { name: "Thói quen" })).toHaveAttribute("aria-current", "page");
+  await strip.getByRole("link", { name: "Ghi chú" }).click();
+  await expect(page).toHaveURL(/\/notes$/);
+  await expect(page.getByRole("heading", { name: "Ghi chú", level: 1 })).toBeVisible();
+
+  const families: [string, string[]][] = [["/timetable", ["Lịch", "Thời khóa biểu"]], ["/free-time", ["Hoạt động", "Rảnh lúc nào?"]], ["/me/privacy", ["Hồ sơ", "Quyền riêng tư"]]];
+  for (const [path, tabs] of families) {
+    await page.goto(path);
+    await expect(strip.getByRole("link")).toHaveText(tabs);
+  }
+  // A screen without children has no strip.
+  await page.goto("/groups");
+  await expect(strip).toHaveCount(0);
+
+  // On a phone the row under the top bar lists the menu entries of the tab, and the strip the family.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/notes");
+  await expect(page.getByRole("navigation", { name: "Trong mục này" }).getByRole("link")).toHaveText(["Lịch", "Việc"]);
+  await expect(strip.getByRole("link")).toHaveText(["Việc", "Thói quen", "Ghi chú"]);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("friend removal requires confirmation", async ({ page }) => {

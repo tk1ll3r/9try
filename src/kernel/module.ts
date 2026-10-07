@@ -25,6 +25,11 @@ export interface NavContribution {
   readonly order: number;
   /** A small counter drawn on the icon, such as unread notifications. */
   readonly badge?: ComponentType;
+  /**
+   * The `to` of the entry this screen belongs under. Such a screen is not listed in the menu; it is
+   * reached through a strip of tabs on its parent, as "Thói quen" is under "Việc".
+   */
+  readonly parent?: string;
 }
 
 /** A card on the Today screen. A card with nothing to say renders nothing. */

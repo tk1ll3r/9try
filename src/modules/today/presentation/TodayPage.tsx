@@ -1,19 +1,7 @@
-import { Check, MapPin, NotebookPen, Repeat, Users, UsersRound } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useRegistry } from "../../../kernel/session";
-import { Card } from "../../../kernel/ui/Card";
 import { ProfileReminder } from "../../identity";
 
-const shortcuts = [
-  { to: "/meetups", label: "Đề xuất cuộc hẹn", Icon: UsersRound },
-  { to: "/me/friends", label: "Bạn bè và lời mời", Icon: Users },
-  { to: "/me/organizer", label: "Việc cần làm và nhắc việc", Icon: Check },
-  { to: "/habits", label: "Thói quen", Icon: Repeat },
-  { to: "/notes", label: "Ghi chú", Icon: NotebookPen },
-  { to: "/me/location", label: "Chia sẻ vị trí có thời hạn", Icon: MapPin },
-];
-
-/** The home screen. Each module adds its own card through `today`; a card with nothing to say stays away. */
+/** What needs doing today. Each module adds its own card through `today`; a card with nothing to say stays away. */
 export function TodayPage() {
   const { today } = useRegistry();
   return <div className="space-y-5">
@@ -24,10 +12,5 @@ export function TodayPage() {
     <div className="space-y-5 xl:columns-2 xl:gap-5 xl:space-y-0 xl:*:mb-5 xl:*:break-inside-avoid">
       {today.map(({ card: TodayCard }, index) => <TodayCard key={index} />)}
     </div>
-    <Card title="Lên kế hoạch cùng nhau">
-      <div className="grid gap-2 sm:grid-cols-2">
-        {shortcuts.map(({ to, label, Icon }) => <Link key={to} to={to} className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Icon size={19} /> {label}</Link>)}
-      </div>
-    </Card>
   </div>;
 }

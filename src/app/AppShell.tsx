@@ -72,19 +72,24 @@ export function AppShell() {
 
   // The current screen is the one whose path is the longest prefix of the address.
   const current = navigation.filter(item => isAt(pathname, item.to)).sort((a, b) => b.to.length - a.to.length)[0];
-  const groups = tabs.map(tab => ({ ...tab, items: navigation.filter(item => item.tab === tab.id) })).filter(tab => tab.items.length);
+  // The menu lists the screens that stand on their own. A screen with a `parent` is a tab on that parent's screen.
+  const parentOf = (item: NavContribution) => navigation.find(other => other.to === item.parent && other !== item);
+  const menu = navigation.filter(item => !parentOf(item));
+  const section = current && (parentOf(current) ?? current);
+  const family = section ? [section, ...navigation.filter(item => item !== section && parentOf(item) === section)] : [];
+  const groups = tabs.map(tab => ({ ...tab, items: menu.filter(item => item.tab === tab.id) })).filter(tab => tab.items.length);
   const phoneTabs = groups.filter(tab => !topBarTabs.includes(tab.id));
   const topBar = groups.filter(tab => topBarTabs.includes(tab.id));
-  const siblings = groups.find(tab => tab.id === current?.tab)?.items ?? [];
-  const activeIndex = phoneTabs.findIndex(tab => tab.id === current?.tab);
+  const siblings = groups.find(tab => tab.id === section?.tab)?.items ?? [];
+  const activeIndex = phoneTabs.findIndex(tab => tab.id === section?.tab);
 
   // On a phone the row of sub-screens scrolls sideways; keep the current one in the middle of it.
   const pills = useRef<HTMLElement>(null);
   useEffect(() => {
     const row = pills.current;
-    const active = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    const active = row?.querySelector<HTMLElement>("[aria-current]");
     if (row && active) row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
-  }, [current?.to]);
+  }, [section?.to]);
 
   return (
     <div className="relative min-h-dvh bg-[var(--paper)] text-[var(--ink)]">
@@ -106,8 +111,8 @@ export function AppShell() {
             <div key={group.id} className="space-y-1">
               {group.items.length > 1 && <p className="px-3 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{group.label}</p>}
               {group.items.map(item => (
-                <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
-                  className={`flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-[background-color,color,transform] duration-200 ease-[var(--ease-out)] ${item === current ? "bg-[var(--ink)] text-[var(--paper)] shadow-lg" : "text-[var(--muted)] hover:translate-x-1 hover:bg-[var(--soft)]"}`}>
+                <Link key={item.to} to={item.to} aria-current={item === current ? "page" : item === section ? "true" : undefined}
+                  className={`flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-[background-color,color,transform] duration-200 ease-[var(--ease-out)] ${item === section ? "bg-[var(--ink)] text-[var(--paper)] shadow-lg" : "text-[var(--muted)] hover:translate-x-1 hover:bg-[var(--soft)]"}`}>
                   <span className="relative"><item.icon size={19} />{item.badge && <item.badge />}</span>
                   {group.items.length > 1 ? item.label : group.label}
                   {group.id === "mode" && <span aria-hidden className="relative ml-auto grid size-2.5 place-items-center"><span className="absolute inset-0 animate-ping rounded-full bg-[var(--lime-strong)] opacity-70" /><span className="size-2.5 rounded-full bg-[var(--lime-strong)]" /></span>}
@@ -122,8 +127,8 @@ export function AppShell() {
         <div className="mb-4 flex items-center gap-2 lg:hidden">
           <button type="button" onClick={() => setSearching(true)} className="glass pressable flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] dark:border-white/8"><Search size={17} /> Tìm kiếm</button>
           {topBar.map(tab => (
-            <Link key={tab.id} to={tab.items[0].to} aria-label={tab.label} aria-current={current?.tab === tab.id ? "page" : undefined}
-              className={`pressable grid size-11 shrink-0 place-items-center rounded-full border border-black/5 dark:border-white/8 ${current?.tab === tab.id ? "bg-[var(--ink)] text-[var(--paper)]" : "glass"}`}>
+            <Link key={tab.id} to={tab.items[0].to} aria-label={tab.label} aria-current={section?.tab === tab.id ? "page" : undefined}
+              className={`pressable grid size-11 shrink-0 place-items-center rounded-full border border-black/5 dark:border-white/8 ${section?.tab === tab.id ? "bg-[var(--ink)] text-[var(--paper)]" : "glass"}`}>
               <span className="relative"><tab.icon size={20} /><Badges items={tab.items} /></span>
             </Link>
           ))}
@@ -132,9 +137,20 @@ export function AppShell() {
         {siblings.length > 1 && (
           <nav ref={pills} aria-label="Trong mục này" className="relative -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:hidden">
             {siblings.map(item => (
-              <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors duration-200 ${item === current ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
+              <Link key={item.to} to={item.to} aria-current={item === current ? "page" : item === section ? "true" : undefined}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors duration-200 ${item === section ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
                 <item.icon size={16} /> {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+        {/* The screens that share one menu entry, as tabs: "Việc · Thói quen · Ghi chú". */}
+        {family.length > 1 && (
+          <nav aria-label="Trong màn này" className="mb-4 flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[var(--soft)] p-1 sm:inline-flex">
+            {family.map(item => (
+              <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
+                className={`inline-flex min-h-9 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:flex-none ${item === current ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
+                <item.icon size={15} /> {item.label}
               </Link>
             ))}
           </nav>
@@ -151,7 +167,7 @@ export function AppShell() {
         <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)]"
           style={{ width: `calc((100% - 0.75rem) / ${phoneTabs.length})`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }} />
         {phoneTabs.map(tab => {
-          const active = tab.id === current?.tab;
+          const active = tab.id === section?.tab;
           return (
             <Link key={tab.id} to={tab.items[0].to} aria-current={active ? "page" : undefined}
               className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors duration-300 active:scale-95 ${active ? "text-[var(--paper)]" : "text-[var(--muted)]"}`}>
