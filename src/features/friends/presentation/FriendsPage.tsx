@@ -1,11 +1,18 @@
 import { Ban, CalendarDays, Check, Clock3, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { friendsData, type BusyRange, type FriendConnection } from "../infrastructure/FriendsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
+import { useAuth } from "../../../bootstrap/AuthProvider";
+import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 
 export function FriendsPage() {
+  const { user } = useAuth();
+  const scope = useRef(new AsyncOwnerScope());
+  const lock = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [items, setItems] = useState<FriendConnection[]>([]);
   const [sharedWith, setSharedWith] = useState<Set<string>>(new Set());
   const [username, setUsername] = useState("");
@@ -14,40 +21,59 @@ export function FriendsPage() {
   const [busyViewer, setBusyViewer] = useState<{ friend: FriendConnection; ranges: BusyRange[] } | null>(null);
 
   async function refresh() {
+    if (!user) return;
+    const current = scope.current.beginRequest(user.id);
+    if (!current()) return;
+    setLoading(true);
     try {
       const [nextItems, nextShares] = await Promise.all([friendsData.list(), friendsData.myAvailabilityShares()]);
-      setItems(nextItems);
-      setSharedWith(nextShares);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể tải danh sách bạn bè.");
-    }
+      if (current()) { setItems(nextItems); setSharedWith(nextShares); setError(""); }
+    } catch (cause) {
+      if (current()) setError(humanize(cause));
+    } finally { if (current()) setLoading(false); }
   }
 
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => {
+    scope.current.activate(user?.id); lock.current = false;
+    setItems([]); setSharedWith(new Set()); setBusyViewer(null); setUsername(""); setMessage(""); setError(""); setLoading(true); setBusy(false);
+    void refresh();
+    return () => scope.current.dispose();
+  }, [user?.id]);
+
+  async function act(action: () => Promise<void>, success?: string, after?: () => void) {
+    if (!user || lock.current) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
+    lock.current = true; setBusy(true); setError(""); setMessage("");
+    try {
+      await action();
+      if (!current()) return;
+      after?.();
+      await refresh();
+      if (current() && success) setMessage(success);
+    } catch (cause) {
+      if (current()) setError(humanize(cause));
+    } finally { if (current()) { lock.current = false; setBusy(false); } }
+  }
 
   async function send(event: FormEvent) {
     event.preventDefault();
     if (!username.trim()) return;
-    setBusy(true);
-    try {
-      await friendsData.send(username);
-      setUsername("");
-      setMessage("Đã gửi lời mời.");
-      await refresh();
-    } catch (error) {
-      setMessage(humanize(error));
-    } finally {
-      setBusy(false);
-    }
+    await act(() => friendsData.send(username), "Đã gửi lời mời.", () => setUsername(""));
   }
 
   async function showBusy(friend: FriendConnection) {
+    if (!user) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
     const from = new Date();
     const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
+    setError("");
     try {
-      setBusyViewer({ friend, ranges: await friendsData.busyFor(friend.userId, from, to) });
+      const ranges = await friendsData.busyFor(friend.userId, from, to);
+      if (current()) setBusyViewer({ friend, ranges });
     } catch {
-      setMessage("Người này chưa chia sẻ trạng thái bận/rảnh với bạn.");
+      if (current()) setError("Người này chưa chia sẻ trạng thái bận/rảnh với bạn.");
     }
   }
 
@@ -66,12 +92,16 @@ export function FriendsPage() {
         <form onSubmit={send} className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3.5 text-[var(--muted)]" size={17} />
-            <input className="field w-full pl-10" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username chính xác" required />
+            <label className="sr-only" htmlFor="friend-username">Username người bạn muốn mời</label>
+            <input id="friend-username" className="field w-full pl-10" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username chính xác" required />
           </div>
           <Button type="submit" variant="secondary" disabled={busy}><UserPlus size={17} /> Gửi lời mời</Button>
         </form>
-        {message && <p className="mt-3 text-sm text-[var(--muted)]">{message}</p>}
+        {message && <p role="status" className="mt-3 text-sm text-[var(--muted)]">{message}</p>}
+        {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error} <Button variant="ghost" disabled={loading} onClick={() => void refresh()}>Thử tải lại</Button></p>}
       </Card>
+
+      {loading && !items.length && <p role="status">Đang tải bạn bè…</p>}
 
       {incoming.length > 0 && (
         <Card title={`Đang chờ bạn · ${incoming.length}`}>
@@ -79,8 +109,8 @@ export function FriendsPage() {
             {incoming.map((item) => (
               <PersonRow key={item.userId} item={item} actions={
                 <>
-                  <Button className="px-3" onClick={async () => { await friendsData.respond(item.userId, true); await refresh(); }}><Check size={16} /> Chấp nhận</Button>
-                  <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.respond(item.userId, false); await refresh(); }}><X size={16} /> Từ chối</Button>
+                  <Button disabled={busy} className="px-3" onClick={() => void act(() => friendsData.respond(item.userId, true))}><Check size={16} /> Chấp nhận</Button>
+                  <Button disabled={busy} variant="ghost" className="px-3" onClick={() => void act(() => friendsData.respond(item.userId, false))}><X size={16} /> Từ chối</Button>
                 </>
               } />
             ))}
@@ -93,7 +123,7 @@ export function FriendsPage() {
           <div className="space-y-2">
             {outgoing.map((item) => (
               <PersonRow key={item.userId} item={item} actions={
-                <Button variant="ghost" onClick={async () => { await friendsData.cancel(item.userId); await refresh(); }}><X size={16} /> Hủy lời mời</Button>
+                <Button disabled={busy} variant="ghost" onClick={() => void act(() => friendsData.cancel(item.userId))}><X size={16} /> Hủy lời mời</Button>
               } />
             ))}
           </div>
@@ -101,7 +131,7 @@ export function FriendsPage() {
       )}
 
       <Card title={`Bạn bè · ${accepted.length}`}>
-        {accepted.length === 0 ? (
+        {!loading && !error && accepted.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào.</p>
         ) : (
           <div className="space-y-2">
@@ -110,17 +140,23 @@ export function FriendsPage() {
               return (
                 <PersonRow key={item.userId} item={item} actions={
                   <>
-                    <Link to={`/calendar/shared/${item.userId}`}><Button variant="ghost" className="px-3"><CalendarDays size={16} /> Lịch chia sẻ</Button></Link>
-                    <Button variant="ghost" className="px-3" onClick={() => void showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
+                    <Link to={`/calendar/shared/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><CalendarDays size={16} /> Lịch chia sẻ</Link>
+                    <Button disabled={busy} variant="ghost" className="px-3" onClick={() => void showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
                     <Button
                       variant={sharing ? "secondary" : "ghost"}
                       className="px-3"
-                      onClick={async () => { await friendsData.setAvailabilityShare(item.userId, !sharing); await refresh(); }}
+                      disabled={busy}
+                      aria-pressed={sharing}
+                      onClick={() => void act(() => friendsData.setAvailabilityShare(item.userId, !sharing))}
                     >
                       <Share2 size={16} /> {sharing ? "Đang chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh"}
                     </Button>
-                    <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.remove(item.userId); await refresh(); }}><UserMinus size={16} /> Xóa</Button>
-                    <Button variant="ghost" className="px-3" onClick={async () => { await friendsData.block(item.userId); await refresh(); }}><Ban size={16} /> Chặn</Button>
+                    <Button disabled={busy} variant="ghost" className="px-3" onClick={() => {
+                      if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) void act(() => friendsData.remove(item.userId), undefined, () => setBusyViewer(null));
+                    }}><UserMinus size={16} /> Xóa</Button>
+                    <Button disabled={busy} variant="ghost" className="px-3" onClick={() => {
+                      if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) void act(() => friendsData.block(item.userId), undefined, () => setBusyViewer(null));
+                    }}><Ban size={16} /> Chặn</Button>
                   </>
                 } />
               );
@@ -167,7 +203,9 @@ function PersonRow({ item, actions }: { item: FriendConnection; actions: ReactNo
 }
 
 function humanize(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message
+    : error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message
+    : "Không thể thực hiện thao tác. Hãy thử lại.";
   if (message.includes("user not found")) return "Không tìm thấy username này.";
   if (message.includes("already exists")) return "Hai bạn đã có một trạng thái kết nối.";
   return message;

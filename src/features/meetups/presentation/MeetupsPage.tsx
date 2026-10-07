@@ -1,10 +1,12 @@
 import { CalendarCheck2, Check, Clock3, MessageCircle, Plus, Send, UsersRound, X, XCircle } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
 import { meetupsData, type MeetupComment, type MeetupListItem, type PollOption } from "../infrastructure/MeetupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
+import { ActivityModesCard } from "./ActivityModesCard";
+import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 
 export function MeetupsPage() {
   const { user } = useAuth();
@@ -15,23 +17,38 @@ export function MeetupsPage() {
   const [description, setDescription] = useState("");
   const [capacity, setCapacity] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const createLock = useRef(false);
+  const scope = useRef(new AsyncOwnerScope());
 
   async function refresh() {
     if (!user) return;
+    const current = scope.current.beginRequest(user.id);
+    if (!current()) return;
+    setLoading(true);
     try {
       const [nextMeetups, nextGroups] = await Promise.all([meetupsData.list(user.id), groupsData.list(user.id)]);
-      setItems(nextMeetups);
-      setGroups(nextGroups);
-      setMessage("");
+      if (current()) { setItems(nextMeetups); setGroups(nextGroups); setMessage(""); }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể tải hoạt động.");
-    }
+      if (current()) setMessage(error instanceof Error ? error.message : "Không thể tải hoạt động.");
+    } finally { if (current()) setLoading(false); }
   }
 
-  useEffect(() => { void refresh(); }, [user?.id]);
+  useEffect(() => {
+    scope.current.activate(user?.id); createLock.current = false;
+    setItems([]); setGroups([]); setMessage(""); setLoading(true); setCreating(false); setShowCreate(false);
+    void refresh();
+    return () => scope.current.dispose();
+  }, [user?.id]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
+    if (!user || createLock.current) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
+    createLock.current = true; setCreating(true); setMessage("");
     try {
       await meetupsData.create({
         groupId: groupId || null,
@@ -39,13 +56,12 @@ export function MeetupsPage() {
         description,
         capacity: capacity ? Number(capacity) : null,
       });
-      setTitle("");
-      setDescription("");
-      setCapacity("");
+      if (!current()) return;
+      setTitle(""); setDescription(""); setCapacity(""); setShowCreate(false);
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể tạo hoạt động.");
-    }
+      if (current()) setMessage(error instanceof Error ? error.message : "Không thể tạo hoạt động.");
+    } finally { if (current()) { createLock.current = false; setCreating(false); } }
   }
 
   return (
@@ -55,25 +71,27 @@ export function MeetupsPage() {
         <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Hoạt động</h1>
       </header>
 
-      <Card title="Đề xuất hoạt động">
-        <form onSubmit={create} className="grid gap-3 md:grid-cols-2">
-          <input className="field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ví dụ: Ăn tối cuối tuần" required />
-          <select className="field" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+      <ActivityModesCard />
+
+      <Card title="Đề xuất hoạt động" action={<Button variant="secondary" aria-expanded={showCreate} onClick={() => setShowCreate(value => !value)}><Plus size={17} /> {showCreate ? "Đóng" : "Tạo hoạt động"}</Button>}>
+        {showCreate && <form onSubmit={create} aria-busy={creating} className="grid gap-3 md:grid-cols-2">
+          <label className="grid gap-1 text-sm font-semibold">Tên hoạt động<input className="field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ví dụ: Ăn tối cuối tuần" maxLength={200} required /></label>
+          <label className="grid gap-1 text-sm font-semibold">Nhóm<select className="field" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
             <option value="">Không gắn nhóm</option>
             {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
-          </select>
-          <textarea className="field min-h-24 md:col-span-2" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Mô tả ngắn…" />
-          <input className="field" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="Sức chứa (tùy chọn)" />
-          <Button type="submit"><Plus size={17} /> Tạo đề xuất</Button>
-        </form>
+          </select></label>
+          <label className="grid gap-1 text-sm font-semibold md:col-span-2">Mô tả (tùy chọn)<textarea className="field min-h-24" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Mô tả ngắn…" /></label>
+          <label className="grid gap-1 text-sm font-semibold">Sức chứa (tùy chọn)<input className="field" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} /></label>
+          <Button type="submit" disabled={creating}><Plus size={17} /> {creating ? "Đang tạo…" : "Tạo đề xuất"}</Button>
+        </form>}
       </Card>
 
-      {message && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
-
+      {message && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message} <Button variant="ghost" disabled={loading} onClick={() => void refresh()}>Thử tải lại</Button></div>}
+      {loading && !items.length && <p role="status">Đang tải hoạt động…</p>}
       <div className="space-y-4">
-        {items.length === 0
-          ? <Card><p className="py-10 text-center text-[var(--muted)]">Chưa có hoạt động nào.</p></Card>
-          : items.map((item) => <MeetupCard key={item.id} item={item} userId={user?.id ?? ""} onChanged={refresh} />)}
+        {!loading && !message && items.length === 0
+          ? <Card><p className="py-10 text-center text-[var(--muted)]">Chưa có hoạt động nào. Tạo đề xuất để bắt đầu.</p></Card>
+          : items.map((item) => <MeetupCard key={`${user?.id}:${item.id}`} item={item} userId={user?.id ?? ""} onChanged={refresh} />)}
       </div>
     </div>
   );
@@ -88,65 +106,73 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
   const [optionEnd, setOptionEnd] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [detailError, setDetailError] = useState("");
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
+  const scope = useRef(new AsyncOwnerScope());
 
   async function loadDetails() {
+    const current = scope.current.beginRequest(userId);
+    if (!current()) return;
+    setDetailLoading(true); setDetailError("");
     try {
-      const [nextPoll, nextComments] = await Promise.all([
-        meetupsData.poll(item.id),
-        meetupsData.comments(item.id),
-      ]);
-      setPoll(nextPoll);
-      setComments(nextComments);
-    } catch {
-      setPoll([]);
-      setComments([]);
-    }
+      const [nextPoll, nextComments] = await Promise.all([meetupsData.poll(item.id), meetupsData.comments(item.id)]);
+      if (current()) { setPoll(nextPoll); setComments(nextComments); }
+    } catch (cause) {
+      if (current()) setDetailError(humanize(cause));
+    } finally { if (current()) setDetailLoading(false); }
   }
 
-  useEffect(() => { void loadDetails(); }, [item.id]);
+  useEffect(() => {
+    scope.current.activate(userId); lock.current = false;
+    setPoll([]); setComments([]); setDetailLoading(true); setDetailError(""); setError(""); setFeedback(""); setBusy(false);
+    void loadDetails();
+    return () => scope.current.dispose();
+  }, [item.id, userId]);
 
-  async function respond(response: "going" | "maybe" | "declined") {
+  async function mutate(action: () => Promise<void>, after?: () => Promise<void> | void, success?: string) {
+    if (lock.current) return;
+    const current = scope.current.capture(userId);
+    if (!current()) return;
+    lock.current = true; setBusy(true); setError(""); setFeedback("");
     try {
-      await meetupsData.respond(item.id, response);
-      await onChanged();
-    } catch (e) {
-      setError(humanize(e));
-    }
+      await action();
+      if (!current()) return;
+      await after?.();
+      if (current() && success) setFeedback(success);
+    } catch (cause) {
+      if (current()) setError(humanize(cause));
+    } finally { if (current()) { lock.current = false; setBusy(false); } }
   }
 
-  async function invite(event: FormEvent) {
+  function respond(response: "going" | "maybe" | "declined") {
+    return mutate(() => meetupsData.respond(item.id, response), onChanged);
+  }
+
+  function invite(event: FormEvent) {
     event.preventDefault();
-    try {
-      await meetupsData.invite(item.id, inviteUsername);
-      setInviteUsername("");
-      setError("Đã gửi lời mời.");
-    } catch (e) {
-      setError(humanize(e));
-    }
+    return mutate(() => meetupsData.invite(item.id, inviteUsername), () => setInviteUsername(""), "Đã gửi lời mời.");
   }
 
-  async function addOption(event: FormEvent) {
+  function addOption(event: FormEvent) {
     event.preventDefault();
-    try {
-      await meetupsData.addOption(item.id, new Date(optionStart), new Date(optionEnd));
-      setOptionStart("");
-      setOptionEnd("");
-      await loadDetails();
-    } catch (e) {
-      setError(humanize(e));
+    const start = new Date(optionStart), end = new Date(optionEnd);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+      setError("Giờ kết thúc phải sau giờ bắt đầu."); return;
     }
+    return mutate(() => meetupsData.addOption(item.id, start, end), async () => {
+      setOptionStart(""); setOptionEnd(""); await loadDetails();
+    });
   }
 
-  async function postComment(event: FormEvent) {
+  function postComment(event: FormEvent) {
     event.preventDefault();
     if (!commentBody.trim()) return;
-    try {
-      await meetupsData.postComment(item.id, commentBody.trim());
-      setCommentBody("");
-      await loadDetails();
-    } catch (e) {
-      setError(humanize(e));
-    }
+    return mutate(() => meetupsData.postComment(item.id, commentBody.trim()), async () => {
+      setCommentBody(""); await loadDetails();
+    });
   }
 
   return (
@@ -167,20 +193,24 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
 
         {!organizer && item.status !== "canceled" && item.status !== "completed" && (
           <div className="flex flex-wrap gap-2">
-            <Button variant={item.rsvp === "going" ? "secondary" : "ghost"} onClick={() => void respond("going")}><Check size={16} /> Đi</Button>
-            <Button variant={item.rsvp === "maybe" ? "secondary" : "ghost"} onClick={() => void respond("maybe")}>Có thể</Button>
-            <Button variant="ghost" onClick={() => void respond("declined")}><X size={16} /> Không</Button>
+            <Button disabled={busy} variant={item.rsvp === "going" ? "secondary" : "ghost"} onClick={() => void respond("going")}><Check size={16} /> Đi</Button>
+            <Button disabled={busy} variant={item.rsvp === "maybe" ? "secondary" : "ghost"} onClick={() => void respond("maybe")}>Có thể</Button>
+            <Button disabled={busy} variant="ghost" onClick={() => void respond("declined")}><X size={16} /> Không</Button>
           </div>
         )}
 
         {organizer && item.status !== "canceled" && item.status !== "completed" && (
-          <Button variant="ghost" onClick={async () => { await meetupsData.cancel(item.id); await onChanged(); }}><XCircle size={16} /> Hủy hoạt động</Button>
+          <Button variant="ghost" disabled={busy} onClick={() => {
+            if (window.confirm("Hủy hoạt động này? Người được mời sẽ không thể tham gia.")) void mutate(() => meetupsData.cancel(item.id), onChanged);
+          }}><XCircle size={16} /> Hủy hoạt động</Button>
         )}
       </div>
 
       <div className="mt-5 border-t border-black/8 pt-5 dark:border-white/8">
         <p className="mb-3 text-sm font-bold">Bình chọn thời gian</p>
-        {poll.length === 0 ? <p className="text-sm text-[var(--muted)]">Chưa có khung giờ nào được đề xuất.</p> : (
+        {detailLoading && <p role="status" className="text-sm text-[var(--muted)]">Đang tải bình chọn và thảo luận…</p>}
+        {detailError && <p role="alert" className="text-sm text-[var(--danger)]">Không tải được chi tiết: {detailError} <Button variant="ghost" disabled={detailLoading} onClick={() => void loadDetails()}>Thử lại</Button></p>}
+        {!detailLoading && !detailError && poll.length === 0 ? <p className="text-sm text-[var(--muted)]">Chưa có khung giờ nào được đề xuất.</p> : !detailError && !detailLoading && (
           <div className="space-y-2">
             {poll.map((option) => (
               <div key={option.optionId} className="flex flex-col gap-2 rounded-2xl bg-[var(--soft)] p-3 sm:flex-row sm:items-center">
@@ -189,25 +219,25 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
                   <p className="text-xs text-[var(--muted)]">{option.availableCount}/{option.totalVotes || 0} người đã chọn rảnh</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant={option.myVote === true ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, true); await loadDetails(); }}>Rảnh</Button>
-                  <Button variant={option.myVote === false ? "secondary" : "ghost"} className="px-3" onClick={async () => { await meetupsData.vote(option.optionId, false); await loadDetails(); }}>Bận</Button>
-                  {organizer && <Button className="px-3" onClick={async () => { await meetupsData.confirm(item.id, option.optionId); await onChanged(); }}><CalendarCheck2 size={15} /> Chốt</Button>}
+                  <Button disabled={busy} aria-pressed={option.myVote === true} variant={option.myVote === true ? "secondary" : "ghost"} className="px-3" onClick={() => void mutate(() => meetupsData.vote(option.optionId, true), loadDetails)}>Rảnh</Button>
+                  <Button disabled={busy} aria-pressed={option.myVote === false} variant={option.myVote === false ? "secondary" : "ghost"} className="px-3" onClick={() => void mutate(() => meetupsData.vote(option.optionId, false), loadDetails)}>Bận</Button>
+                  {organizer && item.status === "proposed" && <Button disabled={busy} className="px-3" onClick={() => void mutate(() => meetupsData.confirm(item.id, option.optionId), onChanged)}><CalendarCheck2 size={15} /> Chốt</Button>}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {organizer && item.status !== "canceled" && item.status !== "completed" && (
+        {organizer && item.status === "proposed" && (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <form onSubmit={addOption} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-              <input className="field" type="datetime-local" required value={optionStart} onChange={(e) => setOptionStart(e.target.value)} />
-              <input className="field" type="datetime-local" required value={optionEnd} onChange={(e) => setOptionEnd(e.target.value)} />
-              <Button type="submit" variant="secondary"><Plus size={16} /> Giờ</Button>
+            <form onSubmit={addOption} aria-busy={busy} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <label className="grid gap-1 text-sm font-semibold">Bắt đầu<input className="field min-w-0" type="datetime-local" required value={optionStart} onChange={(e) => setOptionStart(e.target.value)} /></label>
+              <label className="grid gap-1 text-sm font-semibold">Kết thúc<input className="field min-w-0" type="datetime-local" required value={optionEnd} onChange={(e) => setOptionEnd(e.target.value)} /></label>
+              <Button type="submit" variant="secondary" disabled={busy} className="self-end"><Plus size={16} /> Giờ</Button>
             </form>
-            <form onSubmit={invite} className="flex gap-2">
-              <input className="field min-w-0 flex-1" value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="Mời bằng username" required />
-              <Button type="submit" aria-label="Gửi lời mời"><Send size={16} /></Button>
+            <form onSubmit={invite} aria-busy={busy} className="flex items-end gap-2">
+              <label className="grid min-w-0 flex-1 gap-1 text-sm font-semibold">Tên người mời<input className="field min-w-0" value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="Username" required /></label>
+              <Button type="submit" disabled={busy} aria-label="Gửi lời mời"><Send size={16} /></Button>
             </form>
           </div>
         )}
@@ -215,7 +245,7 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
 
       <div className="mt-5 border-t border-black/8 pt-5 dark:border-white/8">
         <p className="mb-3 flex items-center gap-2 text-sm font-bold"><MessageCircle size={16} /> Thảo luận</p>
-        <div className="space-y-2">
+        {!detailError && !detailLoading && <div className="space-y-2">
           {comments.map((comment) => (
             <div key={comment.id} className="rounded-2xl bg-[var(--soft)] p-3">
               <div className="flex items-center justify-between gap-3">
@@ -226,16 +256,17 @@ function MeetupCard({ item, userId, onChanged }: { item: MeetupListItem; userId:
             </div>
           ))}
           {comments.length === 0 && <p className="text-sm text-[var(--muted)]">Chưa có tin nhắn nào.</p>}
-        </div>
+        </div>}
         {item.status !== "canceled" && (
-          <form onSubmit={postComment} className="mt-3 flex gap-2">
-            <input className="field min-w-0 flex-1" value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="Nhắn cho mọi người trong hoạt động…" maxLength={4000} />
-            <Button type="submit" aria-label="Gửi bình luận"><Send size={16} /></Button>
+          <form onSubmit={postComment} aria-busy={busy} className="mt-3 flex items-end gap-2">
+            <label className="grid min-w-0 flex-1 gap-1 text-sm font-semibold">Bình luận<input className="field min-w-0" value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="Nhắn cho mọi người trong hoạt động…" maxLength={4000} /></label>
+            <Button type="submit" disabled={busy || !commentBody.trim()} aria-label="Gửi bình luận"><Send size={16} /></Button>
           </form>
         )}
       </div>
 
-      {error && <p className="mt-3 text-sm text-[var(--muted)]">{error}</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
+      {feedback && <p role="status" className="mt-3 text-sm text-[var(--success)]">{feedback}</p>}
     </Card>
   );
 }
@@ -253,7 +284,9 @@ function formatRange(start: string, end: string) {
 }
 
 function humanize(error: unknown) {
-  const text = error instanceof Error ? error.message : String(error);
+  const text = error instanceof Error ? error.message
+    : error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message
+    : "Thao tác không thành công. Hãy thử lại.";
   if (text.includes("capacity reached")) return "Hoạt động vừa đủ số người tham gia.";
   if (text.includes("user not found")) return "Không tìm thấy username này.";
   return text;

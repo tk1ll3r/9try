@@ -24,10 +24,14 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         navigateFallback: "/index.html",
+        // Map renderer/worker are large route-only assets; fetch on demand, not at install.
+        globIgnores: ["**/MapCanvas-*.js", "**/maplibre-gl-worker-*.js"],
         importScripts: ["push-handler.js"],
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => ["style", "script", "font", "image"].includes(request.destination),
+            urlPattern: ({ request, url }) => url.origin === self.location.origin
+              && !url.pathname.startsWith("/auth/") && !url.pathname.startsWith("/rest/")
+              && ["style", "script", "font", "image"].includes(request.destination),
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "gnouht-static-v1",

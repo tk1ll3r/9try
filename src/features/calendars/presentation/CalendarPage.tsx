@@ -8,7 +8,7 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/monarch/theme.css";
 import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { CalendarPlus, Repeat2, Trash2, XCircle } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import { useAuth } from "../../../bootstrap/AuthProvider";
 import {
@@ -21,6 +21,9 @@ import { friendsData, type FriendConnection } from "../../friends/infrastructure
 import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
+import { lazy, Suspense } from "react";
+import { DialogPanel } from "../../../shared/ui/DialogPanel";
+const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default: m.IcsImportCard })));
 
 type EventKind = "timed" | "all_day";
 
@@ -44,6 +47,10 @@ export function CalendarPage() {
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [message, setMessage] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const createLock = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -70,7 +77,7 @@ export function CalendarPage() {
 
   async function create(event: FormEvent) {
     event.preventDefault();
-    if (!user) return;
+    if (!user || createLock.current) return;
 
     if (kind === "timed" && new Date(end) <= new Date(start)) {
       setMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
@@ -93,6 +100,8 @@ export function CalendarPage() {
       return;
     }
 
+    createLock.current = true;
+    setCreating(true);
     try {
       await calendarData.create({
         userId: user.id,
@@ -115,10 +124,11 @@ export function CalendarPage() {
       setVisibility("only_me");
       setSelectedFriendIds([]);
       setAudienceGroupId("");
+      setCreateOpen(false);
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tạo sự kiện.");
-    }
+    } finally { createLock.current = false; setCreating(false); }
   }
 
   function chooseOccurrence(id: string) {
@@ -218,17 +228,24 @@ export function CalendarPage() {
 
       {message && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
 
-      <Card title="Thêm sự kiện" action={<CalendarPlus size={18} className="text-[var(--muted)]" />}>
-        <form onSubmit={create} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="flex flex-wrap gap-2">
+        <Button id="create-event-trigger" onClick={() => { setMessage(""); setCreateOpen(true); }}><CalendarPlus size={17} /> Thêm sự kiện</Button>
+        <Button variant="ghost" onClick={() => setShowImport(value => !value)} aria-expanded={showImport}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</Button>
+      </div>
+      <DialogPanel open={createOpen} onOpenChange={setCreateOpen} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn được xem theo mặc định. Chọn chia sẻ hoặc lặp khi cần." busy={creating}>
+        {message && <p role="alert" className="mb-4 text-sm text-red-700">{message}</p>}
+        <form onSubmit={create} className="grid gap-3 md:grid-cols-2">
           <input
             className="field md:col-span-2"
+            aria-label="Tên sự kiện"
+            data-dialog-initial-focus
             required
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Tên sự kiện"
           />
 
-          <select className="field" value={kind} onChange={(event) => {
+          <select className="field" aria-label="Loại sự kiện" value={kind} onChange={(event) => {
             setKind(event.target.value as EventKind);
             setStart("");
             setEnd("");
@@ -237,7 +254,7 @@ export function CalendarPage() {
             <option value="all_day">Cả ngày</option>
           </select>
 
-          <select className="field" value={recurrence} onChange={(event) => setRecurrence(event.target.value as "" | RecurrenceRule)}>
+          <select className="field" aria-label="Lặp lại" value={recurrence} onChange={(event) => setRecurrence(event.target.value as "" | RecurrenceRule)}>
             <option value="">Không lặp</option>
             <option value="daily">Mỗi ngày</option>
             <option value="weekly">Mỗi tuần</option>
@@ -339,13 +356,15 @@ export function CalendarPage() {
           )}
 
           <div className="flex items-end">
-            <Button type="submit" className="w-full"><CalendarPlus size={17} /> Thêm vào lịch</Button>
+            <Button type="submit" className="w-full" disabled={creating}><CalendarPlus size={17} /> {creating ? "Đang lưu…" : "Thêm vào lịch"}</Button>
           </div>
         </form>
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
           Sự kiện cả ngày được lưu bằng ngày, không ép qua UTC. Chuỗi timed giữ giờ địa phương theo múi giờ tài khoản.
         </p>
-      </Card>
+      </DialogPanel>
+
+      {showImport && user && <Suspense fallback={<p role="status">Đang tải công cụ nhập lịch…</p>}><IcsImportCard userId={user.id} onImported={refresh} /></Suspense>}
 
       {selected && (
         <Card
@@ -394,7 +413,7 @@ export function CalendarPage() {
       <Card className="overflow-hidden p-3 sm:p-5">
         <FullCalendar
           plugins={[themePlugin, dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
+          initialView={window.matchMedia("(max-width: 640px)").matches ? "timeGridWeek" : "dayGridMonth"}
           locale={viLocale}
           firstDay={1}
           height="auto"
@@ -406,6 +425,12 @@ export function CalendarPage() {
             allDay: event.allDay,
           }))}
           eventClick={(info) => chooseOccurrence(info.event.id)}
+          dateClick={(info) => {
+            setMessage(""); setKind(info.allDay ? "all_day" : "timed");
+            if (info.allDay) { setStart(info.dateStr); setEnd(info.dateStr); }
+            else { setStart(toLocalDateTimeInput(info.date.toISOString())); setEnd(toLocalDateTimeInput(new Date(info.date.getTime() + 60 * 60_000).toISOString())); }
+            setCreateOpen(true);
+          }}
           datesSet={(info) => {
             setRange({ start: info.start, end: info.end });
             void refresh(info.start, info.end);

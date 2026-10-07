@@ -1,18 +1,12 @@
 import { Bell, BellOff, Check, Moon, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../bootstrap/AuthProvider";
-import { appData } from "../../../shared/infrastructure/AppData";
+import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
+import { notificationDestination, notificationsData, type NotificationRow } from "../infrastructure/NotificationsData";
 import { pushData, type NotificationPreferences } from "../infrastructure/PushData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
-
-interface NotificationRow {
-  id: string;
-  title: string;
-  body: string;
-  read_at: string | null;
-  created_at: string;
-}
 
 const categories = [
   ["friend_request", "Lời mời kết bạn"],
@@ -27,7 +21,13 @@ const categories = [
 
 export function NotificationsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const scope = useRef(new AsyncOwnerScope());
   const [items, setItems] = useState<NotificationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [opening, setOpening] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<NotificationPreferences>({
     pushEnabled: false,
     quietStart: "",
@@ -38,65 +38,98 @@ export function NotificationsPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function refreshNotifications() {
+  async function loadNotifications(offset = 0) {
     if (!user) return;
-    const home = await appData.home(user.id);
-    setItems(home.notifications as NotificationRow[]);
+    const current = scope.current.beginRequest(user.id);
+    if (!current()) return;
+    setLoading(true);
+    setListError("");
+    try {
+      const rows = await notificationsData.list(user.id, offset);
+      if (current()) {
+        setItems(previous => offset ? [...previous, ...rows] : rows);
+        setHasMore(rows.length === 20);
+      }
+    } catch (error) {
+      if (current()) setListError(error instanceof Error ? error.message : "Không thể tải thông báo.");
+    } finally { if (current()) setLoading(false); }
   }
 
   async function refreshPreferences() {
     if (!user) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
     try {
       const [nextPrefs, subscribed] = await Promise.all([
         pushData.preferences(user.id),
         pushData.isSubscribed(),
       ]);
-      setPrefs(nextPrefs);
-      setBrowserSubscribed(subscribed);
+      if (current()) { setPrefs(nextPrefs); setBrowserSubscribed(subscribed); }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể tải cài đặt thông báo.");
+      if (current()) setMessage(error instanceof Error ? error.message : "Không thể tải cài đặt thông báo.");
     }
   }
 
   useEffect(() => {
-    void refreshNotifications();
+    scope.current.activate(user?.id);
+    setItems([]); setHasMore(false); setOpening(null); setListError(""); setMessage(""); setBusy(false);
+    setPrefs({ pushEnabled: false, quietStart: "", quietEnd: "", categoryPush: {} }); setBrowserSubscribed(false);
+    void loadNotifications();
     void refreshPreferences();
+    return () => scope.current.dispose();
   }, [user?.id]);
 
-  async function markRead(id: string) {
-    await appData.markRead(id);
-    await refreshNotifications();
+  async function openNotification(item: NotificationRow) {
+    if (!user || opening) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
+    setOpening(item.id);
+    setListError("");
+    try {
+      if (!item.read_at) await notificationsData.markRead(user.id, item.id);
+      if (!current()) return;
+      setItems(previous => previous.map(row => row.id === item.id ? { ...row, read_at: row.read_at ?? new Date().toISOString() } : row));
+      const destination = notificationDestination(item.action_path);
+      if (destination) navigate(destination);
+    } catch (error) {
+      if (current()) setListError(error instanceof Error ? error.message : "Không thể mở thông báo.");
+    } finally { if (current()) setOpening(null); }
   }
 
   async function togglePush() {
-    if (!user) return;
+    if (!user || busy) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
     setBusy(true);
     setMessage("");
     try {
       if (browserSubscribed || prefs.pushEnabled) {
         await pushData.disable(user.id);
-        setMessage("Đã tắt web push trên thiết bị này.");
+        if (current()) setMessage("Đã tắt web push trên thiết bị này.");
       } else {
         await pushData.enable(user.id);
-        setMessage("Đã bật web push trên thiết bị này.");
+        if (current()) setMessage("Đã bật web push trên thiết bị này.");
       }
-      await refreshPreferences();
+      if (current()) await refreshPreferences();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể thay đổi web push.");
+      if (current()) setMessage(error instanceof Error ? error.message : "Không thể thay đổi web push.");
     } finally {
-      setBusy(false);
+      if (current()) setBusy(false);
     }
   }
 
   async function savePreferences(next: NotificationPreferences) {
-    if (!user) return;
-    setPrefs(next);
+    if (!user || busy) return;
+    const current = scope.current.capture(user.id);
+    if (!current()) return;
+    const previous = prefs;
+    setPrefs(next); setBusy(true);
     try {
       await pushData.savePreferences(user.id, next);
-      setMessage("Đã lưu tùy chọn thông báo.");
+      if (current()) setMessage("Đã lưu tùy chọn thông báo.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Không thể lưu tùy chọn.");
-    }
+      if (current()) { setPrefs(previous); setMessage(error instanceof Error ? error.message : "Không thể lưu tùy chọn."); }
+    } finally { if (current()) setBusy(false); }
   }
 
   const pushActive = prefs.pushEnabled && browserSubscribed;
@@ -165,6 +198,7 @@ export function NotificationsPage() {
           <Button
             className="mt-3"
             variant="ghost"
+            disabled={busy}
             onClick={() => void savePreferences(prefs)}
           >
             Lưu giờ yên tĩnh
@@ -180,7 +214,7 @@ export function NotificationsPage() {
                   <input
                     type="checkbox"
                     checked={enabled}
-                    disabled={!prefs.pushEnabled}
+                    disabled={!prefs.pushEnabled || busy}
                     onChange={(event) => {
                       const next = {
                         ...prefs,
@@ -198,13 +232,17 @@ export function NotificationsPage() {
       </div>
 
       <Card title={`Trung tâm thông báo · ${items.filter((item) => !item.read_at).length} chưa đọc`}>
+        {listError && <p role="alert" className="mb-3 text-sm text-[var(--danger)]">{listError} <Button variant="ghost" disabled={loading} onClick={() => void loadNotifications(items.length)}>Thử lại</Button></p>}
+        {loading && !items.length && <p role="status">Đang tải thông báo…</p>}
         {items.length ? (
           <div className="divide-y divide-black/8 dark:divide-white/8">
             {items.map((item) => (
               <button
                 key={item.id}
-                onClick={() => void markRead(item.id)}
-                className="flex w-full gap-3 py-4 text-left"
+                onClick={() => void openNotification(item)}
+                disabled={opening !== null}
+                aria-label={`${item.title}. ${notificationDestination(item.action_path) ? "Mở nội dung" : "Đánh dấu đã đọc"}`}
+                className="flex w-full gap-3 py-4 text-left disabled:opacity-60"
               >
                 <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.read_at ? "bg-black/10 dark:bg-white/10" : "bg-[var(--lime-strong)]"}`} />
                 <span className="min-w-0 flex-1">
@@ -220,12 +258,13 @@ export function NotificationsPage() {
               </button>
             ))}
           </div>
-        ) : (
+        ) : !loading && !listError ? (
           <div className="py-12 text-center text-[var(--muted)]">
             <Bell className="mx-auto mb-2" />
             Chưa có thông báo mới.
           </div>
-        )}
+        ) : null}
+        {hasMore && <Button className="mt-3" variant="ghost" disabled={loading} onClick={() => void loadNotifications(items.length)}>{loading ? "Đang tải…" : "Xem thêm"}</Button>}
       </Card>
     </div>
   );

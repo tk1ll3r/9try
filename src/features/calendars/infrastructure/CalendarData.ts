@@ -360,23 +360,27 @@ function expandTimed(
   const duration = current.until(originalEnd);
   const until = row.recurrence_until ? Temporal.PlainDate.from(row.recurrence_until) : null;
   const result: CalendarOccurrence[] = [];
+  // An occurrence outside the master range can be moved into the visible range.
+  const lastException = [...exceptions.keys()].sort().at(-1);
+  const expansionEnd = lastException
+    ? Math.max(rangeEnd.getTime(), Temporal.PlainDate.from(lastException).add({ days: 1 }).toZonedDateTime(row.timezone).epochMilliseconds)
+    : rangeEnd.getTime();
 
   for (let guard = 0; guard < 2000; guard++) {
     const occurrenceDate = current.toPlainDate();
     if (until && Temporal.PlainDate.compare(occurrenceDate, until) > 0) break;
-    if (current.epochMilliseconds >= rangeEnd.getTime()) break;
+    if (current.epochMilliseconds >= expansionEnd) break;
 
     const end = current.add(duration);
-    if (end.epochMilliseconds > rangeStart.getTime()) {
-      const item = timedOccurrence(
-        row,
-        current.toInstant().toString(),
-        end.toInstant().toString(),
-        true,
-        exceptions,
-      );
-      if (item && overlaps(item, rangeStart, rangeEnd)) result.push(item);
-    }
+    const item = timedOccurrence(
+      row,
+      current.toInstant().toString(),
+      end.toInstant().toString(),
+      true,
+      exceptions,
+    );
+    // Apply cancellations and overrides BEFORE filtering by effective time.
+    if (item && overlaps(item, rangeStart, rangeEnd)) result.push(item);
 
     current = addRecurrence(current, row.recurrence_rule!);
   }
@@ -394,19 +398,20 @@ function expandAllDay(
   const originalEnd = Temporal.PlainDate.from(row.all_day_end_exclusive!);
   const durationDays = current.until(originalEnd).days;
   const until = row.recurrence_until ? Temporal.PlainDate.from(row.recurrence_until) : null;
-  const rangeStartDate = Temporal.PlainDate.from(localDateString(rangeStart));
-  const rangeEndDate = Temporal.PlainDate.from(localDateString(rangeEnd));
+  const endDate = Temporal.PlainDate.from(localDateString(rangeEnd));
+  const rangeEndDate = rangeEnd.getTime() === new Date(`${endDate}T00:00:00`).getTime() ? endDate : endDate.add({ days: 1 });
+  const lastException = [...exceptions.keys()].sort().at(-1);
+  const exceptionEnd = lastException ? Temporal.PlainDate.from(lastException).add({ days: 1 }) : rangeEndDate;
+  const expansionEnd = Temporal.PlainDate.compare(exceptionEnd, rangeEndDate) > 0 ? exceptionEnd : rangeEndDate;
   const result: CalendarOccurrence[] = [];
 
   for (let guard = 0; guard < 2000; guard++) {
     if (until && Temporal.PlainDate.compare(current, until) > 0) break;
-    if (Temporal.PlainDate.compare(current, rangeEndDate) >= 0) break;
+    if (Temporal.PlainDate.compare(current, expansionEnd) >= 0) break;
 
     const end = current.add({ days: durationDays });
-    if (Temporal.PlainDate.compare(end, rangeStartDate) > 0) {
-      const item = allDayOccurrence(row, current.toString(), end.toString(), true, exceptions);
-      if (item) result.push(item);
-    }
+    const item = allDayOccurrence(row, current.toString(), end.toString(), true, exceptions);
+    if (item && overlaps(item, rangeStart, rangeEnd)) result.push(item);
 
     current = addPlainDateRecurrence(current, row.recurrence_rule!);
   }
@@ -495,8 +500,8 @@ function overlaps(
 ): occurrence is CalendarOccurrence {
   if (!occurrence) return false;
   if (occurrence.allDay) {
-    const start = Date.parse(`${occurrence.start}T00:00:00Z`);
-    const end = Date.parse(`${occurrence.end}T00:00:00Z`);
+    const start = Date.parse(`${occurrence.start}T00:00:00`);
+    const end = Date.parse(`${occurrence.end}T00:00:00`);
     return start < rangeEnd.getTime() && end > rangeStart.getTime();
   }
   return Date.parse(occurrence.start) < rangeEnd.getTime()
