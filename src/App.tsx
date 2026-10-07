@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { UpdatePrompt } from "./app/UpdatePrompt";
+import "./kernel/install"; // starts listening for the browser's install offer
 
 const AuthenticatedApp = lazy(() => import("./app/AuthenticatedApp"));
 const LocationDemoPage = lazy(() => import("./modules/location/presentation/LocationDemoPage").then(m => ({ default: m.LocationDemoPage })));

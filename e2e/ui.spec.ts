@@ -513,6 +513,38 @@ test("the inbox marks everything read at once", async ({ page }) => {
   expect(patches[0]).not.toContain("id=eq.n");
 });
 
+test("Today offers to install the app when the browser can, once, and stays quiet after a dismissal", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
+  // What Chrome does when the app can be installed.
+  const offer = () => page.evaluate(() => {
+    const event = Object.assign(new Event("beforeinstallprompt"), { prompt: () => { (window as unknown as { asked: number }).asked = ((window as unknown as { asked?: number }).asked ?? 0) + 1; return Promise.resolve(); } });
+    window.dispatchEvent(event);
+  });
+  await page.goto("/");
+  const card = page.getByRole("heading", { name: "Cài ứng dụng lên màn hình chính" });
+  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+  await expect(card).toHaveCount(0);
+
+  await offer();
+  await page.getByRole("button", { name: "Cài đặt", exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { asked: number }).asked)).toBe(1);
+  await expect(card).toHaveCount(0);
+
+  await offer();
+  await expect(card).toBeVisible();
+  await page.getByRole("button", { name: "Ẩn gợi ý cài đặt" }).click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Hôm nay mình có gì?" })).toBeVisible();
+  await offer();
+  await expect(card).toHaveCount(0);
+});
+
 test("friend removal requires confirmation", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {
