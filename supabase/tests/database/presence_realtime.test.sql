@@ -22,7 +22,8 @@ reset role;
 select is((select count(*) from realtime.messages where event='presence' and topic='user:00000000-0000-4000-8000-000000000602'), 1::bigint, 'an accepted friend is told when a mode is set');
 select is((select count(*) from realtime.messages where event='presence' and topic='user:00000000-0000-4000-8000-000000000601'), 1::bigint, 'the owner''s other devices are told too');
 select is((select count(*) from realtime.messages where event='presence' and topic in ('user:00000000-0000-4000-8000-000000000603','user:00000000-0000-4000-8000-000000000604')), 0::bigint, 'a stranger and a pending request hear nothing');
-select is((select payload from realtime.messages where event='presence' limit 1), '{}'::jsonb, 'the event carries no data about the mode');
+-- Supabase adds its own message id to the payload; nothing else may be in it.
+select is((select payload - 'id' from realtime.messages where event='presence' limit 1), '{}'::jsonb, 'the event carries no data about the mode');
 
 set local role authenticated;
 select public.set_my_activity_mode(null, 60);

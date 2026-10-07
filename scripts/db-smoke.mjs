@@ -1,13 +1,39 @@
-// Applies every migration and runs the pgTAP files on an embedded Postgres (PGlite), so the
-// database tests can run without Docker: `npm run test:db`, or `npm run test:db -- location`
-// for one file. This is a smoke check with stand-ins for the Supabase roles, auth.uid(),
-// pg_cron, realtime and pgTAP. `supabase test db` on a real local stack stays the authority.
+// Runs the pgTAP files in supabase/tests/database.
+//
+//   npm run test:db              on an embedded Postgres (PGlite): applies every migration first, with
+//                                stand-ins for the Supabase roles, auth.uid(), pg_cron, realtime and pgTAP.
+//                                Needs no Docker. A smoke check.
+//   npm run test:db:local        on the local Supabase stack's own Postgres, with the real pgTAP. The
+//                                migrations must already be applied there (`supabase migration up --local`).
+//   npm run test:db -- location  one file, in either mode.
+//
+// Every test file opens a transaction and rolls it back, so a run leaves no data behind.
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { readFileSync, readdirSync } from "node:fs";
 
 const repo = new URL("..", import.meta.url).pathname;
-const only = process.argv[2];
+const args = process.argv.slice(2);
+const url = args.includes("--url") ? args[args.indexOf("--url") + 1] : undefined;
+const only = args.find((arg, index) => !arg.startsWith("--") && args[index - 1] !== "--url");
+
+/** The local stack's Postgres. Refuses any other host: these tests insert users and must never reach a real project. */
+async function realDatabase() {
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname)) {
+    console.log("Refusing to run: --url must point at 127.0.0.1 or localhost."); process.exit(2);
+  }
+  const { default: pg } = await import("pg");
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  return {
+    run: async sql => [await client.query(sql)].flat().map(result => result.rows),
+    recover: () => client.query("rollback; reset role;"),
+    close: () => client.end(),
+  };
+}
+
+/** PGlite with what the migrations expect from a Supabase database, and every migration applied. */
+async function embeddedDatabase() {
 const db = new PGlite({ extensions: { pgcrypto } });
 
 // The parts of a Supabase database that the migrations rely on.
@@ -59,23 +85,33 @@ for (const file of readdirSync(`${repo}supabase/migrations`).sort()) {
   catch (error) { console.log("MIGRATION FAILED", file, "→", error.message); process.exit(1); }
 }
 
+  return {
+    run: async sql => (await db.exec(sql)).map(result => result.rows),
+    recover: () => db.exec("rollback; reset role;"),
+    close: async () => {},
+  };
+}
+
+const db = url ? await realDatabase() : await embeddedDatabase();
 let failed = 0;
 for (const file of readdirSync(`${repo}supabase/tests/database`).sort()) {
   if (only && !file.includes(only)) continue;
-  const sql = readFileSync(`${repo}supabase/tests/database/${file}`, "utf8").replace(/create extension if not exists pgtap[^;]*;/, "");
+  // The embedded Postgres has its pgTAP stand-in already; the real one installs pgTAP inside the transaction.
+  const sql = readFileSync(`${repo}supabase/tests/database/${file}`, "utf8");
   let lines = [];
   try {
-    for (const result of await db.exec(sql)) for (const row of result.rows) {
+    for (const rows of await db.run(url ? sql : sql.replace(/create extension if not exists pgtap[^;]*;/, ""))) for (const row of rows) {
       const value = Object.values(row)[0];
       if (typeof value === "string" && /^(ok|not ok|1\.\.)/.test(value)) lines.push(value);
     }
-  } catch (error) { lines.push(`not ok - file aborted: ${error.message}`); await db.exec("rollback; reset role;"); }
+  } catch (error) { lines.push(`not ok - file aborted: ${error.message}`); await db.recover(); }
   const bad = lines.filter(line => line.startsWith("not ok"));
   const planned = Number(lines.find(line => line.startsWith("1.."))?.slice(3));
-  const ran = lines.filter(line => /^(ok|not ok) - /.test(line)).length;
+  const ran = lines.filter(line => /^(ok|not ok)\b/.test(line)).length;
   if (ran !== planned) bad.push(`not ok - planned ${planned} assertions, ran ${ran}`);
   failed += bad.length;
   console.log(`${bad.length ? "FAIL" : "pass"} ${file}: ${ran}/${planned}`);
   for (const line of bad) console.log("   ", line);
 }
+await db.close();
 process.exit(failed ? 1 : 0);
