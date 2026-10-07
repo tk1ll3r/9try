@@ -15,7 +15,7 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - A Today screen that every feature adds a card to: requests waiting for an answer, what comes next, tasks, habits, what friends are doing.
 - Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders sent by the server.
 - Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
-- Status modes that friends can see for a chosen time.
+- Mode, the home screen: what each friend says they are doing right now, and your own mode for a chosen time.
 - Notification center, with optional Web Push, quiet hours and per-category choices.
 - A privacy screen that lists what other people can see right now, with a stop button for each.
 - Search across the app (Ctrl/Cmd+K).

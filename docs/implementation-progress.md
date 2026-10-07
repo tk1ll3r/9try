@@ -1,5 +1,33 @@
 # Development-plan implementation status
 
+## 2026-10-07, evening: Mode as the home screen, and motion
+
+The owner said the Mode tab has the highest priority, because it shows what each member is doing, and asked for modern effects and animation. Still the local branch `refactor/foundation`, nothing pushed, no Supabase project changed.
+
+What changed:
+
+- Mode is the first tab and the screen at `/`. Today moved to `/today`. This was my reading of "highest priority"; moving Mode back to a tab beside Today is a two-line change in `presence.module.ts` and `today.module.ts`.
+- The Mode screen shows the user's own mode with a ring that empties as its time runs out, six mode tiles, duration chips, and every friend grouped by mode with a turning ring in the mode's color. Friends without a mode are listed below. A friend's tile opens the chat with them.
+- Today's first card shows the same people. The mode card left the meetups screen.
+- Migration 0027 sends a `presence` event to the user and their accepted, unblocked friends when a mode is set, changed or cleared. The event carries no data. Until it is applied, the screen reloads every 20 seconds.
+- Motion, all in CSS: screens arrive in steps; one pill slides under the current tab of the bottom bar; bars and cards are frosted over slowly drifting lights; dialogs rise in and leave; buttons lift and give under a press; a shimmer stands in while a screen's code loads; a thin bar shows a fetch that takes longer than 0.4 s; live map markers and mode rings pulse. `prefers-reduced-motion` turns all of it off.
+- The shell stays on screen while a page's code loads. Before, the whole screen was replaced by "Đang tải trang…".
+- On a phone the profile and the inbox are in the top bar, so the bottom bar keeps five tabs.
+
+Checks run with Node 22.23.3:
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests, also under `TZ=America/Los_Angeles` | 90 of 90 in 20 files |
+| `npm run test:db` | 27 migrations applied; 166 of 166 assertions in 16 files |
+| Browser tests, mocked backend, dev server, reduced motion | 32 of 32 |
+| Production build | Pass |
+
+Download size, gzip: sign-in 144 kB, the home screen 210 kB.
+
+Not verified: how the motion feels and performs on a real phone, in particular the blurred backgrounds on an older Android device; the realtime event on a real Supabase project; everything listed as not verified in the entries below.
+
 ## 2026-10-07, later the same day: Today dashboard, task labels and times, meetup pages
 
 Still the local branch `refactor/foundation`, nothing pushed, no Supabase project changed. None of this adds a migration, so it works on a database that stops at migration 0012.

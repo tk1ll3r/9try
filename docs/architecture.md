@@ -35,6 +35,8 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `install.ts` | The browser's offer to install the app, kept from page load |
 | `ui/` | `Button`, `Card`, `DialogPanel` |
 
+Motion lives in `src/styles.css`: two easing curves, a handful of keyframes and the classes built on them (`page-slot`, `pressable`, `glass`, `aurora`, `skeleton`, `mode-ring`, `animate-pop`). There is no animation library. One rule at the end of the file turns all of it off under `prefers-reduced-motion`, and the browser tests run with that setting.
+
 ## Inside a module
 
 | Folder | Holds | Must not import |
@@ -58,7 +60,7 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 |---|---|
 | `create(session)` | Builds the module's services for one signed-in user. Screens get them with `useModule(module)` |
 | `routes` | Signed-in pages. The same list decides which outside paths are accepted (`registry.safePath`) |
-| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge |
+| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge. Mode is the first tab and the screen at `/`; the inbox and the profile sit in the phone's top bar |
 | `indicator` | A banner on every screen, such as "Đang chia sẻ vị trí" |
 | `privacy` | A section of the privacy screen: what the module shows to other people now, with a way to stop |
 | `searchItems(services)` | What the global search can find in this module |
@@ -79,7 +81,7 @@ A process that must outlive a screen is a class with `subscribe` and `getState`,
 
 Each user listens to one private channel, `user:<id>`. Only database triggers write to it, through `private.emit(user_id, event, payload)`. Because the trigger picks the recipients when the event happens, unfriending or blocking takes effect on the next event.
 
-Event names are the first element of query keys: `notifications`, `friends`, `groups`, `chat`, `location`. `RealtimeBridge` reloads the matching queries and reloads everything after a reconnect. Polling stays as a fallback: 60 s for the unread badge, 5 s for an open chat thread, 20 s for the chat list, 15 s for the map. Friends' status modes have no event yet and reload every 60 s.
+Event names are the first element of query keys: `notifications`, `friends`, `groups`, `chat`, `location`, `presence`. `RealtimeBridge` reloads the matching queries and reloads everything after a reconnect. Polling stays as a fallback: 60 s for the unread badge, 5 s for an open chat thread, 20 s for the chat list, 15 s for the map. The Mode screen also reloads every 20 s.
 
 Every row added to `notifications` also queues a row in `reminders`, which the `process-reminders` function turns into a Web Push. Quiet hours and per-category choices are applied there.
 
