@@ -23,7 +23,8 @@ First deploy: 2026-10-08, from commit `ccfe3b8` on the local branch `refactor/fo
 
 Known on the live site:
 
-- The database is still at migration 0012, so the features listed in point 2 show "máy chủ chưa được cập nhật".
+- Since 2026-10-08 the database has all 29 migrations and the site is the version of commit `1a78cbb`; the owner ran `db push` and `npm run deploy`.
+- No Edge Function is deployed. Until they are: deleting an account fails, reminders never fire, and a calendar feed address answers "not found". `npx supabase@2.119.0 functions deploy calendar-feed delete-account --use-api` covers the first and the last; `process-reminders` also needs `CRON_SECRET` and a scheduler (section 3).
 - Cloudflare adds its Web Analytics script (`static.cloudflareinsights.com`) to the pages. It is a zone setting, not part of the app; turn it off in the Cloudflare dashboard under Web Analytics if it is not wanted.
 - A request for a file that does not exist under `/assets/` is answered with the app's HTML and status 200, as every unknown path is.
 - Push notifications are off: `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` is empty.

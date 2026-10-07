@@ -1,5 +1,18 @@
 # Development-plan implementation status
 
+## 2026-10-08, evening: the cloud database and the live site are current
+
+The owner ran `supabase db push --linked` and `npm run deploy`. Checked afterwards, read-only:
+
+- `supabase migration list --linked`: 29 applied, none pending.
+- The live site serves the new version (new Mode screen, 19 activities, the simpler sign-in text), answers 200 with the security headers, its service worker activates and the shell opens offline, with no console error on the sign-in screen.
+- As a visitor who is not signed in, the production API refuses every new function with "permission denied" instead of "not found": friend links, chat, location requests, habit undo, calendar feed, pins, activity modes. `get_shared_busy` refuses too, so the anonymous read of busy times that migration 0015 closes is closed in production. The chat tables return no rows to anyone outside the functions.
+- DNS for mail: SPF, the Resend DKIM key, the `send` subdomain and the new DMARC record (`p=none`, reports to `admin@gnouht.space`) are all public.
+
+Not verified: a real sign-in email through Resend (the SMTP fields and templates in the Supabase dashboard cannot be read from outside); anything behind sign-in on production; realtime delivery.
+
+Still missing on production: no Edge Function is deployed (`supabase functions list` is empty), so account deletion, reminders and the calendar feed address do not work there; push keys are not set.
+
 ## 2026-10-08, later: a bolder Mode screen, 19 activities, simpler screens
 
 The owner asked for the features to work on the live app, simpler use, more prominence on the Mode tab for oneself and for everyone, and more activities with icons.
