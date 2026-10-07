@@ -19,6 +19,15 @@ Three things outside the upload decide whether the deployed app works:
 
 Checked before the first deploy: the production build passes the 32 browser tests in preview mode, contains no server secret and no demo route, and `wrangler deploy --dry-run` accepts the configuration.
 
+First deploy: 2026-10-08, from commit `ccfe3b8` on the local branch `refactor/foundation`, Cloudflare version `ca7d292b`. Checked on the live site: status 200 with the security headers, deep links answered with the app, hashed assets cached as immutable, the sign-in screen renders, the service worker activates and the shell then opens offline. Not checked: an actual sign-in (it sends an email), and anything behind sign-in.
+
+Known on the live site:
+
+- The database is still at migration 0012, so the features listed in point 2 show "máy chủ chưa được cập nhật".
+- Cloudflare adds its Web Analytics script (`static.cloudflareinsights.com`) to the pages. It is a zone setting, not part of the app; turn it off in the Cloudflare dashboard under Web Analytics if it is not wanted.
+- A request for a file that does not exist under `/assets/` is answered with the app's HTML and status 200, as every unknown path is.
+- Push notifications are off: `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` is empty.
+
 The sections below are the full checklist for a production launch.
 
 ## 1. Supabase project

@@ -1,5 +1,15 @@
 # Development-plan implementation status
 
+## 2026-10-08: first deploy, to 9try.gnouht.space
+
+The owner asked for a deploy to `9try.gnouht.space`, logged wrangler in and added the address to the Supabase redirect URLs. The web app is now served from Cloudflare (`wrangler.jsonc`, static assets with the single-page fallback, custom domain). The deploy created the DNS record for `9try` only; `mcp.gnouht.space` still answers as before. The branch is still not pushed: the upload came from the local working tree at commit `ccfe3b8`.
+
+Before the upload: 32 of 32 browser tests against the production build in preview mode (first preview run since the plan started); the bundle has no server secret and no demo route.
+
+On the live site, read-only: HTTP 200 with the security headers; `/calendar`, `/today`, `/meetups/x`, `/me/privacy` answered with the app; `sw.js` and the manifest served; hashed assets `immutable`; the sign-in screen renders at 390 px with no console error; the service worker activates about 8 seconds after the first load and the shell then opens with the network cut.
+
+Not done and not verified: a real sign-in on the new address; the cloud database is still at migration 0012; Edge Functions are not deployed; push keys are not set.
+
 ## 2026-10-07, night: friends ranked on the Mode screen, a shorter menu, tests on a real Postgres
 
 Plan approved by the owner the same day (ranking by upcoming meetups, chat, live activity and pins; trim the Mode screen, the menu, Today, dead code and old documents; use the local Supabase stack for tests). Still the local branch `refactor/foundation`, nothing pushed, the cloud project untouched.
