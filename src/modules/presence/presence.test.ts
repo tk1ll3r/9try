@@ -34,6 +34,12 @@ describe("friend ranking", () => {
     expect(first.score).toBe(90);
     expect(first.reasons.map(reason => reason.label)).toEqual(["hôm nay"]);
   });
+  it("shows the weightier kind of reason first, even when a lighter one scores more points", () => {
+    const signals: Reason[] = [{ userId: "kha", kind: "chat", strength: 1, label: "Hay trò chuyện" }, { userId: "kha", kind: "unread", strength: 0.2, label: "1 tin chưa đọc" }];
+    const [first] = new FriendRanking().rank([kha], [], signals, new Set(), now);
+    expect(first.score).toBe(57);
+    expect(first.reasons.map(reason => reason.label)).toEqual(["1 tin chưa đọc", "Hay trò chuyện"]);
+  });
   it("gives a kind it does not know the default weight, and clamps a strength outside 0 to 1", () => {
     const ranked = new FriendRanking().rank([kha, lan], [], [{ userId: "kha", kind: "nudge", strength: 1 }, { userId: "lan", kind: "nudge", strength: 7 }], new Set(), now);
     expect(ranked.map(item => item.score)).toEqual([20, 20]);

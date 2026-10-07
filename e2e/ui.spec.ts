@@ -545,48 +545,81 @@ test("Today offers to install the app when the browser can, once, and stays quie
   await expect(card).toHaveCount(0);
 });
 
-test("Mode is the home screen: each friend's status at a glance, and setting your own", async ({ page }) => {
+test("Mode is the home screen: friends ranked by what matters now, each with the reason", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {
     localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
   }, user);
   await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
-  const kha = "22222222-2222-4222-8222-222222222222", lan = "33333333-3333-4333-8333-333333333333";
+  const id = (digit: number) => `${String(digit).repeat(8)}-2222-4222-8222-222222222222`;
+  const kha = id(2), lan = id(3), bao = id(4), thu = id(5);
   const at = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
-  const friend = (id: string, name: string) => ({ user_id: id, display_name: name, username: name.toLowerCase(), status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" });
-  let mine: string | null = null; const calls: { p_mode: string | null; p_minutes: number }[] = [];
+  const friend = (userId: string, name: string) => ({ user_id: userId, display_name: name, username: null, status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" });
+  let mine: string | null = null, pinned: string[] = [];
+  const calls: { p_mode: string | null; p_minutes: number }[] = [];
   await page.route("**/rest/v1/**", route => {
     const path = new URL(route.request().url()).pathname;
-    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [friend(kha, "Kha"), friend(lan, "Lan")] });
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [friend(thu, "Thu"), friend(bao, "Bảo"), friend(lan, "Lan"), friend(kha, "Kha")] });
     if (path.endsWith("/activity_modes")) return route.fulfill({ json: [
-      { user_id: kha, mode: "studying", updated_at: at(-30), expires_at: at(30) },
+      { user_id: lan, mode: "gaming", updated_at: at(-60), expires_at: at(60) },
+      { user_id: bao, mode: "studying", updated_at: at(-60), expires_at: at(20) },
       ...(mine ? [{ user_id: user.id, mode: mine, updated_at: at(0), expires_at: at(60) }] : []),
     ] });
     if (path.endsWith("/rpc/set_my_activity_mode")) { calls.push(route.request().postDataJSON()); mine = calls.at(-1)!.p_mode; return route.fulfill({ json: null }); }
+    // Kha: a confirmed meetup in four hours and three unread messages. Lan: a live location.
+    if (path.endsWith("/rpc/list_conversations")) return route.fulfill({ json: [{ id: "c1", kind: "direct", title: "Kha", other_user_id: kha, group_id: null, last_message_at: at(-60), last_message_body: "Tối nay nhé", unread_count: 3, recent_messages: 12 }] });
+    if (path.endsWith("/meetup_invitees")) return route.fulfill({ json: [{ rsvp_status: "going", meetup: { id: "m1", organizer_id: kha, title: "Ăn tối", description: "", status: "confirmed", timezone: "UTC", start_at: at(240), end_at: at(360), capacity: null, location_name: null, group_id: null } }] });
+    if (path.endsWith("/rpc/list_meetup_participants")) return route.fulfill({ json: [{ user_id: kha, display_name: "Kha", username: null, rsvp_status: "going" }, { user_id: user.id, display_name: "Vy", username: null, rsvp_status: "going" }] });
+    if (path.endsWith("/rpc/list_visible_locations")) return route.fulfill({ json: [{ session_id: "s1", owner_id: lan, owner_display_name: "Lan", owner_username: null, expires_at: at(60), approximate: false, latitude: 10.77, longitude: 106.7, accuracy_m: 10, recorded_at: at(0) }] });
+    if (path.endsWith("/friend_pins")) return route.fulfill({ json: pinned.map(friendId => ({ friend_id: friendId })) });
+    if (path.endsWith("/rpc/set_friend_pin")) { const body = route.request().postDataJSON(); pinned = body.p_pinned ? [...pinned, body.p_friend_id] : pinned.filter(item => item !== body.p_friend_id); return route.fulfill({ json: null }); }
     return route.fulfill({ json: [] });
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Mọi người đang làm gì?" })).toBeVisible();
-  await expect(page.getByText("1/2 bạn đang bật mode")).toBeVisible();
-  // Mode is the first tab of the bar and the one that is open.
+  await expect(page.getByText("2/4 bạn đang bật mode")).toBeVisible();
   const firstTab = page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link").first();
   await expect(firstTab).toHaveText("Mode");
   await expect(firstTab).toHaveAttribute("aria-current", "page");
 
-  await expect(page.getByRole("heading", { name: "Học bài · 1" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Kha: Học bài. Nhắn tin" })).toHaveAttribute("href", `/chat/with/${kha}`);
-  await expect(page.locator("section", { hasText: "Chưa bật mode · 1" }).getByText("Lan")).toBeVisible();
+  // The friends who matter now are on the first screen, in order, each with the reason.
+  const top = page.locator('section[aria-label="Nổi bật"] > ul > li');
+  await expect(top).toHaveText([/Kha/, /Lan/]);
+  await expect(top.nth(0)).toBeInViewport();
+  await expect(top.nth(0).getByRole("link", { name: /Hẹn \d{2}:\d{2} (hôm nay|mai) · Ăn tối/ })).toHaveAttribute("href", "/meetups/m1");
+  await expect(top.nth(0).getByRole("link", { name: "3 tin chưa đọc" })).toHaveAttribute("href", "/chat/c1");
+  await expect(top.nth(1)).toContainText("Chơi game");
+  await expect(top.nth(1).getByRole("link", { name: "Đang chia sẻ vị trí" })).toHaveAttribute("href", "/me/location");
+  await expect(top.nth(0).getByRole("link", { name: "Nhắn tin cho Kha" })).toHaveAttribute("href", `/chat/with/${kha}`);
+  const rows = page.locator('section[aria-label="Mọi người"] > ul > li');
+  await expect(rows).toHaveText([/Bảo.*Học bài · còn 20 phút/, /Thu.*Chưa bật mode/]);
 
+  // A pin beats the score.
+  await page.getByRole("button", { name: "Ghim Thu" }).click();
+  await expect(top).toHaveText([/Thu/, /Kha/, /Lan/]);
+  await expect(page.getByRole("button", { name: "Bỏ ghim Thu" })).toHaveAttribute("aria-pressed", "true");
+  expect(pinned).toEqual([thu]);
+
+  await page.getByRole("button", { name: "Đang bật · 2" }).click();
+  await expect(top).toHaveCount(0);
+  await expect(rows).toHaveText([/Lan/, /Bảo/]);
+  await page.getByRole("button", { name: "Tất cả" }).click();
+
+  // The user's own mode: one tap to turn one on, the dialog to change it and its duration.
   const myMode = page.getByRole("region", { name: "Mode của bạn" });
   await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
-  await myMode.getByRole("button", { name: "1 giờ", exact: true }).click();
-  await myMode.getByRole("button", { name: "Chơi game", exact: true }).click();
+  await myMode.getByRole("button", { name: "Chơi game" }).click();
   await expect(myMode.getByRole("status")).toHaveText("Chơi game");
-  await expect(myMode.getByRole("button", { name: "Chơi game", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await myMode.getByRole("button", { name: "Đổi" }).click();
+  const picker = page.getByRole("dialog", { name: "Mode của bạn" });
+  await picker.getByRole("button", { name: "1 giờ", exact: true }).click();
+  await picker.getByRole("button", { name: "Học bài", exact: true }).click();
+  await expect(picker).toHaveCount(0);
+  await expect(myMode.getByRole("status")).toHaveText("Học bài");
   await myMode.getByRole("button", { name: "Tắt mode" }).click();
   await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
-  expect(calls).toEqual([{ p_mode: "gaming", p_minutes: 60 }, { p_mode: null, p_minutes: 60 }]);
+  expect(calls).toEqual([{ p_mode: "gaming", p_minutes: 120 }, { p_mode: "studying", p_minutes: 60 }, { p_mode: null, p_minutes: 60 }]);
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Hôm nay" }).click();

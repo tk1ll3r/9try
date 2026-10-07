@@ -22,7 +22,7 @@ export interface RankedFriend<Friend extends Person = Person> {
   mode?: ActiveMode;
   pinned: boolean;
   score: number;
-  /** What to show on the card: the reasons that have a label, the one that counts most first. */
+  /** What to show on the card: the reasons that have a label, the weightiest kind first. */
   reasons: Reason[];
 }
 
@@ -52,9 +52,10 @@ export class FriendRanking {
       // Several reasons of one kind count once, at their strongest.
       const strongest = new Map<string, Reason>();
       for (const reason of own) if ((strongest.get(reason.kind)?.strength ?? -1) < reason.strength) strongest.set(reason.kind, reason);
+      // On the card the weightier kind comes first: unread messages before "talks a lot", whatever their strength.
       const weighed = [...strongest.values()]
-        .map(reason => ({ reason, points: (this.weights[reason.kind] ?? otherWeight) * Math.min(1, Math.max(0, reason.strength)) }))
-        .sort((a, b) => b.points - a.points);
+        .map(reason => { const weight = this.weights[reason.kind] ?? otherWeight; return { reason, weight, points: weight * Math.min(1, Math.max(0, reason.strength)) }; })
+        .sort((a, b) => b.weight - a.weight || b.points - a.points);
       return {
         friend, mode, pinned: pinned.has(friend.userId),
         score: Math.round(weighed.reduce((sum, item) => sum + item.points, 0)),
