@@ -1,5 +1,7 @@
 # Implementation plan
 
+> Superseded by [master-plan.md](master-plan.md) on 2026-10-07. Kept for history.
+
 ## Architecture
 React/TypeScript presentation -> application use cases -> OOP domain -> repository interfaces -> Supabase adapters.
 The domain imports no React, browser, HTTP, or database SDK code. Supabase RLS is authoritative for access control.

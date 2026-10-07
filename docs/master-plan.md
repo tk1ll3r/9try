@@ -1,6 +1,6 @@
 # Gnouht Together — Master Development Plan
 
-**Status:** proposal for approval · written 2026-10-07
+**Status:** approved 2026-10-07 · Phases 0 and 1 are implemented on branch `refactor/foundation`; see section 10 for what is still open
 **Supersedes:** `docs/roadmap.md`, `docs/system-development-plan.md`, `docs/ui-ux-development-plan.md`, `docs/implementation-plan.md` (kept as history). `docs/implementation-progress.md` stays as the running log.
 
 ---
@@ -324,6 +324,21 @@ One private channel per signed-in user: `user:{userId}`.
 
 **Dependencies.** Add `@tanstack/react-query`, more Radix primitives, `@testing-library/react`, ESLint / Prettier, dependency-cruiser. Remove `motion` (installed, never imported) unless the design system ends up needing it.
 
+### 3.13 What Phase 1 built differently
+
+Phase 1 followed one rule: build a piece when something uses it. The structure above still holds; these are the differences in the code today.
+
+| Planned | Built | Reason |
+|---|---|---|
+| One class per use case | One service class per module (`TaskService`); a use case gets its own class when it grows | The single-use classes were pass-through code |
+| `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
+| `FeatureModule` with extension points | `create` and `routes` only | Navigation, widgets and notification handlers are added in the phase that first uses them |
+| Plain snapshots for the UI | Screens use the entity objects | Snapshots are only needed once the cache is stored on the device (Phase 10) |
+| dependency-cruiser, ESLint, Prettier, path aliases, Testing Library | `src/architecture.test.ts` checks the import rules; the rest is not added | One test file covers the rules without new tooling; TypeScript 7 support of the lint tools is still unverified |
+| `EventBus`, `Controller`, `Audience`, `RealtimeGateway`, `UserTime`, message catalog | Not built yet | No user in Phase 1 |
+| Generated database types | Not done | Needs a running database |
+| Database tests need Docker | `npm run test:db` runs them on an embedded Postgres | Docker is not available on the development machine |
+
 ---
 
 ## 4. Experience design for phone, tablet and desktop
@@ -414,7 +429,8 @@ One routing pattern (a list route with a nested detail route) gives "pushed page
   | Opening `.ics` import | + 25 KB |
   | Service-worker precache | 46 files, about 1.2 MB |
 
-- **Budgets**: the first signed-in screen stays at or under today's 172 KB while the shell and design system are added; Today never loads calendar-grid, map or ICS code; chat and long lists are virtualized. Lighthouse numbers are still to be measured.
+- **After Phase 1**: sign-in 154 KB, Today 185 KB. The 13 KB added to Today is the query library and the session code.
+- **Budgets**: the first signed-in screen stays under 200 KB while the shell and design system are added; Today never loads calendar-grid, map or ICS code; chat and long lists are virtualized. Lighthouse numbers are still to be measured.
 
 ### 4.7 Screen by screen
 
@@ -558,6 +574,9 @@ These come from reading the source and SQL, not from running it. Each one gets a
 | 15 | Task due dates use the device's "23:59" while habits use the profile time zone. | `AppData.createTask` | Phase 8 |
 | 16 | Re-importing an `.ics` file duplicates events. | `IcsImportCard.tsx` | Phase 6 |
 | 17 | Dead code: `AppData.createGroup`, `createEvent`, `markRead`; Home loads notifications it never shows. | `AppData.ts` | Phase 1 |
+| 18 | Invite links and reminders fail where pgcrypto lives in the `extensions` schema, because three functions pin `search_path` to `public`. | `create_group_invite`, `claim_group_invite` (0003), `schedule_personal_reminder` (0004) | Phase 1 |
+
+**Status on 2026-10-07.** Defects 1–5 were reproduced on an embedded Postgres and are fixed by migration 0015. Defect 5 turned out to be more than hygiene: an anonymous caller who knew a user id could read that user's busy times. Two parts of defect 5 are still open: `prepare_account_deletion` can be called directly, and `is_group_member(g, u)` answers for any pair of ids. Defect 17 is fixed. Defect 18 was found while testing and is fixed by migration 0016; it was reproduced on an embedded Postgres laid out like Supabase and still has to be confirmed on the real project. Neither migration is applied to a Supabase project yet.
 
 ---
 
@@ -605,6 +624,8 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 
 **Exit:** a clean clone passes every check locally (Node ≥ 22.12) and in CI (Node 24); nothing is uncommitted; a disposable database is available.
 
+**Status on 2026-10-07:** items 2, 3, 5 and the bundle part of 6 are done. The work is committed on the local branch `refactor/foundation` and not pushed, so CI has not run. Item 4 waits for your approval. Lighthouse and screenshots are not done. ADRs were not written; this plan records the same decisions.
+
 ### Phase 1 — Architecture foundation (8–12 days)
 
 1. **Tooling**: Prettier (one format-only commit), ESLint, path aliases, a tsconfig for `e2e/` and `scripts/`, dependency-cruiser rules, TanStack Query, Testing Library.
@@ -619,6 +640,8 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 **Files.** New: `src/app/*`, `src/kernel/*`, `src/modules/tasks/*`, `src/modules/notifications/*`, `supabase/migrations/0015_security_hardening.sql`, `supabase/tests/database/security_hardening.test.sql`. Changed: `src/main.tsx`, `src/App.tsx`, `src/bootstrap/AuthenticatedApp.tsx`, `src/shared/infrastructure/AppData.ts`, `src/features/home/presentation/HomePage.tsx`, `src/features/personal/presentation/TaskListCard.tsx`, `src/features/notifications/*`, `package.json`, `tsconfig.json`, `vite.config.ts`, `.github/workflows/ci.yml`.
 
 **Exit:** tasks and notifications run end to end through domain → use case → repository; the architecture lint passes in CI; the hardening tests pass on a local database; all earlier unit and browser tests still pass; a dummy module can be added by touching only `app/modules.ts`.
+
+**Status on 2026-10-07:** done with the differences listed in section 3.13. Checks: typecheck, 56 unit tests, 16 browser tests, production build, and 63 database assertions on the embedded Postgres all pass. Not done: generated database types (needs a running database), a run of the pgTAP files on a real Supabase stack, and moving account-deletion preparation behind the Edge Function. The bottom tabs are still a fixed list in `AppShell.tsx` until Phase 2.
 
 ### Phase 2 — Design system, adaptive shell, sign-in, PWA basics (10–14 days)
 
@@ -637,17 +660,17 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 
 1. Modules **`friends`** and **`groups`**: entities and state machines, repositories over the existing SQL functions, use cases, redesigned pages, friend profile, group hub skeleton. Fixes defects 10 and 11.
 2. PeoplePicker and AudiencePicker, then used everywhere a username is typed today.
-3. Friends v2 (`0016_friends_v2.sql`): invite links and QR, search, friend lists, nicknames, blocked-users screen, birthdays.
-4. Groups v2 (`0017_groups_v2.sql`): invite management, roles, `member_count` trigger, group picture (storage bucket and policies), group availability toggle.
-5. Realtime platform (`0018_realtime_user_topics.sql`): topic policy, `private.emit`, `RealtimeGateway`, provider, reconnect catch-up, polling fallback.
-6. Notification pipeline (`0019_notifications_pipeline.sql`): `entity_type`, `entity_id`, `actor_id`; `private.notify`; push queue and Edge Function `notify-dispatch`; inline actions; mark all read; cleanup job (defect 8).
+3. Friends v2 (`0017_friends_v2.sql`): invite links and QR, search, friend lists, nicknames, blocked-users screen, birthdays.
+4. Groups v2 (`0018_groups_v2.sql`): invite management, roles, `member_count` trigger, group picture (storage bucket and policies), group availability toggle.
+5. Realtime platform (`0019_realtime_user_topics.sql`): topic policy, `private.emit`, `RealtimeGateway`, provider, reconnect catch-up, polling fallback.
+6. Notification pipeline (`0020_notifications_pipeline.sql`): `entity_type`, `entity_id`, `actor_id`; `private.notify`; push queue and Edge Function `notify-dispatch`; inline actions; mark all read; cleanup job (defect 8).
 7. Module **`identity`**: profile editing (picture, username rules, birthday, time-zone select) and the settings skeleton.
 
 **Exit:** two test users connect through an invite link; the other device shows a badge and a toast in about 2 s without reloading; a push arrives for a friend request on staging; the unfriend / block matrix passes pgTAP and a two-browser test.
 
 ### Phase 4 — Chat (9–12 days)
 
-1. `0020_chat.sql` (tables, RLS, SQL functions, fan-out triggers, indexes) and `0021_chat_migrate_meetup_comments.sql` (copies comments into messages; the old functions stay as wrappers for one release).
+1. `0021_chat.sql` (tables, RLS, SQL functions, fan-out triggers, indexes) and `0022_chat_migrate_meetup_comments.sql` (copies comments into messages; the old functions stay as wrappers for one release).
 2. Module **`chat`**: entities, `ChatConversationController`, repositories, use cases, realtime handlers.
 3. UI: conversation list, thread, composer, reactions, replies, two panes on desktop; entry points from the friend profile, the group hub and the meetup.
 4. Push for messages: grouped per conversation, mute, hidden-preview option.
@@ -658,7 +681,7 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 
 ### Phase 5 — Live friend map and status v2 (9–13 days)
 
-1. `0022_live_location.sql` (session modes, pause state, watch leases, location requests, rate limit, fan-out triggers) and `0023_status_catalog.sql`.
+1. `0023_live_location.sql` (session modes, pause state, watch leases, location requests, rate limit, fan-out triggers) and `0024_status_catalog.sql`.
 2. Module **`location`**: `LocationPublisher` (grown from `LocationController`), `FriendLocationsController`, repositories, use cases, `GeolocationProvider` and `WakeLockProvider` ports.
 3. UI: map page, avatar markers, smooth movement, share sheet, app-wide sharing indicator, Tàng hình, Hỏi vị trí, check-in, Today widget.
 4. Module **`presence`**: catalog-driven status, custom status, audience, live updates, nudge.
@@ -669,24 +692,24 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 ### Phase 6 — Calendar v2 (12–16 days)
 
 1. Module **`calendar`**: move the engine into the domain, add `RecurrenceRule`, fix defect 7, keep the Los Angeles / Ho Chi Minh time-zone test runs; `CalendarSource` and `ListOccurrences`.
-2. `0024_calendar_v2.sql` (new columns, `import_batches`) and `0025_busy_projection.sql` (`list_busy_projection`, defect 6).
+2. `0025_calendar_v2.sql` (new columns, `import_batches`) and `0026_busy_projection.sql` (`list_busy_projection`, defect 6).
 3. UI: agenda / day / week / month, source filters, one event sheet, edit scopes, drag and drop with a keyboard alternative; the shared calendar moves inside the friend profile.
-4. Event reminders: `0026_occurrence_window.sql`, Edge Function `materialize-occurrences` running the shared engine, `process-reminders` extended to event reminders.
+4. Event reminders: `0027_occurrence_window.sql`, Edge Function `materialize-occurrences` running the shared engine, `process-reminders` extended to event reminders.
 5. `.ics` import v2 and export (defect 16).
 
 **Exit:** the "done when" of feature A4.
 
 ### Phase 7 — Timetable, free-time finder, meetups v2 (13–18 days)
 
-1. `0027_timetable.sql`; module **`timetable`**: domain, importers, calendar source, week grid, day swiper, class detail, exceptions, reminders, optional automatic status.
+1. `0028_timetable.sql`; module **`timetable`**: domain, importers, calendar source, week grid, day swiper, class detail, exceptions, reminders, optional automatic status.
 2. Module **`availability`**: `FreeSlotFinder`, heatmap and slot list, group availability, "propose these slots".
-3. Module **`meetups`** with v2 (`0028_meetups_v2.sql`): detail route, wizard, participants, deadlines, place, templates, group auto-invite (defect 9), calendar source, chat thread, arrival sharing.
+3. Module **`meetups`** with v2 (`0029_meetups_v2.sql`): detail route, wizard, participants, deadlines, place, templates, group auto-invite (defect 9), calendar source, chat thread, arrival sharing.
 
 **Exit:** one scripted classmate journey passes in a two-browser test: both import timetables → the finder shows common free slots → A proposes three → B votes → A confirms → both calendars show it → reminder → arrival sharing → chat in the thread.
 
 ### Phase 8 — Planner v2 and privacy center (10–14 days)
 
-1. Tasks v2 (`0029_tasks_v2.sql`, defect 15), habits (`0030_habits.sql`, expand step), notes v2 (`0031_notes_v2.sql`), shared group task lists (`0032_group_tasks.sql`), quick-add parser, reminders for tasks and habits.
+1. Tasks v2 (`0030_tasks_v2.sql`, defect 15), habits (`0031_habits.sql`, expand step), notes v2 (`0032_notes_v2.sql`), shared group task lists (`0033_group_tasks.sql`), quick-add parser, reminders for tasks and habits.
 2. Settings and privacy center (feature C4); notification settings redesigned.
 3. Focus timer if time allows.
 
@@ -694,8 +717,8 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 
 ### Phase 9 — Calendar sync (5–7 days, +6–9 for Google)
 
-1. Feed out: `0033_calendar_feeds.sql`, Edge Function `calendar-feed`, UI with a clear warning and a revoke button.
-2. Subscribe in: `0034_external_calendars.sql`, scheduled Edge Function `sync-external-calendars` (HTTPS only, private-network addresses blocked, size and time limits, conditional requests).
+1. Feed out: `0034_calendar_feeds.sql`, Edge Function `calendar-feed`, UI with a clear warning and a revoke button.
+2. Subscribe in: `0035_external_calendars.sql`, scheduled Edge Function `sync-external-calendars` (HTTPS only, private-network addresses blocked, size and time limits, conditional requests).
 3. Google connection: go / no-go decision first.
 
 **Exit:** Google Calendar subscribed to a Gnouht feed shows a repeating class correctly; a Google secret address subscribed into Gnouht appears read-only and counts as busy; a revoked feed link stops working.
@@ -716,20 +739,21 @@ Staging acceptance with an updated `docs/deployment.md` checklist · custom SMTP
 
 ## 8. Verification
 
-**Commands** (the ones marked "Phase 1" are added there):
+**Commands** (Node ≥ 22.12):
 
 ```bash
 npm ci
 npm run typecheck
-npm run lint && npm run arch          # Phase 1: ESLint + dependency rules
-npm test                              # unit, use-case, contract (in-memory), component
+npm test                              # unit tests and the architecture rules
+npm run test:db                       # every migration + the pgTAP files on an embedded Postgres
 npm run build
-VITE_BACKEND=memory npm run dev       # Phase 1: whole app on seeded fake data
-npm run test:e2e                      # Playwright (moves to the in-memory backend)
+npm run test:e2e                      # Playwright against a mocked backend
 npx supabase@2.119.0 start            # needs Docker
 npx supabase@2.119.0 test db supabase/tests/database
-npm run test:e2e:real                 # two real users on local Supabase (from scripts/local-two-user-check.mjs)
+node scripts/local-two-user-check.mjs # two real users on local Supabase; see the file for its environment variables
 ```
+
+Planned and not built yet: an in-memory backend mode for the whole app, and the two-real-user script as a Playwright project.
 
 | Layer | Tool | Proves |
 |---|---|---|
@@ -759,12 +783,12 @@ A phase is done when its exit gate is met, CI is green, and `docs/implementation
 | Lint tooling may not support TypeScript 7 yet | Checked first in Phase 1; oxlint or Biome as fallback |
 | Google verification | Feeds (C5 steps 1–2) carry most of the value; the Google connection is optional |
 | Size of the plan | Four releases, marked stretch items, re-estimate every phase |
-| This machine (Node 18, no Docker access) | Phase 0, item 1 |
+| This machine (default Node 18, no Docker access) | `.nvmrc` pins Node 22; `npm run test:db` covers the database without Docker. A real Supabase stack is still needed before anything is applied to the cloud project |
 
 **Decisions needed from you later** (only the first two affect Phases 0–1):
 
 1. Docker access on this machine, or a separate staging Supabase project? — Phase 0
-2. Approval to apply migrations 0013–0015 to the cloud project — Phases 0–1
+2. Approval to apply migrations 0013–0016 to the cloud project — Phases 0–1
 3. Email provider for sign-in codes — Phase 2
 4. Final tab layout after trying the new shell — Phase 2
 5. Allow "until I turn it off" location sharing? Proposed: yes, only to chosen friends, with a monthly reminder of who can see you — Phase 5
@@ -776,16 +800,21 @@ A phase is done when its exit gate is met, CI is green, and `docs/implementation
 
 ## 10. Next steps
 
-**Done on 2026-10-07:** this plan is saved as `docs/master-plan.md`; the baseline checks were run (section 1); bundle sizes were measured (section 4.6).
+**Done on 2026-10-07** (branch `refactor/foundation`, local commits, nothing pushed):
+
+- The uncommitted work is committed in seven grouped commits.
+- Module registry, per-user sessions, and the tasks and notifications modules.
+- Migrations 0015 (privacy fixes) and 0016 (invite links and reminders), each with pgTAP tests.
+- `npm run test:db`, the architecture test, `docs/architecture.md` and `docs/module-guide.md`.
 
 **Waiting for you:**
 
-1. Approval of this plan, or the changes you want.
-2. Go-ahead to commit the current working tree as logical commits on a branch.
-3. Docker access on this machine, or a separate staging Supabase project.
-4. Approval to apply migrations 0013 and 0014 to the cloud project.
+1. Review the branch, then push it or tell me to open a pull request. CI has not run on any of this.
+2. A real Supabase stack to run the pgTAP files on: Docker access on this machine, or a separate staging project.
+3. Approval to apply migrations 0013–0016 to the cloud project. 0015 changes who can receive a location share and a meetup invitation, and deletes availability shares between people who are no longer friends.
+4. For Phase 2: change the Supabase email template so that sign-in emails contain the 6-digit code.
 
-**Then:** mark the four older plan docs as superseded, finish Phase 0, and start Phase 1 on a branch `refactor/foundation` — kernel first, then the `tasks` pilot module.
+**Next in the plan:** Phase 2 — design system, adaptive shell, code sign-in, PWA basics and the Today dashboard.
 
 ---
 

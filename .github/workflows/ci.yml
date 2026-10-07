@@ -23,6 +23,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Migrations and pgTAP files on an embedded Postgres
+        run: npm run test:db
       - name: Production build
         run: npm run build
 

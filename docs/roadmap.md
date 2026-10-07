@@ -1,5 +1,7 @@
 # Lộ trình phát triển Gnouht Together
 
+> Tài liệu này đã được thay bằng [master-plan.md](master-plan.md) từ ngày 2026-10-07. Giữ lại để tham khảo.
+
 Cập nhật: 2026-10-05. Đây là kế hoạch, không phải cam kết mọi hạng mục đã triển khai. Mốc thời gian ước lượng cho một người phát triển, điều chỉnh sau mỗi vòng thử nghiệm.
 
 ## Hiện trạng và nguyên tắc

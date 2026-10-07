@@ -1,5 +1,7 @@
 # Gnouht Together — Detailed System Development and UI/UX Plan
 
+> Superseded by [master-plan.md](master-plan.md) on 2026-10-07. Kept for history.
+
 **Status:** Proposed execution plan; not a claim that the features below are implemented or production-ready.  
 **Research snapshot:** 2026-10-05 UTC.  
 **Product:** Vietnamese-first private planning and coordination for trusted friends and families.  

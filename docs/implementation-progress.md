@@ -1,5 +1,41 @@
 # Development-plan implementation status
 
+## 2026-10-07: foundation for the master plan (phases 0 and 1)
+
+Work is on the local branch `refactor/foundation`. Nothing is pushed, so CI has not run. No Supabase project, DNS record or deployment was changed.
+
+What changed:
+
+- The previously uncommitted work is committed in seven grouped commits.
+- `src/app/modules.ts` lists the app's modules. Signed-in routes and the list of safe return paths come from it.
+- `SessionProvider`, keyed by user id, gives each account its own services and query cache.
+- Tasks and notifications are modules under `src/modules` with domain, application, infrastructure and presentation layers. Their screens use TanStack Query in place of `AsyncOwnerScope` and lock refs.
+- `src/architecture.test.ts` checks the layering rules on every import.
+- Migration 0015 ends shares on unfriend and block, limits location sharing and meetup invitations to connected people, purges positions of ended sessions, and removes anonymous access to functions in `public`.
+- Migration 0016 lets invite links and reminders find pgcrypto in the `extensions` schema.
+- `npm run test:db` applies every migration and runs the pgTAP files on an embedded Postgres.
+
+Checks run on 2026-10-07 with Node 22.23.3:
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests | 56 of 56 |
+| Production build | Pass |
+| Browser tests, mocked backend, dev server | 16 of 16 |
+| `npm run test:db` | 16 migrations applied; 63 of 63 assertions in 5 files |
+
+Evidence for the database fixes: without migration 0015 the embedded Postgres let an anonymous caller read a user's busy times, shared location with a stranger, invited a stranger to a meetup, let an ex-friend read busy times, and kept the position of an expired session. With 0015 the same checks pass.
+
+Not verified:
+
+- The pgTAP files on a real Supabase stack. The embedded Postgres uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron and pgTAP.
+- Migrations 0013–0016 on the cloud project. None of them is applied there.
+- Whether invite links and reminders fail today on the cloud project (defect 18). The failure was reproduced only on the embedded Postgres with pgcrypto in the `extensions` schema.
+- The preview-mode browser run, real devices, real email delivery.
+
+Open from Phase 1: generated database types, and moving account-deletion preparation behind the Edge Function.
+
 ## Subsequent local implementation slices (not release approval)
 
 The UI/UX plan in `docs/ui-ux-development-plan.md` is still in progress. In later local work, the Inbox gained a dedicated owner-scoped, paginated notifications query, safe in-app action links, and account-change guards; the Organizer gained note editing, owner-scoped note mutations, delete confirmation, and retained input on save errors. The meetup screen now scopes list/details to the active owner, distinguishes detail failures from genuinely empty polls, serializes actions, validates proposed end time, labels forms and confirms cancellation. Activity-mode reads and mutations now discard stale owner responses. Existing An/Bình demo users were not renamed and no Vy/Kha cloud accounts were created.

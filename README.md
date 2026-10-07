@@ -34,11 +34,9 @@ Vietnamese-first social planning and personal organization web app for trusted f
 
 ## Architecture
 
-Presentation -> application/domain rules -> infrastructure adapters -> Supabase.
+Features on the new structure live in `src/modules/<name>` with domain, application, infrastructure and presentation layers, and are listed in `src/app/modules.ts`. Tasks and notifications are there today. The other pages are still under `src/features` and move over phase by phase.
 
-Security-sensitive invariants are enforced twice where appropriate:
-- domain classes for deterministic business behavior,
-- Postgres constraints/RLS/RPC transactions for untrusted clients and concurrency.
+Row level security and SQL functions decide what each user can read or change. Checks in the client only improve the experience.
 
 See:
 - `docs/architecture.md`
@@ -46,9 +44,9 @@ See:
 - `docs/deployment.md`
 - `docs/backup-restore.md`
 - `docs/cost-and-limits.md`
-- `docs/roadmap.md` (priorities, acceptance criteria, outstanding checks)
-- `docs/system-development-plan.md` (researched English implementation roadmap)
-- `docs/implementation-progress.md` (implemented scope, browser evidence and remaining release gates)
+- `docs/master-plan.md` (the current plan: architecture, UX, features, phases)
+- `docs/module-guide.md` (how to add or move a module)
+- `docs/implementation-progress.md` (what is implemented, with evidence and open checks)
 
 ## Run locally
 
@@ -60,13 +58,16 @@ npm run dev
 
 For an isolated **local** backend (Docker required), run `npx supabase@2.119.0 start --exclude realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor` in another terminal (lightweight mode; account-deletion Edge Function, reminders and realtime are not available in this mode). All migrations are applied automatically. Set `VITE_SUPABASE_URL=http://127.0.0.1:54321` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the local **PUBLISHABLE_KEY** from `npx supabase@2.119.0 status --output env`. Open `http://127.0.0.1:5173` for the app; magic-link emails arrive in Mailpit at `http://127.0.0.1:55324` (configured port). Restart Vite after editing `.env.local`. Never put SECRET_KEY, SERVICE_ROLE_KEY or JWT_SECRET in `VITE_*` variables; never paste CLI status output in public logs.
 
-To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; activity modes need migrations 0011–0012 and direct location publishing requires policy fix 0013. Migration 0013 was applied to the disposable local database only; **it has not been applied to cloud**. Do not run `supabase db reset --linked` on the cloud project.
+To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; activity modes need migrations 0011–0012 and direct location publishing requires policy fix 0013. Migrations 0013–0016 have **not been applied to cloud**. Do not run `supabase db reset --linked` on the cloud project.
 
 ## Validate
 
+Node 22.12 or newer is required (`.nvmrc`); Vite 8 and Vitest 4 do not start on Node 18.
+
 ```bash
 npm run typecheck
-npm test
+npm test                  # unit tests and the architecture rules
+npm run test:db           # every migration + pgTAP files on an embedded Postgres, no Docker
 npm run build
 npm run test:e2e          # isolated mocked-browser UI tests; needs Playwright Chromium
 npm run test:e2e:preview  # same suite against the production build

@@ -1,5 +1,7 @@
 # Gnouht Together — UI/UX and Product Development Plan
 
+> Superseded by [master-plan.md](master-plan.md) on 2026-10-07. Kept for history.
+
 ## 1. Recommendation and scope
 
 **Status: proposal, not implementation or production-readiness approval.**
