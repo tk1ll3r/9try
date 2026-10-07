@@ -48,6 +48,14 @@ export class SupabaseFriendRepository implements FriendRepository {
     return new Set((data ?? []).map(row => row.user_id as string));
   }
 
+  async pinned(): Promise<Set<string>> {
+    const { data, error } = await this.db.from("friend_pins").select("friend_id");
+    if (error) throw error;
+    return new Set((data ?? []).map(row => row.friend_id as string));
+  }
+
+  setPinned(otherId: string, pinned: boolean) { return this.call("set_friend_pin", { p_friend_id: otherId, p_pinned: pinned }); }
+
   private async call(name: string, args: Record<string, unknown>): Promise<void> {
     const { error } = await this.db.rpc(name, args);
     if (error) throw error;

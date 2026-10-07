@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { AgendaItem, FeatureModule, ModuleRegistry, SearchItem } from "./module";
+import type { AgendaItem, FeatureModule, FriendSignal, ModuleRegistry, SearchItem } from "./module";
 
 /** Everything that belongs to one signed-in user. */
 class Session {
@@ -74,4 +74,14 @@ export function useAgenda(): (from: Date, to: Date) => Promise<AgendaItem[]> {
   const session = useSession();
   return async (from, to) => (await Promise.all(session.registry.modules.map(async module =>
     module.agenda ? module.agenda(session.get(module), from, to).catch(() => []) : []))).flat();
+}
+
+/** Loads what the modules know about the user's friends right now. A module that fails is left out. */
+export function useFriendSignals(): () => Promise<FriendSignal[]> {
+  const session = useSession();
+  return async () => {
+    const context = { userId: session.userId, now: new Date() };
+    return (await Promise.all(session.registry.modules.map(async module =>
+      module.friendSignals ? module.friendSignals(session.get(module), context).catch(() => []) : []))).flat();
+  };
 }

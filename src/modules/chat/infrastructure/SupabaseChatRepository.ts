@@ -9,7 +9,7 @@ export class SupabaseChatRepository implements ChatRepository {
     const { data, error } = await this.db.rpc("list_conversations");
     if (error) throw error;
     return (data ?? []).map((row: any) => ({
-      id: row.id, kind: row.kind, title: row.title, lastMessageAt: row.last_message_at,
+      id: row.id, kind: row.kind, title: row.title, otherUserId: row.other_user_id ?? null, recentMessages: row.recent_messages ?? 0, lastMessageAt: row.last_message_at,
       lastMessageBody: row.last_message_body, unreadCount: row.unread_count ?? 0,
     }));
   }

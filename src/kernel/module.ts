@@ -47,6 +47,19 @@ export interface AgendaItem {
   readonly to: string;
 }
 
+/** Something a module knows about one of the user's friends right now. The Mode screen sorts friends by these. */
+export interface FriendSignal {
+  readonly userId: string;
+  /** What kind of reason this is: "meetup", "unread", "location". The ranking gives each kind a weight. */
+  readonly kind: string;
+  /** How strong it is, from 0 to 1. */
+  readonly strength: number;
+  /** Shown on the friend's card: "Hẹn 18:00 hôm nay · Ăn tối". A signal without a label only counts. */
+  readonly label?: string;
+  /** Where a tap on the label leads. */
+  readonly to?: string;
+}
+
 /** One thing the global search can find. */
 export interface SearchItem {
   readonly title: string;
@@ -75,6 +88,8 @@ export interface FeatureModule<Services = unknown> {
   readonly today?: TodayContribution;
   /** What this module adds to the calendar between two instants. The calendar's own events are not listed here. */
   agenda?(services: Services, from: Date, to: Date): Promise<readonly AgendaItem[]>;
+  /** What this module knows about the user's friends at `now`. */
+  friendSignals?(services: Services, context: { readonly userId: string; readonly now: Date }): Promise<readonly FriendSignal[]>;
 }
 
 /** A path of plain segments. Used in a link, it cannot lead outside the app. */

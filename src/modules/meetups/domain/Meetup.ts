@@ -1,3 +1,5 @@
+import type { FriendSignal } from "../../../kernel/module";
+
 export type MeetupStatus = "draft" | "proposed" | "confirmed" | "canceled" | "completed";
 export type Rsvp = "pending" | "going" | "maybe" | "declined";
 
@@ -80,4 +82,40 @@ export interface MeetupRepository {
   cancel(meetupId: string): Promise<void>;
   comments(meetupId: string): Promise<MeetupComment[]>;
   postComment(meetupId: string, body: string): Promise<void>;
+}
+
+const hour = 3_600_000;
+
+/** Confirmed, not declined, and starting within 48 hours or still going on. */
+export function isSoon(meetup: MeetupSummary, now: Date): boolean {
+  if (meetup.status !== "confirmed" || meetup.rsvp === "declined" || !meetup.startAt) return false;
+  const start = Date.parse(meetup.startAt), end = meetup.endAt ? Date.parse(meetup.endAt) : start + 2 * hour;
+  return end > now.getTime() && start - now.getTime() < 48 * hour;
+}
+
+function whenLabel(startAt: string, now: Date): string {
+  const start = new Date(startAt);
+  if (start.getTime() <= now.getTime()) return "Đang diễn ra";
+  const days = Math.round((new Date(start).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / (24 * hour));
+  return `Hẹn ${start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${days === 0 ? "hôm nay" : days === 1 ? "mai" : "ngày kia"}`;
+}
+
+/**
+ * What meetups say about friends: everyone in a meetup that is soon, stronger the nearer it is, and
+ * the organizer of a proposal that still waits for the user's answer. `goingByMeetup` lists, per
+ * meetup id, the invited people who have not declined; the organizer counts either way.
+ */
+export function meetupSignals(meetups: readonly MeetupSummary[], goingByMeetup: ReadonlyMap<string, readonly string[]>, userId: string, now: Date): FriendSignal[] {
+  return meetups.flatMap(meetup => {
+    const to = `/meetups/${meetup.id}`;
+    if (meetup.status === "proposed" && meetup.rsvp === "pending" && meetup.organizerId !== userId) {
+      return [{ userId: meetup.organizerId, kind: "invite", strength: 1, label: `Đang rủ bạn: ${meetup.title}`, to }];
+    }
+    if (!isSoon(meetup, now)) return [];
+    const hoursLeft = Math.max(0, (Date.parse(meetup.startAt!) - now.getTime()) / hour);
+    const signal = { kind: "meetup", strength: Math.max(0.25, 1 - hoursLeft / 48), label: `${whenLabel(meetup.startAt!, now)} · ${meetup.title}`, to };
+    const people = new Set([meetup.organizerId, ...(goingByMeetup.get(meetup.id) ?? [])]);
+    people.delete(userId);
+    return [...people].map(id => ({ userId: id, ...signal }));
+  });
 }

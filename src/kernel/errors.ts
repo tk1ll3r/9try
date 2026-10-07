@@ -15,6 +15,7 @@ const known: [code: string, text: string][] = [
   ["link unavailable", "Liên kết này không dùng được."],
   ["not a participant", "Bạn không ở trong cuộc trò chuyện này."],
   ["routine not found", "Không tìm thấy thói quen này."],
+  ["not friends", "Chỉ ghim được người đã là bạn của bạn."],
 ];
 
 // The database answers with these codes when a function, table or column of a newer migration is missing.

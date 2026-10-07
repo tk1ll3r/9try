@@ -30,4 +30,7 @@ export interface FriendRepository {
   /** Ids of the friends who may see this user's busy times. */
   availabilitySharedWith(): Promise<Set<string>>;
   setAvailabilityShare(otherId: string, enabled: boolean): Promise<void>;
+  /** Ids of the friends the user pinned. Pins are private to the user. */
+  pinned(): Promise<Set<string>>;
+  setPinned(otherId: string, pinned: boolean): Promise<void>;
 }

@@ -3,7 +3,7 @@ import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import { LocationController } from "./application/LocationController";
-import type { LocationRepository } from "./domain/Location";
+import { locationSignals, type LocationRepository } from "./domain/Location";
 import { SupabaseLocationRepository } from "./infrastructure/SupabaseLocationRepository";
 import { LocationPrivacy } from "./presentation/LocationPrivacy";
 import { SharingIndicator } from "./presentation/SharingIndicator";
@@ -30,6 +30,7 @@ export const locationModule: FeatureModule<LocationServices> = {
     return { locations, sharing, dispose: () => sharing.dispose() };
   },
   indicator: SharingIndicator,
+  friendSignals: async ({ locations }, { now }) => locationSignals(await locations.listVisible(), now),
   privacy: LocationPrivacy,
   today: { order: 45, card: SharingWithMeCard },
   navigation: [{ tab: "together", to: "/me/location", label: "Vị trí", icon: MapPin, order: 40 }],
