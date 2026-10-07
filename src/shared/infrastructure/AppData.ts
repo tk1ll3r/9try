@@ -1,4 +1,20 @@
 import { requireSupabase } from "./supabase";
+import { calendarData } from "../../features/calendars/infrastructure/CalendarData";
+import { localDateKey, selectUpcoming } from "../../features/home/domain/upcoming";
+
+export interface OneTimeTask {
+  id: string;
+  title: string;
+  priority: "low" | "medium" | "high";
+  due_at: string | null;
+  completed_at: string | null;
+}
+
+export interface OwnedLocationSession {
+  id: string;
+  expires_at: string;
+  approximate: boolean;
+}
 
 export interface VisibleLocation {
   sessionId: string;
@@ -16,23 +32,64 @@ export interface VisibleLocation {
 export class AppData {
   async home(userId: string) {
     const db = requireSupabase();
-    const [e, t, g, n] = await Promise.all([
-      db.from("calendar_events").select("id,title,start_at,all_day_start").eq("owner_id", userId).limit(6),
-      db.from("personal_tasks").select("id,title,priority,due_at,completed_at").eq("owner_id", userId).is("completed_at", null).limit(6),
+    const tomorrow = new Date();
+    tomorrow.setHours(24, 0, 0, 0);
+    const now = new Date();
+    const rangeEnd = new Date(now);
+    rangeEnd.setDate(rangeEnd.getDate() + 30);
+    const [events, t, g, n] = await Promise.all([
+      calendarData.listOccurrences(userId, now, rangeEnd),
+      db.from("personal_tasks").select("id,title,priority,due_at,completed_at").eq("owner_id", userId).is("completed_at", null).eq("recurrence", "none").or(`due_at.is.null,due_at.lt.${tomorrow.toISOString()}`).order("due_at", { ascending: true, nullsFirst: false }).limit(50),
       db.from("group_memberships").select("role,group:groups(id,name,description)").eq("user_id", userId).limit(6),
       db.from("notifications").select("id,title,body,read_at,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
     ]);
-    for (const result of [e, t, g, n]) if (result.error) throw result.error;
-    return { events: e.data ?? [], tasks: t.data ?? [], groups: g.data ?? [], notifications: n.data ?? [] };
+    for (const result of [t, g, n]) if (result.error) throw result.error;
+    return { events: selectUpcoming(events, now).slice(0, 6), tasks: t.data ?? [], groups: g.data ?? [], notifications: n.data ?? [] };
   }
 
-  async createTask(userId: string, title: string) {
-    const { error } = await requireSupabase().from("personal_tasks").insert({ owner_id: userId, title, priority: "medium" });
+  async createTask(userId: string, title: string, dueDate?: string, priority: "low" | "medium" | "high" = "medium") {
+    const dueAt = dueDate ? new Date(`${dueDate}T23:59:00`).toISOString() : null;
+    const { error } = await requireSupabase().from("personal_tasks").insert({ owner_id: userId, title: title.trim(), priority, due_at: dueAt });
     if (error) throw error;
   }
 
-  async completeTask(id: string) {
-    const { error } = await requireSupabase().from("personal_tasks").update({ completed_at: new Date().toISOString() }).eq("id", id);
+  async listTasks(userId: string): Promise<OneTimeTask[]> {
+    const { data, error } = await requireSupabase().from("personal_tasks")
+      .select("id,title,priority,due_at,completed_at").eq("owner_id", userId)
+      .eq("recurrence", "none").order("due_at", { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  async setTaskCompleted(userId: string, id: string, completed: boolean) {
+    const completedAt = completed ? new Date().toISOString() : null;
+    const { error } = await requireSupabase().from("personal_tasks")
+      .update({ completed_at: completedAt })
+      .eq("id", id).eq("owner_id", userId).eq("recurrence", "none").select("id").single();
+    if (error) throw error;
+    return completedAt;
+  }
+
+  async undoTaskCompletion(userId: string, id: string, completedAt: string) {
+    const { error } = await requireSupabase().from("personal_tasks").update({ completed_at: null })
+      .eq("id", id).eq("owner_id", userId).eq("recurrence", "none")
+      .eq("completed_at", completedAt).select("id").single();
+    if (error) throw new Error("Việc đã thay đổi hoặc không thể hoàn tác. Hãy tải lại danh sách.");
+  }
+
+  async updateTask(userId: string, id: string, title: string, dueDate: string, priority: OneTimeTask["priority"], originalDue: string | null = null) {
+    if (!title.trim()) throw new Error("Hãy nhập tên công việc.");
+    const { error } = await requireSupabase().from("personal_tasks").update({
+      title: title.trim(), priority,
+      due_at: originalDue && localDateKey(new Date(originalDue)) === dueDate
+        ? originalDue : dueDate ? new Date(`${dueDate}T23:59:00`).toISOString() : null,
+    }).eq("id", id).eq("owner_id", userId).eq("recurrence", "none").select("id").single();
+    if (error) throw error;
+  }
+
+  async deleteTask(userId: string, id: string) {
+    const { error } = await requireSupabase().from("personal_tasks").delete()
+      .eq("id", id).eq("owner_id", userId).eq("recurrence", "none").select("id").single();
     if (error) throw error;
   }
 
@@ -109,6 +166,15 @@ export class AppData {
       accuracyM: row.accuracy_m,
       recordedAt: row.recorded_at,
     }));
+  }
+
+  async listOwnedLocationSessions(userId: string): Promise<OwnedLocationSession[]> {
+    const { data, error } = await requireSupabase().from("location_sessions")
+      .select("id,expires_at,approximate").eq("owner_id", userId)
+      .is("stopped_at", null).gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
   }
 
   async stopLocation(id: string) {

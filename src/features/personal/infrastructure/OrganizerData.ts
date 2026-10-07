@@ -11,16 +11,21 @@ export interface RoutineTask {
   id: string;
   title: string;
   recurrence: "daily" | "weekly";
-  completedToday: boolean;
+  completedInPeriod: boolean;
 }
 
-function localDateKey(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  }).format(new Date());
+export function dateKeyInTimeZone(timeZone: string, date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    year: "numeric", month: "2-digit", day: "2-digit", timeZone,
+  }).formatToParts(date);
+  const value = (type: string) => parts.find(part => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+export function mondayOfWeek(dayKey: string): string {
+  const day = new Date(`${dayKey}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - (day.getUTCDay() + 6) % 7);
+  return day.toISOString().slice(0, 10);
 }
 
 export class OrganizerData {
@@ -48,8 +53,16 @@ export class OrganizerData {
     if (error) throw error;
   }
 
-  async deleteNote(id: string): Promise<void> {
-    const { error } = await requireSupabase().from("personal_notes").delete().eq("id", id);
+  async updateNote(userId: string, id: string, title: string, body: string): Promise<void> {
+    const { error } = await requireSupabase().from("personal_notes")
+      .update({ title: title.trim(), body: body.trim() })
+      .eq("owner_id", userId).eq("id", id).select("id").single();
+    if (error) throw error;
+  }
+
+  async deleteNote(userId: string, id: string): Promise<void> {
+    const { error } = await requireSupabase().from("personal_notes").delete()
+      .eq("owner_id", userId).eq("id", id).select("id").single();
     if (error) throw error;
   }
 
@@ -66,19 +79,27 @@ export class OrganizerData {
     const ids = (tasks ?? []).map((task) => task.id);
     if (ids.length === 0) return [];
 
+    // The RPC records the profile's calendar day, not the browser's timezone day.
+    const { data: profile, error: profileError } = await db.from("profiles")
+      .select("timezone").eq("id", userId).single();
+    if (profileError) throw profileError;
+    const today = dateKeyInTimeZone(profile?.timezone || "UTC");
+    const monday = mondayOfWeek(today);
     const { data: completions, error: completionError } = await db
       .from("routine_completions")
-      .select("task_id")
+      .select("task_id,completion_date")
       .in("task_id", ids)
-      .eq("completion_date", localDateKey());
+      .gte("completion_date", monday)
+      .lte("completion_date", today);
     if (completionError) throw completionError;
 
-    const done = new Set((completions ?? []).map((row) => row.task_id));
+    const todayDone = new Set((completions ?? []).filter(row => row.completion_date === today).map(row => row.task_id));
+    const weekDone = new Set((completions ?? []).map(row => row.task_id));
     return (tasks ?? []).map((task) => ({
       id: task.id,
       title: task.title,
       recurrence: task.recurrence as "daily" | "weekly",
-      completedToday: done.has(task.id),
+      completedInPeriod: task.recurrence === "weekly" ? weekDone.has(task.id) : todayDone.has(task.id),
     }));
   }
 
