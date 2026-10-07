@@ -9,6 +9,11 @@ Apply all SQL migrations in `supabase/migrations/` **in filename order**.
 Configure Auth:
 - Site URL: `https://gnouht.space`
 - Development redirect(s): only the local origins actually used.
+- Email template "Magic Link": include the 6-digit code `{{ .Token }}` next to the link, as in `supabase/templates/magic_link.html`. An installed app on iOS cannot finish sign-in from the link alone.
+
+Realtime: the app listens on private channels named `user:<id>`. Migration 0017 adds the policy on `realtime.messages`; check in the project's Realtime settings that private channels are allowed.
+
+The cloud project is at migration 0012. Migrations 0013–0026 are tested on an embedded Postgres only. Run `npx supabase test db supabase/tests/database` on a real local or staging stack before applying them. 0015 deletes availability shares between people who are no longer friends.
 
 Frontend-safe environment values:
 
@@ -27,6 +32,9 @@ Never put the Supabase service-role key or VAPID private key in a `VITE_*` varia
 Deploy:
 - `process-reminders`
 - `delete-account`
+- `calendar-feed`
+
+`supabase/config.toml` turns the platform's JWT check off for `process-reminders` and `calendar-feed`. Neither is called with a user's token: the first compares `CRON_SECRET`, the second looks up the token in the address. `calendar-feed` has not been deployed or run on Deno yet; fetch a feed address with `curl` and subscribe to it from a calendar app before telling anyone about it.
 
 Set server-only secrets:
 
@@ -130,7 +138,10 @@ Before DNS cutover:
 9. Verify reminder worker creates one in-app record on retry.
 10. Verify account deletion requires group ownership transfer when necessary.
 11. Verify PWA installation and offline shell behavior.
-12. Run the GitHub Actions CI workflow successfully.
+12. Verify sign-in with the emailed code inside an installed app on iOS and Android.
+13. Verify with two signed-in browsers that a chat message, a friend request and a location update arrive without reloading.
+14. Verify that a revoked calendar feed address answers "not found".
+15. Run the GitHub Actions CI workflow successfully.
 
 ## 9. Backups and monitoring
 

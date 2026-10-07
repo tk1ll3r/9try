@@ -1,6 +1,6 @@
 # Gnouht Together — Master Development Plan
 
-**Status:** approved 2026-10-07 · Phases 0 and 1 are implemented on branch `refactor/foundation`; see section 10 for what is still open
+**Status:** approved 2026-10-07 · Phases 0 to 10 are implemented in a reduced form on branch `refactor/foundation`; Phase 11 has not started. Section 3.13 lists what was built differently, section 10 what is open, and `docs/implementation-progress.md` what each phase contains and leaves out
 **Supersedes:** `docs/roadmap.md`, `docs/system-development-plan.md`, `docs/ui-ux-development-plan.md`, `docs/implementation-plan.md` (kept as history). `docs/implementation-progress.md` stays as the running log.
 
 ---
@@ -324,12 +324,29 @@ One private channel per signed-in user: `user:{userId}`.
 
 **Dependencies.** Add `@tanstack/react-query`, more Radix primitives, `@testing-library/react`, ESLint / Prettier, dependency-cruiser. Remove `motion` (installed, never imported) unless the design system ends up needing it.
 
-### 3.13 What Phase 1 built differently
+### 3.13 What was built differently
 
-Phase 1 followed one rule: build a piece when something uses it. The structure above still holds; these are the differences in the code today.
+The work followed one rule: build a piece when something uses it. The layers and the dependency rule above hold in the code. These are the differences.
 
 | Planned | Built | Reason |
 |---|---|---|
+| One class per use case | A service class per module only where a rule sits between the screen and the repository (`TaskService`); elsewhere screens call the repository interface | The single-use classes were pass-through code |
+| `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
+| `ExtensionPoint` class and ten extension points | Six optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems` | Each field was added when a second module needed it |
+| `Entity`, `ValueObject`, `Audience`, `EventBus`, `UserTime`, message catalog | Not built. Entities are plain classes: `Task`, `Habit`, `Membership`, `Profile`, `MeetupPolicy` | Nothing needed the base classes |
+| `Controller<State>` base class | `LocationController` alone, with `subscribe` and `getState` | There is one long-lived process |
+| `RealtimeGateway` with typed handlers per module | `RealtimeBridge`: an event reloads the queries whose key starts with its name | Reloading is enough at this size, and no handler can drift from the query it serves |
+| Plain snapshots for the UI | Screens use the entity objects | Snapshots are needed once the cache is stored on the device, which was not built |
+| 16 modules | 13. Timetable and availability live in `calendar`; search is a dialog in `app/` fed by the modules | They share the calendar's repository and repeat engine |
+| `kernel/ui` design system with a gallery | `Button`, `Card`, `DialogPanel` | The existing three cover the screens |
+| dependency-cruiser, ESLint, Prettier, path aliases, Testing Library | `src/architecture.test.ts` checks the import rules; the rest is not added | One test file covers the rules without new tooling |
+| In-memory backend mode | Browser tests mock the HTTP API | No second implementation of every repository to keep in step |
+| Route names `/plan/*`, `/together/*`, `/inbox` | The old addresses stay | Notifications already stored in the database link to them |
+| Generated database types | Not done | Needs a running database |
+| Database tests need Docker | `npm run test:db` runs them on an embedded Postgres | Docker is not available on the development machine |
+| Server-side recurrence for feeds, bundled from `src` | `supabase/functions/_shared/ics.ts` has no imports and is loaded by both the web app and the function | No build step between the two |
+
+---|---|---|
 | One class per use case | One service class per module (`TaskService`); a use case gets its own class when it grows | The single-use classes were pass-through code |
 | `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
 | `FeatureModule` with extension points | `create` and `routes` only | Navigation, widgets and notification handlers are added in the phase that first uses them |
@@ -576,7 +593,7 @@ These come from reading the source and SQL, not from running it. Each one gets a
 | 17 | Dead code: `AppData.createGroup`, `createEvent`, `markRead`; Home loads notifications it never shows. | `AppData.ts` | Phase 1 |
 | 18 | Invite links and reminders fail where pgcrypto lives in the `extensions` schema, because three functions pin `search_path` to `public`. | `create_group_invite`, `claim_group_invite` (0003), `schedule_personal_reminder` (0004) | Phase 1 |
 
-**Status on 2026-10-07.** Defects 1–5 were reproduced on an embedded Postgres and are fixed by migration 0015. Defect 5 turned out to be more than hygiene: an anonymous caller who knew a user id could read that user's busy times. Two parts of defect 5 are still open: `prepare_account_deletion` can be called directly, and `is_group_member(g, u)` answers for any pair of ids. Defect 17 is fixed. Defect 18 was found while testing and is fixed by migration 0016; it was reproduced on an embedded Postgres laid out like Supabase and still has to be confirmed on the real project. Neither migration is applied to a Supabase project yet.
+**Status on 2026-10-07.** Fixed, each with a test: 1–4, 6–14 and 16–18. Defects 1–5 were first reproduced on an embedded Postgres. Defect 5 turned out to be more than hygiene: an anonymous caller who knew a user id could read that user's busy times. Migration 0015 closes that, and migration 0026 stops `is_group_member` and `is_group_admin` from answering a caller outside the group. One part of defect 5 is open: `prepare_account_deletion` can be called directly, by a user for their own account only. Defect 15 is open; it needs a due-date column and belongs to tasks v2. Defect 18 was found while testing; it was reproduced on an embedded Postgres laid out like Supabase and still has to be confirmed on the real project. None of the migrations 0013–0026 is applied to a Supabase project yet.
 
 ---
 
@@ -800,22 +817,17 @@ A phase is done when its exit gate is met, CI is green, and `docs/implementation
 
 ## 10. Next steps
 
-**Done on 2026-10-07** (branch `refactor/foundation`, local commits, nothing pushed):
-
-- The uncommitted work is committed in seven grouped commits.
-- Module registry, per-user sessions, and the tasks and notifications modules.
-- Migrations 0015 (privacy fixes) and 0016 (invite links and reminders), each with pgTAP tests.
-- `npm run test:db`, the architecture test, `docs/architecture.md` and `docs/module-guide.md`.
-- An unread count on the notifications tab.
+**Done on 2026-10-07** (branch `refactor/foundation`, local commits, nothing pushed): phases 0 to 10 in a reduced form. `docs/implementation-progress.md` lists, phase by phase, what exists, what was left out and what was not verified.
 
 **Waiting for you:**
 
 1. Review the branch, then push it or tell me to open a pull request. CI has not run on any of this.
-2. A real Supabase stack to run the pgTAP files on: Docker access on this machine, or a separate staging project.
-3. Approval to apply migrations 0013–0016 to the cloud project. 0015 changes who can receive a location share and a meetup invitation, and deletes availability shares between people who are no longer friends.
-4. For Phase 2: change the Supabase email template so that sign-in emails contain the 6-digit code.
+2. A real Supabase stack to run the pgTAP files and try realtime on: Docker access on this machine, or a separate staging project.
+3. Approval to apply migrations 0013–0026 to the cloud project, in order. 0015 changes who can receive a location share and a meetup invitation, and deletes availability shares between people who are no longer friends. Until they are applied, the new features show errors against the cloud database.
+4. In the Supabase dashboard: put the 6-digit code in the sign-in email template (`supabase/templates/magic_link.html` is the local copy), and check that Realtime accepts private channels.
+5. Deploy the Edge Functions `calendar-feed` (new), `process-reminders` and `delete-account`, set `CRON_SECRET` and the VAPID keys, and schedule `process-reminders`. `docs/deployment.md` has the steps.
 
-**Next in the plan:** Phase 2 — design system, adaptive shell, code sign-in, PWA basics and the Today dashboard.
+**Next in the plan:** the parts each phase left out, in the order that matters to your classmates, and Phase 11 (staging acceptance, real devices, the pilot). Decisions 4 to 8 in section 9 are still open.
 
 ---
 

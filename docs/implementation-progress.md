@@ -1,5 +1,81 @@
 # Development-plan implementation status
 
+## 2026-10-07: phases 2 to 10 of the master plan, in a reduced form
+
+Work is on the local branch `refactor/foundation` (`git log main..refactor/foundation` lists the commits). Nothing is pushed, so CI has not run. No Supabase project, DNS record or deployment was changed. Migrations 0013–0026 are not applied to any Supabase project.
+
+Each phase was built in its smallest useful form. The tables say what exists and what was left out, phase by phase.
+
+### What exists
+
+| Phase | Built |
+|---|---|
+| 2 Shell, sign-in, PWA | Navigation built from the modules: five bottom tabs, a row of sub-screens and a top bar with search and the bell on a phone, a sidebar on a desktop. Dark mode follows the device. Sign-in with the 6-digit code from the email. Update prompt. PNG and Apple icons, manifest shortcuts, safe-area spacing. |
+| 3 Friends, groups, realtime, notifications | `friends`, `groups` and `identity` modules. Friend invite links (0018), a blocked list with unblock, a friend picker in place of typed usernames. Group roles, invite list with revoke, a member count kept by a trigger (0019), confirmations on destructive actions. One private realtime channel per user fed by database triggers, and a push for every notification (0017). |
+| 4 Chat | Direct and group conversations (0020): history in pages, unread counts and badge, sending that is safe to repeat. |
+| 5 Live map | Sharing with chosen friends for a set time, exact or approximate, with a banner and a stop button on every screen. Positions sent every 5 s while moving and every 30 s while still. "Hỏi vị trí" asks a friend to share (0021). Friends' positions are greyed after 60 s without an update. Status modes are a module; their features are unchanged. |
+| 6 Calendar | `calendar` module with the repeat engine in its domain. An agenda list on phones. Busy times that follow repeats (0022). `.ics` import that does not duplicate on a second run, and `.ics` export. |
+| 7 Timetable, free time, meetups | Classes as weekly events, typed in or pasted, shown by weekday (0022). "Rảnh lúc nào?" finds common free slots and names friends whose busy times are unknown. A meetup in a group invites every member; invitees are picked from friends; each card lists who is invited and their answers (0023). |
+| 8 Planner, privacy | `habits` and `notes` modules on their own screens. A habit shows its streak, can be unchecked for the running period (0024) and deleted. Notes and tasks are found without Vietnamese marks. A privacy screen where each module lists what it shares and stops it. |
+| 9 Calendar sync | A private feed address for Google or Apple Calendar: migration 0025 and the `calendar-feed` function, which uses the same `.ics` writer as the export. |
+| 10 Search, performance | Search over tasks, notes, habits, events, classes, friends, groups, meetups, conversations and screens, opened with Ctrl/Cmd+K or from the phone top bar. The sign-in screen no longer downloads the modules. |
+
+All screens now live in `src/modules`. The folders `src/features`, `src/shared` and `src/bootstrap` are gone, together with `AsyncOwnerScope` and the legacy module.
+
+### What was left out
+
+| Phase | Not built |
+|---|---|
+| 2 | Design-system gallery and more primitives, a theme switch, the quick-add sheet, the onboarding wizard, an install hint, the app icon badge, the `/plan/*` and `/together/*` route names. Confirmations still use the browser's `window.confirm`. |
+| 3 | QR codes, friend lists, nicknames, birthdays, a friend profile page, group pictures, the group hub with tabs, shared task lists, inline actions on notifications. |
+| 4 | Meetup threads (meetups keep their comments), replies, reactions, typing indicator, mute, edit and delete, photos. |
+| 5 | Avatar markers, smooth movement, "until I turn it off", pause-all, check-in, watch leases. Status v2: catalog, custom status, audience, nudge. |
+| 6 | Richer repeat rules, drag and drop, event reminders, colors, source filters, undo of an import. |
+| 7 | Semesters and class exceptions, CSV and school-portal import, the availability heatmap, a meetup detail page, the wizard, deadlines, places on a map, arrival sharing. |
+| 8 | Tasks v2 (lists, tags, subtasks, due time; defect 15 is open), habit schedules and heatmap, note pinning and tags, the quick-add parser, the focus timer. |
+| 9 | Subscribing to an outside calendar address, and the Google account connection. |
+| 10 | The offline copy of planner data, list virtualization, an accessibility audit, Lighthouse runs. |
+| 11 | All of it: staging acceptance, SMTP, schedulers, monitoring, deployment, the pilot. |
+
+### Defects from the master plan
+
+Fixed and covered by tests: 1–4, 6–14, 16–18, and the anonymous-access part of 5. Migration 0026 closes another part of 5: `is_group_member` and `is_group_admin` no longer answer a caller outside the group. Still open: `prepare_account_deletion` can be called directly by its own user (it prepares only that user's account), and defect 15.
+
+Found and fixed on the way: `.ics` text did not escape semicolons; a monthly event on the 31st skipped short months in other calendars.
+
+### Checks run on 2026-10-07 with Node 22.23.3
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests, also under `TZ=America/Los_Angeles` | 82 of 82 in 19 files |
+| `npm run test:db` | 26 migrations applied; 161 of 161 assertions in 15 files |
+| Browser tests, mocked backend, dev server | 26 of 26 |
+| Production build | Pass, with the known warning for the map chunk |
+
+Download size, gzip:
+
+| Screen | Before the plan | Now |
+|---|---:|---:|
+| Sign-in | 145 kB | 144 kB |
+| Today, first signed-in screen | 172 kB | 202 kB |
+| Opening the calendar | + 95 kB | + 94 kB |
+| Opening the map | + 284 kB | + 280 kB |
+
+Today is 30 kB over the budget in the plan. The query cache accounts for about 11 kB of that; the rest is the shell and the module services, which load together.
+
+### Not verified
+
+- Anything on a real Supabase stack: the pgTAP files, realtime delivery on the private channels, the push queue. `npm run test:db` uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron, Realtime and pgTAP.
+- The `calendar-feed` function on Deno. Its handler was run on Node with the database replaced. It has never been deployed, and no calendar app has fetched it.
+- The sign-in email with the code. The cloud project's template has to be changed in the dashboard first.
+- GPS, wake lock, push and installation on real phones.
+- The preview-mode browser run, and CI.
+
+### What the app does on a database without the new migrations
+
+The local dev server points at the cloud project, which has migrations up to 0012. There the older features work, and these show an error until the migrations are applied: friend links, chat, starting a location share, asking for a location, the timetable, busy times of friends, inviting to a meetup with the friend picker, unchecking a habit, the calendar feed. Realtime events do not arrive, so screens refresh on their timers.
+
 ## 2026-10-07: foundation for the master plan (phases 0 and 1)
 
 Work is on the local branch `refactor/foundation`. Nothing is pushed, so CI has not run. No Supabase project, DNS record or deployment was changed.

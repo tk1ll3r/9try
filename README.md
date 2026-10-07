@@ -4,49 +4,40 @@ Vietnamese-first social planning and personal organization web app for trusted f
 
 ## Current implementation
 
-- React 19 + TypeScript 7 + Vite 8 + Tailwind 4.
-- Supabase magic-link authentication and user profiles.
-- Friend requests: send, accept, decline, cancel, remove and block.
-- Groups: create, invite links with expiry/use limits, join, leave, transfer ownership, remove members and archive.
-- Meetups: proposal, invitees, time polling, atomic RSVP capacity enforcement, confirmation, discussion and cancellation.
-- Calendar:
-  - timed and all-day events,
-  - private by default,
-  - explicit selected-friend/group/public audiences,
-  - free/busy sharing without leaking event details,
-  - daily/weekly/monthly recurrence,
-  - per-occurrence exceptions,
-  - edit one occurrence or the whole series,
-  - timezone-safe expansion using Temporal.
-- Personal organizer: tasks, notes, routines and durable server-side reminders.
-- In-app notification center plus optional Web Push with quiet hours/category preferences.
-- Expiring location sharing:
-  - explicit recipients,
-  - approximate mode,
-  - throttled updates,
-  - stale-state display,
-  - latest-position-only storage,
-  - immediate revocation/deletion on stop.
-- Personal data export and guarded account deletion.
-- Installable PWA with static-shell caching only; private Supabase/location API responses are not cached by Workbox.
-- Versioned Supabase schema, indexes, RLS policies, security-definer RPCs and Edge Functions.
-- GitHub Actions validation for typecheck, unit tests and production build.
+- React 19 + TypeScript 7 + Vite 8 + Tailwind 4, TanStack Query, Supabase.
+- Sign-in by emailed link or 6-digit code; profiles.
+- Friends: requests, invite links, block and unblock.
+- Groups: roles, invite links with expiry and use limits, ownership transfer, archive.
+- Chat between friends and inside groups, with unread counts.
+- Meetups: proposal, time poll, RSVP with capacity enforced on the server, discussion. A meetup in a group invites every member.
+- Calendar: timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group, `.ics` import and export, and a private feed address for Google or Apple Calendar.
+- Timetable of weekly classes, and "Rảnh lúc nào?" to find times when chosen friends are all free.
+- Tasks, habits with streaks, notes, and reminders sent by the server.
+- Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
+- Status modes that friends can see for a chosen time.
+- Notification center, with optional Web Push, quiet hours and per-category choices.
+- A privacy screen that lists what other people can see right now, with a stop button for each.
+- Search across the app (Ctrl/Cmd+K).
+- Data export and guarded account deletion.
+- Installable PWA. The service worker caches the app shell only; Supabase and location responses are never cached.
+
+`docs/implementation-progress.md` says what is verified and what is not. Migrations 0013–0026 are not applied to the cloud project yet.
 
 ## Architecture
 
-Features on the new structure live in `src/modules/<name>` with domain, application, infrastructure and presentation layers, and are listed in `src/app/modules.ts`. Tasks and notifications are there today. The other pages are still under `src/features` and move over phase by phase.
+`src/app` puts the app together, `src/kernel` holds what every feature shares, and each feature is a folder in `src/modules` with domain, application, infrastructure and presentation layers. A feature joins the app through one line in `src/app/modules.ts`.
 
 Row level security and SQL functions decide what each user can read or change. Checks in the client only improve the experience.
 
 See:
 - `docs/architecture.md`
+- `docs/module-guide.md` (how to add a module)
+- `docs/implementation-progress.md` (what is implemented, with evidence and open checks)
+- `docs/master-plan.md` (the plan: architecture, UX, features, phases)
 - `docs/permission-matrix.md`
 - `docs/deployment.md`
 - `docs/backup-restore.md`
 - `docs/cost-and-limits.md`
-- `docs/master-plan.md` (the current plan: architecture, UX, features, phases)
-- `docs/module-guide.md` (how to add or move a module)
-- `docs/implementation-progress.md` (what is implemented, with evidence and open checks)
 
 ## Run locally
 
@@ -58,7 +49,7 @@ npm run dev
 
 For an isolated **local** backend (Docker required), run `npx supabase@2.119.0 start --exclude realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor` in another terminal (lightweight mode; account-deletion Edge Function, reminders and realtime are not available in this mode). All migrations are applied automatically. Set `VITE_SUPABASE_URL=http://127.0.0.1:54321` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the local **PUBLISHABLE_KEY** from `npx supabase@2.119.0 status --output env`. Open `http://127.0.0.1:5173` for the app; magic-link emails arrive in Mailpit at `http://127.0.0.1:55324` (configured port). Restart Vite after editing `.env.local`. Never put SECRET_KEY, SERVICE_ROLE_KEY or JWT_SECRET in `VITE_*` variables; never paste CLI status output in public logs.
 
-To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; activity modes need migrations 0011–0012 and direct location publishing requires policy fix 0013. Migrations 0013–0016 have **not been applied to cloud**. Do not run `supabase db reset --linked` on the cloud project.
+To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; the app expects all of them. Migrations 0013–0026 have **not been applied to cloud**; `docs/implementation-progress.md` lists which features show errors until they are. Do not run `supabase db reset --linked` on the cloud project.
 
 ## Validate
 
@@ -66,7 +57,7 @@ Node 22.12 or newer is required (`.nvmrc`); Vite 8 and Vitest 4 do not start on 
 
 ```bash
 npm run typecheck
-npm test                  # unit tests and the architecture rules
+npm test                  # unit tests, the architecture rules, the calendar-feed handler
 npm run test:db           # every migration + pgTAP files on an embedded Postgres, no Docker
 npm run build
 npm run test:e2e          # isolated mocked-browser UI tests; needs Playwright Chromium
@@ -93,7 +84,8 @@ Do **not** modify the existing `mcp.gnouht.space` DNS record, tunnel route or Cl
 External setup is intentionally not faked. Production still requires:
 - Supabase project URL + publishable key,
 - applying migrations,
-- deploying Edge Functions,
+- deploying the Edge Functions (`process-reminders`, `delete-account`, `calendar-feed`),
+- the sign-in email template with the 6-digit code,
 - cron authorization for reminder processing,
 - VAPID keys for Web Push,
 - Cloudflare project/custom-domain binding for `gnouht.space`.
