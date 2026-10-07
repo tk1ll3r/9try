@@ -93,7 +93,7 @@ export function ActivityModesCard() {
         {current && <><span className="text-[var(--muted)]">Đến {new Date(current.expiresAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
           <Button variant="ghost" disabled={busy} onClick={() => void change(null)}><X size={16} /> Tắt mode</Button></>}
       </div>
-      {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
       <h3 className="mt-6 mb-3 text-sm font-bold">Bạn bè</h3>
       {friends.length === 0 ? <p className="text-sm text-[var(--muted)]">Kết bạn để xem mode của nhau.</p> :
         <div className="flex flex-wrap gap-2">{friends.map((friend) => {

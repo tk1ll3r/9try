@@ -45,7 +45,7 @@ export function TaskListCard() {
       <input className="field min-w-0 flex-1" aria-label="Tìm công việc" placeholder="Tìm công việc…" value={search} onChange={e => setSearch(e.target.value)} />
       <select className="field" aria-label="Lọc công việc" value={filter} onChange={e => setFilter(e.target.value)}><option value="open">Chưa xong</option><option value="done">Đã xong</option><option value="all">Tất cả</option></select>
     </div>
-    {problem && <div role="alert" className="mt-3 text-red-700">{problem} <Button variant="ghost" disabled={pending || list.isFetching} onClick={() => void list.refetch()}>Thử tải lại</Button></div>}
+    {problem && <div role="alert" className="mt-3 text-[var(--danger)]">{problem} <Button variant="ghost" disabled={pending || list.isFetching} onClick={() => void list.refetch()}>Thử tải lại</Button></div>}
     {undo && <div role="status" className="mt-3 flex items-center justify-between gap-2">Đã hoàn thành việc.<Button variant="ghost" disabled={pending}
       onClick={() => run(service => service.undoCompletion(undo.id, undo.completedAt), () => setUndo(null))}>Hoàn tác</Button></div>}
     {editing && <form onSubmit={save} className="my-4 space-y-3 rounded-2xl bg-[var(--soft)] p-4">

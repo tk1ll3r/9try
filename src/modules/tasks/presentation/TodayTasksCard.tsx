@@ -40,12 +40,12 @@ export function TodayTasksCard() {
       </div>
       <p className="text-xs text-[var(--muted)]">Xóa ngày để thêm việc không có hạn. Xem việc tương lai trong “Tất cả việc”.</p>
     </form>
-    {problem && <div role="alert" className="mt-3 text-sm text-red-700">{problem} <Button variant="ghost" disabled={pending || today.isFetching} onClick={() => void today.refetch()}>Thử lại</Button></div>}
+    {problem && <div role="alert" className="mt-3 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={pending || today.isFetching} onClick={() => void today.refetch()}>Thử lại</Button></div>}
     {undo && <div role="status" className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--soft)] p-3">Đã hoàn thành việc.
       <Button variant="ghost" disabled={pending} onClick={() => run(service => service.undoCompletion(undo.id, undo.completedAt), () => setUndo(null))}>Hoàn tác</Button></div>}
     <div className="mt-4 space-y-1">{tasks.length ? tasks.map(task => <button key={task.id} type="button" disabled={pending} aria-label={`Hoàn thành: ${task.title}`}
       onClick={() => run(service => service.complete(task.id), completedAt => setUndo({ id: task.id, completedAt }))} className="group flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[var(--soft)]">
-      <span className="grid size-6 shrink-0 place-items-center rounded-lg border-2 border-black/25 group-hover:border-emerald-600"><Check size={15} className="opacity-0 group-hover:opacity-100" /></span>
+      <span className="grid size-6 shrink-0 place-items-center rounded-lg border-2 border-[var(--border)] group-hover:border-emerald-600"><Check size={15} className="opacity-0 group-hover:opacity-100" /></span>
       <span className="min-w-0 flex-1"><span className="block font-semibold">{task.title}</span><span className="text-xs text-[var(--muted)]">{task.dueAt ? new Date(task.dueAt).toLocaleDateString("vi-VN") : "Không hạn"}{task.isOverdue() ? " · Quá hạn" : ""}</span></span>
       {task.priority === "high" && <span className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-900">Quan trọng</span>}
     </button>) : !today.isError && <p className="py-8 text-center text-sm text-[var(--muted)]">{today.isPending ? "Đang tải việc…" : "Xong hết rồi! Thêm một việc mới ở trên."}</p>}</div>

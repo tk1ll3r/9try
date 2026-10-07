@@ -44,8 +44,8 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
     finally { lock.current = false; if (mounted.current) setPending(false); }
   }
   return <main className="grid min-h-dvh bg-[var(--paper)] p-5 text-[var(--ink)] lg:grid-cols-[1.1fr_.9fr]">
-    <section className="hidden rounded-[36px] bg-[var(--ink)] p-12 text-[var(--paper)] lg:flex lg:flex-col">
-      <p className="font-bold text-[var(--lime)]">GNOUHT TOGETHER</p>
+    <section className="hidden rounded-[36px] bg-[#171a12] p-12 text-[#f4f1e8] lg:flex lg:flex-col">
+      <p className="font-bold text-[#d9ff79]">GNOUHT TOGETHER</p>
       <h1 className="my-auto max-w-xl text-6xl font-black leading-[.94] tracking-[-.055em]">Ít nhắn “khi nào rảnh?” hơn. Gặp nhau nhiều hơn.</h1>
       <p className="flex gap-2 text-sm text-white/70"><LockKeyhole size={17} /> Riêng tư mặc định. Chia sẻ khi bạn chủ động chọn.</p>
     </section>
@@ -58,7 +58,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
         : <form onSubmit={submit} className="mt-6 space-y-4" aria-busy={pending}>
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
           <input id="login-email" className="field w-full" type="email" autoComplete="email" inputMode="email" required disabled={pending} value={email} onChange={event => setEmail(event.target.value)} placeholder="ban@gmail.com" aria-describedby="email-help" />
-          {error && <p role="alert" className="text-sm leading-6 text-red-700">{error}</p>}
+          {error && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{error}</p>}
           {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Yêu cầu đã được tiếp nhận.</b><p>Kiểm tra hộp thư của {acceptedEmail}, kể cả Spam và Tất cả thư. Phản hồi này chưa xác nhận email đã đến Gmail.</p></div>}
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
           <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Có thể sửa email rồi gửi lại khi hết thời gian chờ. Giới hạn ở máy chủ có thể dài hơn; app không tự gửi lại.</p>

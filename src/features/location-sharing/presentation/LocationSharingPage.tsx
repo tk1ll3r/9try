@@ -80,7 +80,7 @@ export function LocationSharingPage() {
       <div className="space-y-5">
         <Card title={sharing.sessions.length ? "Phiên chia sẻ của bạn" : "Chia sẻ với người bạn chọn"}>
           {sharing.loading && <p role="status">Đang kiểm tra phiên đang mở…</p>}
-          {sharing.error && <div role="alert" className="mb-3 text-sm text-red-700">{sharing.error}<Button variant="ghost" disabled={sharing.pending} onClick={() => void controller.current?.refresh()}>Thử tải lại phiên</Button></div>}
+          {sharing.error && <div role="alert" className="mb-3 text-sm text-[var(--danger)]">{sharing.error}<Button variant="ghost" disabled={sharing.pending} onClick={() => void controller.current?.refresh()}>Thử tải lại phiên</Button></div>}
           <p role="status" className="mb-3 text-sm">{sharing.status}</p>
           {sharing.sessions.length ? sharing.sessions.map(session => <div key={session.id} className="mb-3 rounded-xl bg-[var(--soft)] p-3">
             <p className="text-sm">Hết hạn: {new Date(session.expires_at).toLocaleString("vi-VN")}{session.approximate ? " · gần đúng" : ""}</p>
@@ -97,7 +97,7 @@ export function LocationSharingPage() {
         </Card>
         <Card title="Người chia sẻ với bạn" action={<Users size={18} />}>
           {recipientLoading && <p role="status">Đang tải người chia sẻ…</p>}
-          {recipientError && <div role="alert" className="mb-3 text-sm text-red-700">{recipientError}<Button variant="ghost" onClick={() => void refreshVisible()}>Thử tải lại danh sách</Button></div>}
+          {recipientError && <div role="alert" className="mb-3 text-sm text-[var(--danger)]">{recipientError}<Button variant="ghost" onClick={() => void refreshVisible()}>Thử tải lại danh sách</Button></div>}
           {!recipientLoading && !recipientError && !visible.length && <p className="py-4 text-sm text-[var(--muted)]">Chưa có ai chia sẻ. Bản đồ vẫn hoạt động; không cần bật GPS để xem.</p>}
           <div className="space-y-3">{visible.map(item => <article key={item.sessionId} className="rounded-2xl bg-[var(--soft)] p-3">
             <div className="flex items-start justify-between gap-2"><b>{item.ownerDisplayName}</b><span className="text-xs text-[var(--muted)]">{item.recordedAt ? isStale(item) ? "Vị trí cũ" : "Mới cập nhật" : "Chưa có GPS"}</span></div>

@@ -126,7 +126,7 @@ export function NotificationsPage() {
           </Button>
         </div>
         {!push.supported() && (
-          <p className="mt-3 text-sm text-amber-700">Trình duyệt hiện tại không hỗ trợ Web Push.</p>
+          <p className="mt-3 text-sm text-[var(--warning)]">Trình duyệt hiện tại không hỗ trợ Web Push.</p>
         )}
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
           Trên một số nền tảng, đặc biệt iPhone/iPad, bạn có thể cần cài website lên Màn hình chính trước khi Web Push hoạt động.

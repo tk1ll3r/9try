@@ -233,7 +233,7 @@ export function CalendarPage() {
         <Button variant="ghost" onClick={() => setShowImport(value => !value)} aria-expanded={showImport}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</Button>
       </div>
       <DialogPanel open={createOpen} onOpenChange={setCreateOpen} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn được xem theo mặc định. Chọn chia sẻ hoặc lặp khi cần." busy={creating}>
-        {message && <p role="alert" className="mb-4 text-sm text-red-700">{message}</p>}
+        {message && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{message}</p>}
         <form onSubmit={create} className="grid gap-3 md:grid-cols-2">
           <input
             className="field md:col-span-2"
