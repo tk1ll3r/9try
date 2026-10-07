@@ -86,7 +86,7 @@ export function LocationSharingPage() {
             <p className="text-sm">Hết hạn: {new Date(session.expires_at).toLocaleString("vi-VN")}{session.approximate ? " · gần đúng" : ""}</p>
             <Button variant="danger" disabled={sharing.pending} className="mt-3 w-full" onClick={() => void controller.current?.stop(session.id)}><MapPinOff size={18} /> Dừng phiên này</Button>
           </div>) : <form onSubmit={start} className="space-y-3">
-            <label className="block text-sm font-semibold">Người nhận<input className="field mt-1 w-full" required value={names} onChange={e => setNames(e.target.value)} placeholder="Username, cách nhau dấu phẩy" /></label>
+            <label className="block text-sm font-semibold">Người nhận<input className="field mt-1 w-full" required value={names} onChange={e => setNames(e.target.value)} placeholder="Username của bạn bè, cách nhau dấu phẩy" /></label>
             <label className="block text-sm font-semibold">Thời hạn<select className="field mt-1 w-full" value={duration} onChange={e => setDuration(Number(e.target.value))}>
               <option value={30}>30 phút</option><option value={60}>1 giờ</option><option value={180}>3 giờ</option><option value={480}>8 giờ</option>
             </select></label>

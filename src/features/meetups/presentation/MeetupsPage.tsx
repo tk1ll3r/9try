@@ -289,5 +289,6 @@ function humanize(error: unknown) {
     : "Thao tác không thành công. Hãy thử lại.";
   if (text.includes("capacity reached")) return "Hoạt động vừa đủ số người tham gia.";
   if (text.includes("user not found")) return "Không tìm thấy username này.";
+  if (text.includes("invite unavailable")) return "Chỉ mời được bạn bè hoặc thành viên của nhóm gắn với hoạt động.";
   return text;
 }

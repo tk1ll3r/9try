@@ -9,6 +9,8 @@ values
  ('00000000-0000-4000-8000-000000000202','00000000-0000-0000-0000-000000000000','authenticated','authenticated','location-recipient@example.invalid'),
  ('00000000-0000-4000-8000-000000000203','00000000-0000-0000-0000-000000000000','authenticated','authenticated','location-stranger@example.invalid');
 update public.profiles set username='local_location_recipient' where id='00000000-0000-4000-8000-000000000202';
+insert into public.friendships(requester_id, addressee_id, status)
+values ('00000000-0000-4000-8000-000000000201','00000000-0000-4000-8000-000000000202','accepted');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000201',true);

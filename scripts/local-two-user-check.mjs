@@ -41,6 +41,12 @@ try {
   const { data: anTask, error: ownError } = await an.client.from('personal_tasks').select('id').eq('id', task.id);
   const { data: binhTask, error: foreignError } = await binh.client.from('personal_tasks').select('id').eq('id', task.id);
   if (ownError || foreignError || anTask?.length !== 1 || binhTask?.length !== 0) fail('Task RLS isolation did not pass', ownError || foreignError);
+  // Location can only be shared with friends (migration 0015).
+  const { error: strangerError } = await an.client.rpc('start_location_session', { p_duration_minutes: 30, p_recipient_usernames: [binh.username], p_approximate: true });
+  if (!strangerError) fail('Location was shared with a non-friend');
+  const { error: requestError } = await an.client.rpc('send_friend_request', { p_username: binh.username });
+  const { error: acceptError } = await binh.client.rpc('respond_friend_request', { p_requester_id: an.id, p_accept: true });
+  if (requestError || acceptError) fail('Friend request flow failed', requestError || acceptError);
   const { data: sessionId, error: sessionError } = await an.client.rpc('start_location_session', { p_duration_minutes: 30, p_recipient_usernames: [binh.username], p_approximate: true });
   if (sessionError || !sessionId) fail('Explicit recipient session failed', sessionError);
   const { error: positionError } = await an.client.from('location_positions').upsert({

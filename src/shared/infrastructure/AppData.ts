@@ -52,6 +52,7 @@ export class AppData {
       p_recipient_usernames: usernames,
       p_approximate: approximate,
     });
+    if (error?.message.includes("no valid recipients")) throw new Error("Chỉ chia sẻ được với bạn bè đã kết nối. Hãy kiểm tra lại username.");
     if (error) throw error;
     return data as string;
   }
