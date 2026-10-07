@@ -1,7 +1,7 @@
 // Applies every migration and runs the pgTAP files on an embedded Postgres (PGlite), so the
 // database tests can run without Docker: `npm run test:db`, or `npm run test:db -- location`
 // for one file. This is a smoke check with stand-ins for the Supabase roles, auth.uid(),
-// pg_cron and pgTAP. `supabase test db` on a real local stack stays the authority.
+// pg_cron, realtime and pgTAP. `supabase test db` on a real local stack stays the authority.
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { readFileSync, readdirSync } from "node:fs";
@@ -26,6 +26,13 @@ await db.exec(`
   create function cron.schedule(job_name text, schedule text, command text) returns bigint language sql as $$
     insert into cron.job(jobname, schedule, command) values (job_name, schedule, command)
     on conflict(jobname) do update set schedule = excluded.schedule, command = excluded.command returning jobid $$;
+  -- Realtime stand-in: realtime.send records the event the way Supabase stores broadcasts.
+  create schema realtime;
+  create table realtime.messages(id bigserial primary key, topic text, extension text default 'broadcast', event text, payload jsonb, private boolean);
+  alter table realtime.messages enable row level security;
+  create function realtime.topic() returns text language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
+  create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void language sql as $$
+    insert into realtime.messages(topic, event, payload, private) values (topic, event, payload, private) $$;
   -- pgTAP stand-in for the five functions the tests use.
   create function extensions.plan(n integer) returns text language sql as $$ select '1..' || n $$;
   create function extensions.is(have anyelement, want anyelement, description text) returns text language sql as $$

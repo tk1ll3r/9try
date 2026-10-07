@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import { AuthProvider, useAuth } from "../bootstrap/AuthProvider";
 import { returnPathKey } from "../features/auth/domain/login";
 import { AuthPage } from "../features/auth/presentation/AuthPage";
+import { RealtimeBridge } from "../kernel/realtime";
 import { SessionProvider } from "../kernel/session";
 import { AppShell } from "./AppShell";
 import { registry } from "./modules";
@@ -24,6 +25,7 @@ function AppRoutes() {
   if (!user) return <AuthPage returnPath={registry.safePath(pathname)} />;
   // The key gives each account its own services and query cache.
   return <SessionProvider key={user.id} userId={user.id} registry={registry}>
+    <RealtimeBridge userId={user.id} />
     <Suspense fallback={<div role="status" className="p-6">Đang tải trang…</div>}>
       <Routes><Route element={<AppShell />}>
         {registry.routes.map(({ path, component: Page }) => path

@@ -1,7 +1,7 @@
 import { Beer, BookOpen, CircleDot, Gamepad2, GraduationCap, Moon, Radio, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
-import { friendsData, type FriendConnection } from "../../friends/infrastructure/FriendsData";
+import { useAcceptedFriends } from "../../../modules/friends";
 import { activityModes, activityModesData, type ActiveMode, type ActivityMode } from "../infrastructure/ActivityModesData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
@@ -19,7 +19,7 @@ const choices = [
 export function ActivityModesCard() {
   const { user } = useAuth();
   const [modes, setModes] = useState<ActiveMode[]>([]);
-  const [friends, setFriends] = useState<FriendConnection[]>([]);
+  const friends = useAcceptedFriends();
   const [minutes, setMinutes] = useState(120);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,19 +29,15 @@ export function ActivityModesCard() {
   useEffect(() => {
     scope.current.activate(user?.id);
     mutationLock.current = false;
-    setModes([]); setFriends([]); setError(""); setBusy(false);
+    setModes([]); setError(""); setBusy(false);
     if (!user) return () => scope.current.dispose();
     const ownerId = user.id;
     async function refresh() {
       const current = scope.current.beginRequest(ownerId);
       if (!current()) return;
       try {
-        const [nextModes, nextFriends] = await Promise.all([activityModesData.list(), friendsData.list()]);
-        if (current()) {
-          setModes(nextModes);
-          setFriends(nextFriends.filter((friend) => friend.status === "accepted"));
-          setError("");
-        }
+        const nextModes = await activityModesData.list();
+        if (current()) { setModes(nextModes); setError(""); }
       } catch (err) {
         if (current()) setError(err instanceof Error ? err.message : "Không tải được mode.");
       }

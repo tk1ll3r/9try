@@ -17,7 +17,7 @@ import {
   type CalendarVisibility,
   type RecurrenceRule,
 } from "../infrastructure/CalendarData";
-import { friendsData, type FriendConnection } from "../../friends/infrastructure/FriendsData";
+import { PeoplePicker } from "../../../modules/friends";
 import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
@@ -38,7 +38,6 @@ export function CalendarPage() {
   const [recurrence, setRecurrence] = useState<"" | RecurrenceRule>("");
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [visibility, setVisibility] = useState<CalendarVisibility>("only_me");
-  const [friends, setFriends] = useState<FriendConnection[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [audienceGroupId, setAudienceGroupId] = useState("");
@@ -54,15 +53,7 @@ export function CalendarPage() {
 
   useEffect(() => {
     if (!user) return;
-    void Promise.all([friendsData.list(), groupsData.list(user.id)])
-      .then(([connections, nextGroups]) => {
-        setFriends(connections.filter((connection) => connection.status === "accepted"));
-        setGroups(nextGroups);
-      })
-      .catch(() => {
-        setFriends([]);
-        setGroups([]);
-      });
+    void groupsData.list(user.id).then(setGroups).catch(() => setGroups([]));
   }, [user?.id]);
 
   async function refresh(startDate = range?.start, endDate = range?.end) {
@@ -316,27 +307,9 @@ export function CalendarPage() {
           )}
 
           {visibility === "selected_friends" && (
-            <fieldset className="rounded-2xl bg-[var(--soft)] p-3 md:col-span-2 xl:col-span-4">
-              <legend className="px-1 text-xs font-bold text-[var(--muted)]">Bạn bè được xem nội dung sự kiện</legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {friends.length === 0 && <span className="text-sm text-[var(--muted)]">Chưa có bạn bè để chọn.</span>}
-                {friends.map((friend) => {
-                  const checked = selectedFriendIds.includes(friend.userId);
-                  return (
-                    <label key={friend.userId} className="flex items-center gap-2 rounded-xl bg-[var(--surface)] px-3 py-2 text-sm font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => setSelectedFriendIds((current) =>
-                          checked ? current.filter((id) => id !== friend.userId) : [...current, friend.userId]
-                        )}
-                      />
-                      {friend.displayName}
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <div className="md:col-span-2">
+              <PeoplePicker legend="Bạn bè được xem nội dung sự kiện" value={selectedFriendIds} onChange={setSelectedFriendIds} />
+            </div>
           )}
 
           {visibility === "group" && (

@@ -1,7 +1,8 @@
 import { ModuleRegistry } from "../kernel/module";
+import { friendsModule } from "../modules/friends/friends.module";
 import { notificationsModule } from "../modules/notifications/notifications.module";
 import { tasksModule } from "../modules/tasks/tasks.module";
 import { legacyModule } from "./legacy.module";
 
 /** Every feature of the app. Adding a feature means adding its module to this list. */
-export const registry = new ModuleRegistry([tasksModule, notificationsModule, legacyModule]);
+export const registry = new ModuleRegistry([tasksModule, notificationsModule, friendsModule, legacyModule]);

@@ -283,6 +283,27 @@ test("friend removal requires confirmation", async ({ page }) => {
   await expect.poll(() => removed).toBe(1);
 });
 
+test("a friend link is created, then makes its visitor a friend", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  let claimed = "";
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/rpc/create_friend_invite")) return route.fulfill({ json: [{ token: "abc123", expires_at: "2026-10-14T00:00:00Z" }] });
+    if (path.endsWith("/rpc/claim_friend_invite")) { claimed = route.request().postDataJSON().p_token; return route.fulfill({ json: "22222222-2222-4222-8222-222222222222" }); }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/me/friends");
+  await page.getByRole("button", { name: "Tạo liên kết kết bạn" }).click();
+  await expect(page.getByLabel("Liên kết kết bạn")).toHaveValue(/\/invite\/friend\/abc123$/);
+  await page.goto("/invite/friend/abc123");
+  await expect(page.getByRole("heading", { name: "Hai bạn đã là bạn bè" })).toBeVisible();
+  expect(claimed).toBe("abc123");
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`demo and login fit viewport ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await mockStyle(page); await loggedOut(page);
