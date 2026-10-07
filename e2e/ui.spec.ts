@@ -304,6 +304,39 @@ test("a friend link is created, then makes its visitor a friend", async ({ page 
   expect(claimed).toBe("abc123");
 });
 
+test("chat: open a conversation, read it and send one message", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const messages = [{ id: "m1", sender_id: "22222222-2222-4222-8222-222222222222", sender_name: "Kha", body: "Đi cà phê không?", created_at: "2026-10-07T01:00:00Z" }];
+  let sends = 0, reads = 0;
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/rpc/list_conversations")) return route.fulfill({ json: [{ id: "c1", kind: "direct", title: "Kha", last_message_at: "2026-10-07T01:00:00Z", last_message_body: messages[messages.length - 1].body, unread_count: reads ? 0 : 1 }] });
+    if (path.endsWith("/rpc/list_messages")) return route.fulfill({ json: [...messages].reverse() });
+    if (path.endsWith("/rpc/mark_conversation_read")) { reads++; return route.fulfill({ json: null }); }
+    if (path.endsWith("/rpc/send_message")) {
+      sends++; const sent = route.request().postDataJSON();
+      messages.push({ id: sent.p_id, sender_id: user.id, sender_name: "Vy", body: sent.p_body, created_at: new Date().toISOString() });
+      return route.fulfill({ json: null });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/chat");
+  await expect(page.getByLabel("1 tin nhắn chưa đọc").filter({ visible: true })).toHaveCount(1);
+  await page.getByRole("link", { name: /Kha/ }).click();
+  await expect(page.getByText("Đi cà phê không?").first()).toBeVisible();
+  await expect.poll(() => reads).toBeGreaterThan(0);
+  await expect(page.getByLabel("1 tin nhắn chưa đọc")).toHaveCount(0);
+  await page.getByLabel("Tin nhắn", { exact: true }).fill("Đi chứ");
+  await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
+  await expect(page.getByText("Đi chứ").first()).toBeVisible();
+  await expect(page.getByLabel("Tin nhắn", { exact: true })).toHaveValue("");
+  expect(sends).toBe(1);
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`demo and login fit viewport ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await mockStyle(page); await loggedOut(page);

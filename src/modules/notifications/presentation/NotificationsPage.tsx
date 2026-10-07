@@ -11,6 +11,7 @@ import { notificationsModule } from "../notifications.module";
 import { unreadKey } from "./UnreadBadge";
 
 const categories = [
+  ["chat_message", "Tin nhắn"],
   ["friend_request", "Lời mời kết bạn"],
   ["group_invite", "Lời mời nhóm"],
   ["meetup_invite", "Lời mời hoạt động"],

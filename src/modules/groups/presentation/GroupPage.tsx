@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Archive, ArrowLeft, Copy, Crown, Link2, LogOut, Share2, ShieldCheck, UserMinus } from "lucide-react";
+import { Archive, ArrowLeft, Copy, Crown, Link2, LogOut, MessageCircle, Share2, ShieldCheck, UserMinus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
@@ -45,6 +45,7 @@ export function GroupPage() {
         <Link to="/groups" className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--muted)]"><ArrowLeft size={16} /> Quay lại nhóm</Link>
         <h1 className="text-4xl font-black tracking-[-.045em]">{group?.name ?? "Nhóm"}</h1>
         {group?.description && <p className="mt-2 text-[var(--muted)]">{group.description}</p>}
+        <Link to={`/chat/group/${groupId}`} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 text-sm font-semibold text-[#1d230e]"><MessageCircle size={17} /> Trò chuyện nhóm</Link>
       </header>
 
       {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={members.isFetching} onClick={() => void members.refetch()}>Thử tải lại</Button></div>}
@@ -102,7 +103,7 @@ export function GroupPage() {
               {invites.data!.map(invite => (
                 <li key={invite.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--soft)] p-3 text-sm">
                   <span>Còn {invite.usesLeft} lượt · hết hạn {new Date(invite.expiresAt).toLocaleString("vi-VN")}</span>
-                  <Button variant="ghost" disabled={pending} onClick={() => act(() => groups.revokeInvite(invite.id), "Đã thu hồi liên kết.")}>Thu hồi</Button>
+                  <Button variant="ghost" className="shrink-0" disabled={pending} onClick={() => act(() => groups.revokeInvite(invite.id), "Đã thu hồi liên kết.")}>Thu hồi</Button>
                 </li>
               ))}
             </ul>

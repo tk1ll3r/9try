@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Ban, CalendarDays, Check, Clock3, Copy, Link2, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
+import { Ban, CalendarDays, Check, Clock3, Copy, Link2, MessageCircle, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
@@ -130,6 +130,7 @@ export function FriendsPage() {
               return (
                 <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
                   <>
+                    <Link to={`/chat/with/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><MessageCircle size={16} /> Nhắn tin</Link>
                     <Link to={`/calendar/shared/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><CalendarDays size={16} /> Lịch chia sẻ</Link>
                     <Button disabled={pending} variant="ghost" className="px-3" onClick={() => showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
                     <Button variant={sharing ? "secondary" : "ghost"} className="px-3" disabled={pending} aria-pressed={sharing}
