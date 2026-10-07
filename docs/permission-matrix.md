@@ -19,7 +19,7 @@ Since migration 0015:
 - Unfriending or blocking ends availability, location and event shares between the two users.
 - An anonymous visitor cannot call any function in `public`.
 
-Since migrations 0017–0026:
+Since migrations 0017–0028:
 
 | Resource/action | Who |
 |---|---|
@@ -34,6 +34,7 @@ Since migrations 0017–0026:
 | Change a member's role | The group's owner |
 | Uncheck a habit, create or revoke a calendar feed | The owner |
 | Read a calendar through its feed address | Anyone who has the address. Only a hash of its token is stored, and revoking or renewing it closes the old address |
+| Pin a friend, see one's own pins | The user, for accepted friends only. Nobody else can read a pin. Unfriending or blocking removes pins in both directions |
 | Learn whether someone is in a group | That person, and members of the group |
 | Listen to a user's realtime channel | That user. Only database triggers write to it |
 

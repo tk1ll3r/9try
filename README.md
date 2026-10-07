@@ -15,14 +15,14 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - A Today screen that every feature adds a card to: requests waiting for an answer, what comes next, tasks, habits, what friends are doing.
 - Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders sent by the server.
 - Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
-- Mode, the home screen: what each friend says they are doing right now, and your own mode for a chosen time.
+- Mode, the home screen: what each friend says they are doing right now, with the friends who matter most at the moment on top (a meetup soon, unread messages, a live location, a pin) and the reason on each card. Your own mode is one tap.
 - Notification center, with optional Web Push, quiet hours and per-category choices.
 - A privacy screen that lists what other people can see right now, with a stop button for each.
 - Search across the app (Ctrl/Cmd+K).
 - Data export and guarded account deletion.
 - Installable PWA. The service worker caches the app shell only; Supabase and location responses are never cached.
 
-`docs/implementation-progress.md` says what is verified and what is not. Migrations 0013–0027 are not applied to the cloud project yet.
+`docs/implementation-progress.md` says what is verified and what is not. Migrations 0013–0028 are not applied to the cloud project yet.
 
 ## Architecture
 
@@ -50,7 +50,7 @@ npm run dev
 
 For an isolated **local** backend (Docker required), run `npx supabase@2.119.0 start --exclude realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor` in another terminal (lightweight mode; account-deletion Edge Function, reminders and realtime are not available in this mode). All migrations are applied automatically. Set `VITE_SUPABASE_URL=http://127.0.0.1:54321` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the local **PUBLISHABLE_KEY** from `npx supabase@2.119.0 status --output env`. Open `http://127.0.0.1:5173` for the app; magic-link emails arrive in Mailpit at `http://127.0.0.1:55324` (configured port). Restart Vite after editing `.env.local`. Never put SECRET_KEY, SERVICE_ROLE_KEY or JWT_SECRET in `VITE_*` variables; never paste CLI status output in public logs.
 
-To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; the app expects all of them. Migrations 0013–0027 have **not been applied to cloud**; `docs/implementation-progress.md` lists which features show errors until they are. Do not run `supabase db reset --linked` on the cloud project.
+To stop local containers: `npx supabase@2.119.0 stop`. For cloud testing instead, apply every migration in `supabase/migrations/` in order and configure the cloud URL/publishable key; the app expects all of them. Migrations 0013–0028 have **not been applied to cloud**; `docs/implementation-progress.md` lists which features show errors until they are. Do not run `supabase db reset --linked` on the cloud project.
 
 ## Validate
 
@@ -67,11 +67,11 @@ npm run test:e2e:preview  # same suite against the production build
 
 For a **fictional two-person map demo** in development, open `/demo/location` (An and Bình, public-place markers). It requires no Auth/GPS and never writes to Supabase; it does not verify real user privacy. The production build omits this route unless `VITE_ENABLE_DEMO=true` is deliberately set at build time. See `docs/implementation-progress.md` for the separate disposable **real-Auth two-browser-context** local test and its strict local-only safety guard.
 
-SQL privacy tests require a disposable local Supabase Postgres and Docker access:
+The same SQL tests run on a real local Supabase Postgres, without Docker access for the test run itself:
 
 ```bash
-npx supabase@2.119.0 db start
-npx supabase@2.119.0 test db supabase/tests/database
+npx supabase@2.119.0 migration up --local   # brings the local database up to the newest migration
+npm run test:db:local                       # pgTAP files in transactions that roll back; localhost only
 ```
 
 Do not run database tests against production. GitHub Actions now has a separate DB job; the new job has not yet been verified on CI. Earlier commits passed the typecheck, unit tests and build workflow on Node 24.

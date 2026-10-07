@@ -33,6 +33,7 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `errors.ts` | `DomainError`, and the Vietnamese text for error codes raised by SQL functions |
 | `dates.ts`, `text.ts` | Date keys, a clock, and search that ignores Vietnamese marks |
 | `install.ts` | The browser's offer to install the app, kept from page load |
+| `useFlip.ts` | Lets the parts of a list glide to their new places when the list is reordered |
 | `ui/` | `Button`, `Card`, `DialogPanel` |
 
 Motion lives in `src/styles.css`: two easing curves, a handful of keyframes and the classes built on them (`page-slot`, `pressable`, `glass`, `aurora`, `skeleton`, `mode-ring`, `animate-pop`). There is no animation library. One rule at the end of the file turns all of it off under `prefers-reduced-motion`, and the browser tests run with that setting.
@@ -60,14 +61,19 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 |---|---|
 | `create(session)` | Builds the module's services for one signed-in user. Screens get them with `useModule(module)` |
 | `routes` | Signed-in pages. The same list decides which outside paths are accepted (`registry.safePath`) |
-| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge. Mode is the first tab and the screen at `/`; the inbox and the profile sit in the phone's top bar |
+| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge. Mode is the first tab and the screen at `/`; the inbox and the profile sit in the phone's top bar. An entry with `parent` leaves the menu and becomes a tab on its parent's screen |
 | `indicator` | A banner on every screen, such as "Đang chia sẻ vị trí" |
 | `privacy` | A section of the privacy screen: what the module shows to other people now, with a way to stop |
 | `searchItems(services)` | What the global search can find in this module |
 | `today` | A card on the Today screen, with its position. A card with nothing to say renders nothing |
 | `agenda(services, from, to)` | Timed things the module puts on the calendar and under "Sắp tới", such as a confirmed meetup |
+| `friendSignals(services, { userId, now })` | What the module knows about the user's friends right now: a meetup soon, unread messages, a live location. The Mode screen ranks friends by these |
 
 Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen and the search need no edit.
+
+## How the Mode screen orders friends
+
+Modules report `FriendSignal`s; `FriendRanking` in `src/modules/presence/domain/` turns them into an order. Each kind of signal has a weight in one table (`defaultWeights`): meetup 100, invite 70, unread 60, location 50, chat 45, mode 40, any other kind 20. A friend's score is the sum of weight × the strongest signal of each kind. Pinned friends come first, then score, then friends with a mode on, then name. The reasons are shown on the friend's card, so the order explains itself.
 
 ## Sessions and data
 
@@ -111,6 +117,6 @@ Edge Functions:
 | `npm test` | Unit tests, the architecture rules, and the `calendar-feed` handler on Node |
 | `npm run test:db` | Every migration plus the pgTAP files on an embedded Postgres, no Docker needed |
 | `npm run test:e2e` | Browser tests against a mocked backend |
-| `npx supabase test db supabase/tests/database` | The same pgTAP files on a real local Supabase stack |
+| `npm run test:db:local` | The same pgTAP files on the local Supabase stack's Postgres, with the real pgTAP. No Docker access needed |
 
-`npm run test:db` uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron, Realtime and pgTAP. The last command is the authority when the two disagree, and it has not been run yet.
+`npm run test:db` uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron, Realtime and pgTAP. `npm run test:db:local` has none of them: it is the authority when the two disagree. It needs the migrations applied to the local stack first (`npx supabase migration up --local`) and refuses any host but localhost. Both pass as of migration 0028.

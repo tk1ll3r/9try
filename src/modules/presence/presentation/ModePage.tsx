@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Radio, UserPlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useFriendSignals, useModule, useUserId } from "../../../kernel/session";
@@ -13,9 +13,11 @@ import type { ActivityMode } from "../domain/ActivityMode";
 import { featured, FriendRanking, type RankedFriend } from "../domain/FriendRanking";
 import { presenceModule } from "../presence.module";
 import { FeaturedFriend, FriendRow } from "./FriendCard";
-import { ModePicker } from "./ModePicker";
 import { choices, presenceKey } from "./modes";
 import { MyModeBar } from "./MyModeBar";
+
+// Opened now and then, so the dialog code stays out of the home screen's download.
+const ModePicker = lazy(() => import("./ModePicker").then(m => ({ default: m.ModePicker })));
 
 const ranking = new FriendRanking();
 const minutesKey = "gnouht-mode-minutes";
@@ -88,7 +90,7 @@ export function ModePage() {
     </header>
 
     <MyModeBar mine={mine} now={now} pending={pending} onSet={setMode} onPick={() => setPicking(true)} />
-    <ModePicker open={picking} onOpenChange={setPicking} mine={mine} minutes={minutes} onMinutes={chooseMinutes} pending={pending} onSet={setMode} />
+    {picking && <Suspense fallback={null}><ModePicker open onOpenChange={setPicking} mine={mine} minutes={minutes} onMinutes={chooseMinutes} pending={pending} onSet={setMode} /></Suspense>}
 
     {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={list.isFetching} onClick={() => void list.refetch()}>Thử tải lại</Button></div>}
 

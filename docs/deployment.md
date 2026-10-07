@@ -13,7 +13,7 @@ Configure Auth:
 
 Realtime: the app listens on private channels named `user:<id>`. Migration 0017 adds the policy on `realtime.messages`; check in the project's Realtime settings that private channels are allowed.
 
-The cloud project is at migration 0012. Migrations 0013–0027 are tested on an embedded Postgres only. Run `npx supabase test db supabase/tests/database` on a real local or staging stack before applying them. 0015 deletes availability shares between people who are no longer friends.
+The cloud project is at migration 0012. Migrations 0013–0028 are tested on an embedded Postgres only. Run `npx supabase test db supabase/tests/database` on a real local or staging stack before applying them. 0015 deletes availability shares between people who are no longer friends.
 
 Frontend-safe environment values:
 

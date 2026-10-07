@@ -21,6 +21,8 @@
 | Show a banner on every screen | `indicator` |
 | Show a card on Today | `today: { order, card }`. Return `null` from the card when there is nothing to show |
 | Put timed items on the calendar and under "Sắp tới" | `agenda` |
+| Move a friend up on the Mode screen, with a reason | `friendSignals`: return `{ userId, kind, strength, label, to }`. Give a new `kind` a weight in `FriendRanking` if 20 is not right |
+| Put a screen under another menu entry instead of in the menu | `parent: "/path-of-the-parent"` on the navigation entry |
 | List what the feature shares on the privacy screen, with a stop button | `privacy` |
 | Make the feature's items findable in the global search | `searchItems` |
 | Reload a screen when the server changes something | Emit an event named after the query key from a database trigger with `private.emit` |
@@ -37,4 +39,4 @@ One test file per module covers the entity's rules and the repository's scoping.
 2. New functions use `security definer set search_path = ''`, revoke `execute` from `public` and `anon`, and grant it to `authenticated`. Helpers that the API must not expose go in the `private` schema.
 3. Raise short error codes such as `routine not found`, and add their Vietnamese text to `src/kernel/errors.ts`.
 4. Add a pgTAP file in `supabase/tests/database/` that checks the rule for the owner, a friend, an ex-friend, a blocked user, a stranger and an anonymous visitor where it applies.
-5. Run `npm run test:db`.
+5. Run `npm run test:db`, then `npx supabase migration up --local` and `npm run test:db:local` when the local stack is running.

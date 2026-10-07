@@ -1,7 +1,7 @@
 # Gnouht Together — Master Development Plan
 
 **Status:** approved 2026-10-07 · Phases 0 to 10 are implemented in a reduced form on branch `refactor/foundation`; Phase 11 has not started. Section 3.13 lists what was built differently, section 10 what is open, and `docs/implementation-progress.md` what each phase contains and leaves out
-**Supersedes:** `docs/roadmap.md`, `docs/system-development-plan.md`, `docs/ui-ux-development-plan.md`, `docs/implementation-plan.md` (kept as history). `docs/implementation-progress.md` stays as the running log.
+**Supersedes:** the earlier roadmap, system plan, UI/UX plan and implementation plan, which were removed from `docs/` on 2026-10-07 and remain in git history. `docs/implementation-progress.md` is the running log.
 
 ---
 
@@ -332,7 +332,7 @@ The work followed one rule: build a piece when something uses it. The layers and
 |---|---|---|
 | One class per use case | A service class per module only where a rule sits between the screen and the repository (`TaskService`); elsewhere screens call the repository interface | The single-use classes were pass-through code |
 | `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
-| `ExtensionPoint` class and ten extension points | Eight optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems`, `today`, `agenda` | Each field was added when a second module needed it |
+| `ExtensionPoint` class and ten extension points | Nine optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems`, `today`, `agenda`, `friendSignals` | Each field was added when a second module needed it |
 | `Entity`, `ValueObject`, `Audience`, `EventBus`, `UserTime`, message catalog | Not built. Entities are plain classes: `Task`, `Habit`, `Membership`, `Profile`, `MeetupPolicy` | Nothing needed the base classes |
 | `Controller<State>` base class | `LocationController` alone, with `subscribe` and `getState` | There is one long-lived process |
 | `RealtimeGateway` with typed handlers per module | `RealtimeBridge`: an event reloads the queries whose key starts with its name | Reloading is enough at this size, and no handler can drift from the query it serves |
@@ -593,7 +593,7 @@ These come from reading the source and SQL, not from running it. Each one gets a
 | 17 | Dead code: `AppData.createGroup`, `createEvent`, `markRead`; Home loads notifications it never shows. | `AppData.ts` | Phase 1 |
 | 18 | Invite links and reminders fail where pgcrypto lives in the `extensions` schema, because three functions pin `search_path` to `public`. | `create_group_invite`, `claim_group_invite` (0003), `schedule_personal_reminder` (0004) | Phase 1 |
 
-**Status on 2026-10-07.** Fixed, each with a test: 1–4, 6–14 and 16–18. Defects 1–5 were first reproduced on an embedded Postgres. Defect 5 turned out to be more than hygiene: an anonymous caller who knew a user id could read that user's busy times. Migration 0015 closes that, and migration 0026 stops `is_group_member` and `is_group_admin` from answering a caller outside the group. One part of defect 5 is open: `prepare_account_deletion` can be called directly, by a user for their own account only. Defect 15 is open; it needs a due-date column and belongs to tasks v2. Defect 18 was found while testing; it was reproduced on an embedded Postgres laid out like Supabase and still has to be confirmed on the real project. None of the migrations 0013–0027 is applied to a Supabase project yet.
+**Status on 2026-10-07.** Fixed, each with a test: 1–4, 6–14 and 16–18. Defects 1–5 were first reproduced on an embedded Postgres. Defect 5 turned out to be more than hygiene: an anonymous caller who knew a user id could read that user's busy times. Migration 0015 closes that, and migration 0026 stops `is_group_member` and `is_group_admin` from answering a caller outside the group. One part of defect 5 is open: `prepare_account_deletion` can be called directly, by a user for their own account only. Defect 15 is open; it needs a due-date column and belongs to tasks v2. Defect 18 was found while testing; it was reproduced on an embedded Postgres laid out like Supabase and still has to be confirmed on the real project. None of the migrations 0013–0028 is applied to a Supabase project yet.
 
 ---
 
@@ -823,7 +823,7 @@ A phase is done when its exit gate is met, CI is green, and `docs/implementation
 
 1. Review the branch, then push it or tell me to open a pull request. CI has not run on any of this.
 2. A real Supabase stack to run the pgTAP files and try realtime on: Docker access on this machine, or a separate staging project.
-3. Approval to apply migrations 0013–0027 to the cloud project, in order. 0015 changes who can receive a location share and a meetup invitation, and deletes availability shares between people who are no longer friends. Until they are applied, the new features show errors against the cloud database.
+3. Approval to apply migrations 0013–0028 to the cloud project, in order. 0015 changes who can receive a location share and a meetup invitation, and deletes availability shares between people who are no longer friends. Until they are applied, the new features show errors against the cloud database.
 4. In the Supabase dashboard: put the 6-digit code in the sign-in email template (`supabase/templates/magic_link.html` is the local copy), and check that Realtime accepts private channels.
 5. Deploy the Edge Functions `calendar-feed` (new), `process-reminders` and `delete-account`, set `CRON_SECRET` and the VAPID keys, and schedule `process-reminders`. `docs/deployment.md` has the steps.
 
