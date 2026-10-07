@@ -6,7 +6,26 @@ import { classTimes, firstClassDate, type ClassDraft, type ClassEntry } from "..
 
 /** The signed-in user's calendar in Supabase. Repeating events are expanded on this side. */
 export class SupabaseCalendarRepository {
-  constructor(private readonly db: SupabaseClient, private readonly ownerId: string) {}
+  constructor(private readonly db: SupabaseClient, private readonly ownerId: string, private readonly feedAddress = "") {}
+
+  /** When the user's feed address was made, or null when there is none. The address itself is shown only once. */
+  async feedCreatedAt(): Promise<string | null> {
+    const { data, error } = await this.db.from("calendar_feeds").select("created_at").eq("owner_id", this.ownerId).maybeSingle();
+    if (error) throw error;
+    return data?.created_at ?? null;
+  }
+
+  /** Makes a private address other calendar apps can subscribe to. An earlier address stops working. */
+  async createFeed(): Promise<string> {
+    const { data, error } = await this.db.rpc("create_calendar_feed");
+    if (error) throw error;
+    return `${this.feedAddress}?token=${data}`;
+  }
+
+  async revokeFeed(): Promise<void> {
+    const { error } = await this.db.rpc("revoke_calendar_feed");
+    if (error) throw error;
+  }
 
   async listOccurrences(
     rangeStart: Date,

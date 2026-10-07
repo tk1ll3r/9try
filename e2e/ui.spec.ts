@@ -372,6 +372,33 @@ test("search finds a note by its body without marks, and a screen by name", asyn
   await expect(page.getByRole("dialog", { name: "Tìm kiếm" })).toBeVisible();
 });
 
+test("calendar feed link is shown once when created and is revoked from the privacy screen", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  let createdAt: string | null = null;
+  await page.route("**/rest/v1/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/calendar_feeds")) return route.fulfill({ json: createdAt ? [{ created_at: createdAt }] : [] });
+    if (path.endsWith("/rpc/create_calendar_feed")) { createdAt = "2026-10-07T00:00:00Z"; return route.fulfill({ json: "a".repeat(64) }); }
+    if (path.endsWith("/rpc/revoke_calendar_feed")) { createdAt = null; return route.fulfill({ json: null }); }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/calendar");
+  await page.getByRole("button", { name: "Liên kết lịch", exact: true }).click();
+  await page.getByRole("button", { name: "Tạo liên kết lịch", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Liên kết lịch" })).toHaveValue(/\/functions\/v1\/calendar-feed\?token=a{64}$/);
+  await expect(page.getByText("Đang có một liên kết")).toHaveCount(0);
+
+  await page.goto("/me/privacy");
+  await expect(page.getByText("Một liên kết lịch đang hoạt động.")).toBeVisible();
+  await page.getByRole("button", { name: "Thu hồi liên kết", exact: true }).click();
+  await expect(page.getByText("Một liên kết lịch đang hoạt động.")).toHaveCount(0);
+  expect(createdAt).toBeNull();
+});
+
 test("friend removal requires confirmation", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {

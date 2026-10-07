@@ -52,5 +52,35 @@ describe("ics export", () => {
     const ours = expand(weekly, new Date("2026-10-01T00:00:00Z"), new Date("2026-12-01T00:00:00Z")).map(occurrence => occurrence.occurrenceDate);
     expect(ours).toEqual(["2026-10-12", "2026-10-26", "2026-11-02", "2026-11-09"]);
     expect(theirs).toEqual(ours);
+    expect(text).toContain("SUMMARY:Cấu trúc dữ liệu\\; tuần chẵn\\, lẻ");
+  });
+
+  /** Dates another parser reads from the file, next to the dates this app's own engine shows. */
+  function bothViews(row: CalendarEventRow, from: string, to: string) {
+    const [event] = new ICAL.Component(ICAL.parse(toIcs([row]))).getAllSubcomponents("vevent").map(component => new ICAL.Event(component));
+    const iterator = event.iterator(); const theirs: string[] = [];
+    for (let next = iterator.next(); next && theirs.length < 40; next = iterator.next()) theirs.push(next.toString().slice(0, 10));
+    return { theirs, ours: expand(row, new Date(from), new Date(to)).map(occurrence => occurrence.occurrenceDate) };
+  }
+
+  it("keeps a monthly event on the 31st at the end of shorter months, as the app does", () => {
+    const { theirs, ours } = bothViews({ ...weekly, id: "rent", title: "Đóng tiền nhà", start_at: "2027-01-31T02:00:00Z", end_at: "2027-01-31T03:00:00Z",
+      recurrence_rule: "monthly", recurrence_until: "2027-06-30", calendar_event_exceptions: [] }, "2027-01-01T00:00:00Z", "2027-08-01T00:00:00Z");
+    expect(ours).toEqual(["2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30", "2027-05-31", "2027-06-30"]);
+    expect(theirs).toEqual(ours);
+  });
+
+  it("ends a series on the right day when the clocks change before the last occurrence", () => {
+    // Los Angeles leaves daylight time on 1 November 2026, between the first and the last class.
+    const { theirs, ours } = bothViews({ ...weekly, id: "la", timezone: "America/Los_Angeles", start_at: "2026-10-19T16:00:00Z", end_at: "2026-10-19T17:00:00Z",
+      recurrence_until: "2026-11-09", calendar_event_exceptions: [] }, "2026-10-01T00:00:00Z", "2026-12-01T00:00:00Z");
+    expect(ours).toEqual(["2026-10-19", "2026-10-26", "2026-11-02", "2026-11-09"]);
+    expect(theirs).toEqual(ours);
+  });
+
+  it("ends a daily all-day series on its last day", () => {
+    const { theirs, ours } = bothViews({ ...day, id: "trip", recurrence_rule: "daily", recurrence_until: "2026-10-23" }, "2026-10-01T00:00:00Z", "2026-11-01T00:00:00Z");
+    expect(ours).toEqual(["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]);
+    expect(theirs).toEqual(ours);
   });
 });

@@ -1,13 +1,13 @@
 import { CalendarDays, CalendarSearch, GraduationCap } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../kernel/supabase";
+import { functionsUrl, requireSupabase } from "../../kernel/supabase";
 import { SupabaseCalendarRepository } from "./infrastructure/SupabaseCalendarRepository";
 import { CalendarPrivacy } from "./presentation/CalendarPrivacy";
 
 export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {
   id: "calendar",
-  create: ({ userId }) => new SupabaseCalendarRepository(requireSupabase(), userId),
+  create: ({ userId }) => new SupabaseCalendarRepository(requireSupabase(), userId, `${functionsUrl}/calendar-feed`),
   privacy: CalendarPrivacy,
   searchItems: async calendar => (await calendar.listEvents()).map(event => event.category === "class"
     ? { title: event.title, kind: "Lớp học", to: "/timetable", keywords: event.place ?? "" }

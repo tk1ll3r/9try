@@ -8,12 +8,13 @@ import viLocale from "@fullcalendar/react/locales/vi";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/monarch/theme.css";
 import "@fullcalendar/react/themes/monarch/palettes/purple.css";
-import { CalendarPlus, Download, Repeat2, Trash2, XCircle } from "lucide-react";
+import { CalendarPlus, Download, Link2, Repeat2, Trash2, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import { useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
 import { toIcs } from "../domain/icsExport";
+import { CalendarFeedCard } from "./CalendarFeedCard";
 import type { CalendarOccurrence, CalendarVisibility, RecurrenceRule } from "../domain/Occurrence";
 import { PeoplePicker } from "../../friends";
 import { useMyGroups } from "../../groups";
@@ -46,6 +47,7 @@ export function CalendarPage() {
   const [message, setMessage] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showFeed, setShowFeed] = useState(false);
   const [creating, setCreating] = useState(false);
   const createLock = useRef(false);
 
@@ -228,6 +230,7 @@ export function CalendarPage() {
         <Button id="create-event-trigger" onClick={() => { setMessage(""); setCreateOpen(true); }}><CalendarPlus size={17} /> Thêm sự kiện</Button>
         <Button variant="ghost" onClick={() => setShowImport(value => !value)} aria-expanded={showImport}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</Button>
         <Button variant="ghost" onClick={() => void exportIcs()}><Download size={17} /> Xuất lịch .ics</Button>
+        <Button variant="ghost" onClick={() => setShowFeed(value => !value)} aria-expanded={showFeed}><Link2 size={17} /> {showFeed ? "Ẩn liên kết lịch" : "Liên kết lịch"}</Button>
       </div>
       <DialogPanel open={createOpen} onOpenChange={setCreateOpen} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn được xem theo mặc định. Chọn chia sẻ hoặc lặp khi cần." busy={creating}>
         {message && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{message}</p>}
@@ -344,6 +347,7 @@ export function CalendarPage() {
       </DialogPanel>
 
       {showImport && <Suspense fallback={<p role="status">Đang tải công cụ nhập lịch…</p>}><IcsImportCard onImported={refresh} /></Suspense>}
+      {showFeed && <CalendarFeedCard />}
 
       {selected && (
         <Card

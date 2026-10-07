@@ -33,11 +33,15 @@ await db.exec(`
   create function realtime.topic() returns text language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
   create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void language sql as $$
     insert into realtime.messages(topic, event, payload, private) values (topic, event, payload, private) $$;
-  -- pgTAP stand-in for the five functions the tests use.
+  -- pgTAP stand-in for the functions the tests use.
   create function extensions.plan(n integer) returns text language sql as $$ select '1..' || n $$;
   create function extensions.is(have anyelement, want anyelement, description text) returns text language sql as $$
     select case when have is not distinct from want then 'ok - ' || description
       else 'not ok - ' || description || ' (have ' || coalesce(have::text, 'NULL') || ', want ' || coalesce(want::text, 'NULL') || ')' end $$;
+  create function extensions.isnt(have anyelement, want anyelement, description text) returns text language sql as $$
+    select case when have is distinct from want then 'ok - ' || description else 'not ok - ' || description || ' (both ' || coalesce(have::text, 'NULL') || ')' end $$;
+  create function extensions.ok(passed boolean, description text) returns text language sql as $$
+    select case when passed then 'ok - ' || description else 'not ok - ' || description end $$;
   create function extensions.lives_ok(code text, description text) returns text language plpgsql as $$
     begin execute code; return 'ok - ' || description;
     exception when others then return 'not ok - ' || description || ' (' || sqlstate || ': ' || sqlerrm || ')'; end $$;

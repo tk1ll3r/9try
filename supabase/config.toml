@@ -394,6 +394,16 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# Both functions below are called without a user's sign-in token and check their own secret instead,
+# so the platform must not reject the request first.
+[functions.calendar-feed]
+# Calendar apps fetch the feed anonymously; the function checks the token in the address.
+verify_jwt = false
+
+[functions.process-reminders]
+# A scheduler calls it with CRON_SECRET, which the function compares itself.
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
