@@ -3,16 +3,23 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "engines": { "node": ">=22.12" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run"
+    "test": "vitest run",
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:preview": "E2E_PREVIEW=1 playwright test"
   },
   "dependencies": {
     "@fullcalendar/react": "7.1.0",
+    "@radix-ui/react-dialog": "1.1.23",
     "@supabase/supabase-js": "2.117.2",
+    "ical.js": "^2.2.1",
     "lucide-react": "1.52.0",
     "maplibre-gl": "6.11.2",
     "motion": "13.4.6",
@@ -22,6 +29,7 @@
     "temporal-polyfill": "1.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
