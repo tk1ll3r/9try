@@ -7,7 +7,7 @@ The app is a React single-page PWA on Supabase: Auth, Postgres with row level se
 ```
 src/
   main.tsx, App.tsx     entry and public routes
-  app/                  composition root: the module list and the signed-in routes
+  app/                  composition root: the module list, the signed-in routes and the shell
   kernel/               code every module may use: module contract, session, dates, errors
   modules/<name>/       features on the new structure (tasks, notifications)
   features/ shared/ bootstrap/

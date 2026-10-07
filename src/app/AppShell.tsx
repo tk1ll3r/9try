@@ -1,6 +1,7 @@
 import { Bell, CalendarDays, CircleUserRound, Home, MapPin, Users, UsersRound, WifiOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { UnreadBadge } from "../modules/notifications";
 
 const primary = [
   ["/", "Trang chủ", Home],
@@ -73,7 +74,7 @@ export function AppShell() {
             to={to}
             className={({ isActive }) => `flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold ${isActive ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--muted)]"}`}
           >
-            <Icon size={20} />
+            <span className="relative"><Icon size={20} />{to === "/notifications" && <UnreadBadge />}</span>
             {label}
           </NavLink>
         ))}
@@ -89,7 +90,7 @@ function SideLink({ to, label, Icon }: { to: string; label: string; Icon: typeof
       to={to}
       className={({ isActive }) => `flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-semibold ${isActive ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--muted)] hover:bg-[var(--soft)]"}`}
     >
-      <Icon size={19} />
+      <span className="relative"><Icon size={19} />{to === "/notifications" && <UnreadBadge />}</span>
       {label}
     </NavLink>
   );

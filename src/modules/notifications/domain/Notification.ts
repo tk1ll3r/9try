@@ -19,6 +19,7 @@ export interface NotificationPreferences {
 export interface NotificationRepository {
   /** `pageSize` notifications starting at offset `from`, newest first. */
   list(from: number, pageSize: number): Promise<AppNotification[]>;
+  countUnread(): Promise<number>;
   markRead(id: string): Promise<void>;
 }
 

@@ -105,18 +105,22 @@ test("inbox opens an allowed notification target without fetching Home", async (
     localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
   }, user);
   await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
-  const requests: string[] = [];
+  const requests: string[] = []; let unread = 1;
   await page.route("**/rest/v1/**", route => {
     const request = route.request(); const url = new URL(request.url()); requests.push(url.pathname);
     if (url.pathname.endsWith("/notifications")) {
-      if (request.method() === "PATCH") return route.fulfill({ json: [{ id: "n1" }] });
+      if (request.method() === "HEAD") return route.fulfill({ headers: { "content-range": `*/${unread}`, "access-control-expose-headers": "content-range", "access-control-allow-origin": "*" } });
+      if (request.method() === "PATCH") { unread = 0; return route.fulfill({ json: [{ id: "n1" }] }); }
       return route.fulfill({ json: [{ id: "n1", title: "Lời mời", body: "Kha mời bạn", read_at: null, created_at: "2026-01-01T00:00:00Z", action_path: "/meetups" }] });
     }
     return route.fulfill({ json: [] });
   });
   await page.goto("/notifications");
+  const badge = page.getByLabel("1 thông báo chưa đọc").filter({ visible: true });
+  await expect(badge).toHaveText("1");
   await page.getByRole("button", { name: "Lời mời. Mở nội dung" }).click();
   await expect(page).toHaveURL(/\/meetups$/);
+  await expect(badge).toHaveCount(0);
   expect(requests.some(path => path.endsWith("/calendar_events") || path.endsWith("/personal_tasks"))).toBe(false);
 });
 

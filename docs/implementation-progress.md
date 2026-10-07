@@ -14,13 +14,14 @@ What changed:
 - Migration 0015 ends shares on unfriend and block, limits location sharing and meetup invitations to connected people, purges positions of ended sessions, and removes anonymous access to functions in `public`.
 - Migration 0016 lets invite links and reminders find pgcrypto in the `extensions` schema.
 - `npm run test:db` applies every migration and runs the pgTAP files on an embedded Postgres.
+- The bell in the tab bar and the sidebar shows the number of unread notifications, refreshed every minute.
 
 Checks run on 2026-10-07 with Node 22.23.3:
 
 | Check | Result |
 |---|---|
 | `tsc -b` | Pass |
-| Unit tests | 56 of 56 |
+| Unit tests | 57 of 57 |
 | Production build | Pass |
 | Browser tests, mocked backend, dev server | 16 of 16 |
 | `npm run test:db` | 16 migrations applied; 63 of 63 assertions in 5 files |

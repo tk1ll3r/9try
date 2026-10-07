@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from "../bootstrap/AuthProvider";
 import { returnPathKey } from "../features/auth/domain/login";
 import { AuthPage } from "../features/auth/presentation/AuthPage";
 import { SessionProvider } from "../kernel/session";
-import { AppShell } from "../shared/ui/AppShell";
+import { AppShell } from "./AppShell";
 import { registry } from "./modules";
 
 export default function AuthenticatedApp() { return <AuthProvider><AppRoutes /></AuthProvider>; }

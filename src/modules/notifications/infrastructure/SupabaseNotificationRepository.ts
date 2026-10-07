@@ -16,6 +16,13 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     }));
   }
 
+  async countUnread(): Promise<number> {
+    const { count, error } = await this.db.from("notifications")
+      .select("id", { count: "exact", head: true }).eq("user_id", this.userId).is("read_at", null);
+    if (error) throw error;
+    return count ?? 0;
+  }
+
   async markRead(id: string): Promise<void> {
     const { error } = await this.db.from("notifications")
       .update({ read_at: new Date().toISOString() }).eq("user_id", this.userId).eq("id", id).select("id").single();

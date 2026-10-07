@@ -641,7 +641,7 @@ That is roughly 5–7 months of full-time work for one person, and proportionall
 
 **Exit:** tasks and notifications run end to end through domain → use case → repository; the architecture lint passes in CI; the hardening tests pass on a local database; all earlier unit and browser tests still pass; a dummy module can be added by touching only `app/modules.ts`.
 
-**Status on 2026-10-07:** done with the differences listed in section 3.13. Checks: typecheck, 56 unit tests, 16 browser tests, production build, and 63 database assertions on the embedded Postgres all pass. Not done: generated database types (needs a running database), a run of the pgTAP files on a real Supabase stack, and moving account-deletion preparation behind the Edge Function. The bottom tabs are still a fixed list in `AppShell.tsx` until Phase 2.
+**Status on 2026-10-07:** done with the differences listed in section 3.13. Checks: typecheck, 57 unit tests, 16 browser tests, production build, and 63 database assertions on the embedded Postgres all pass. Not done: generated database types (needs a running database), a run of the pgTAP files on a real Supabase stack, and moving account-deletion preparation behind the Edge Function. The bottom tabs are still a fixed list in `AppShell.tsx` until Phase 2.
 
 ### Phase 2 — Design system, adaptive shell, sign-in, PWA basics (10–14 days)
 
@@ -806,6 +806,7 @@ A phase is done when its exit gate is met, CI is green, and `docs/implementation
 - Module registry, per-user sessions, and the tasks and notifications modules.
 - Migrations 0015 (privacy fixes) and 0016 (invite links and reminders), each with pgTAP tests.
 - `npm run test:db`, the architecture test, `docs/architecture.md` and `docs/module-guide.md`.
+- An unread count on the notifications tab.
 
 **Waiting for you:**
 

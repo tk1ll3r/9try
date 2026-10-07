@@ -8,6 +8,7 @@ import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 import { notificationTarget, type AppNotification, type NotificationPreferences } from "../domain/Notification";
 import { notificationsModule } from "../notifications.module";
+import { unreadKey } from "./UnreadBadge";
 
 const categories = [
   ["friend_request", "Lời mời kết bạn"],
@@ -50,6 +51,7 @@ export function NotificationsPage() {
         ...data,
         pages: data.pages.map(page => page.map(row => row.id === item.id ? { ...row, readAt: row.readAt ?? new Date().toISOString() } : row)),
       });
+      void queries.invalidateQueries({ queryKey: unreadKey });
       const target = notificationTarget(item.actionPath, safePath);
       if (target) navigate(target);
     },
