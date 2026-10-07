@@ -11,6 +11,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
+    "test:db": "node scripts/db-smoke.mjs",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test"
@@ -30,6 +31,7 @@
     "temporal-polyfill": "1.0.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "^19.2.0",
