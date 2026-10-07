@@ -1,6 +1,88 @@
-<h2>Đăng nhập Gnouht Together</h2>
-<p>Mã đăng nhập của bạn:</p>
-<p style="font-size:28px;font-weight:700;letter-spacing:6px">{{ .Token }}</p>
-<p>Nhập mã này vào ứng dụng, hoặc bấm liên kết sau để đăng nhập trên trình duyệt:</p>
-<p><a href="{{ .ConfirmationURL }}">Đăng nhập</a></p>
-<p>Mã và liên kết hết hạn sau 1 giờ. Nếu bạn không yêu cầu đăng nhập, hãy bỏ qua thư này.</p>
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Mã đăng nhập Gnouht Together</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f1e8;">
+<!-- Dòng xem trước trong hộp thư. Không chứa mã, để mã không hiện trên màn hình khóa. -->
+<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">Dùng mã trong thư này để đăng nhập. Mã hết hạn sau 1 giờ.</div>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f1e8;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;">
+
+        <!-- Thương hiệu -->
+        <tr>
+          <td style="padding:0 6px 20px 6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;background-color:#171a12;border-radius:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:20px;font-weight:800;color:#d9ff79;">G</td>
+                <td style="padding-left:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+                  <div style="font-size:16px;line-height:20px;font-weight:700;color:#171a12;">Gnouht Together</div>
+                  <div style="font-size:12px;line-height:16px;color:#696c62;">Mình gặp nhau nhé.</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Thẻ nội dung -->
+        <tr>
+          <td style="background-color:#fffdf7;border:1px solid #e3e0d5;border-radius:28px;padding:32px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+
+            <h1 style="margin:0 0 8px 0;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-0.6px;color:#171a12;">Mã đăng nhập của bạn</h1>
+            <p style="margin:0 0 22px 0;font-size:15px;line-height:24px;color:#696c62;">Nhập mã này vào ứng dụng để vào Gnouht Together.</p>
+
+            <!-- Mã 6 số -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td align="center" style="background-color:#171a12;border-radius:20px;padding:24px 12px 20px 12px;">
+                  <div style="font-family:'SFMono-Regular',Menlo,Consolas,'Liberation Mono','Courier New',monospace;font-size:38px;line-height:44px;font-weight:700;letter-spacing:10px;padding-left:10px;color:#d9ff79;">{{ .Token }}</div>
+                  <div style="margin-top:8px;font-size:12px;line-height:16px;color:#a9ac9f;">Hết hạn sau 1 giờ</div>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:26px 0 14px 0;font-size:13px;line-height:20px;color:#696c62;text-align:center;">Hoặc đăng nhập ngay trên trình duyệt này</p>
+
+            <!-- Nút -->
+            <table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+              <tr>
+                <td align="center" style="background-color:#d9ff79;border-radius:16px;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:#1d230e;text-decoration:none;border-radius:16px;">Đăng nhập</a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Lưu ý -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;">
+              <tr>
+                <td style="background-color:#eae7dd;border-radius:16px;padding:14px 16px;font-size:13px;line-height:21px;color:#4b4e45;">
+                  Bạn không yêu cầu đăng nhập? Cứ bỏ qua thư này. Đừng chuyển thư cho người khác: ai có mã hoặc liên kết đều đăng nhập được.
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:20px 0 0 0;font-size:12px;line-height:19px;color:#8a8d82;">Nút không bấm được? Mở liên kết này:<br><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#507100;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+          </td>
+        </tr>
+
+        <!-- Chân thư -->
+        <tr>
+          <td align="center" style="padding:20px 12px 0 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:19px;color:#8a8d82;">
+            Thư gửi tới {{ .Email }} vì có người nhập địa chỉ này để đăng nhập.<br>
+            Gnouht Together · Riêng tư mặc định, chia sẻ khi bạn chủ động chọn.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
