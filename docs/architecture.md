@@ -34,7 +34,7 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `dates.ts`, `text.ts` | Date keys, a clock, and search that ignores Vietnamese marks |
 | `install.ts` | The browser's offer to install the app, kept from page load |
 | `useFlip.ts` | Lets the parts of a list glide to their new places when the list is reordered |
-| `ui/` | `Button`, `Card`, `DialogPanel` |
+| `ui/` | `Button`, `Card`, `DialogPanel`, `MoreMenu` (a "…" button for the actions a row needs less often) |
 
 Motion lives in `src/styles.css`: two easing curves, a handful of keyframes and the classes built on them (`page-slot`, `pressable`, `glass`, `aurora`, `skeleton`, `mode-ring`, `animate-pop`). There is no animation library. One rule at the end of the file turns all of it off under `prefers-reduced-motion`, and the browser tests run with that setting.
 
@@ -71,9 +71,13 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 
 Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen and the search need no edit.
 
+## Activities
+
+The activities a person can show (Học bài, Cà phê, Đang rảnh…) are a list in `src/modules/presence/presentation/modes.ts`: key, name, icon, color, grouped as the picker shows them. Since migration 0029 the database stores any key of the right shape, so adding an activity is one line in that file. A key the running app does not know is shown as "Đang làm việc khác"; the raw key is never displayed.
+
 ## How the Mode screen orders friends
 
-Modules report `FriendSignal`s; `FriendRanking` in `src/modules/presence/domain/` turns them into an order. Each kind of signal has a weight in one table (`defaultWeights`): meetup 100, invite 70, unread 60, location 50, chat 45, mode 40, any other kind 20. A friend's score is the sum of weight × the strongest signal of each kind. Pinned friends come first, then score, then friends with a mode on, then name. The reasons are shown on the friend's card, so the order explains itself.
+Modules report `FriendSignal`s; `FriendRanking` in `src/modules/presence/domain/` turns them into an order. Each kind of signal has a weight in one table (`defaultWeights`): meetup 100, invite 70, unread 60, free 55, location 50, chat 45, mode 40, any other kind 20. A friend's score is the sum of weight × the strongest signal of each kind. Pinned friends come first, then score, then friends with a mode on, then name. The reasons are shown on the friend's card, so the order explains itself.
 
 ## Sessions and data
 

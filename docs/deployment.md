@@ -14,7 +14,7 @@ npm run deploy            # typecheck, build with .env.local, upload, bind 9try.
 Three things outside the upload decide whether the deployed app works:
 
 1. Supabase dashboard, Authentication → URL Configuration: add `https://9try.gnouht.space/**` to the redirect URLs (and make it the Site URL if this is the main address). Without it the sign-in link sends people to the old Site URL.
-2. The database must have every migration in `supabase/migrations/`. The cloud project is at 0012; chat, friend links, the live map, the timetable, pins and habit undo need 0013–0028. Apply them with `npx supabase@2.119.0 login` and `npx supabase@2.119.0 db push` after reading the note on 0015 below.
+2. The database must have every migration in `supabase/migrations/`. The cloud project is at 0012; chat, friend links, the live map, the timetable, pins and habit undo need 0013–0029. Apply them with `npx supabase@2.119.0 login` and `npx supabase@2.119.0 db push` after reading the note on 0015 below.
 3. Sign-in by code inside an installed app needs the email template of section 1.
 
 Checked before the first deploy: the production build passes the 32 browser tests in preview mode, contains no server secret and no demo route, and `wrangler deploy --dry-run` accepts the configuration.
@@ -43,7 +43,7 @@ Configure Auth:
 
 Realtime: the app listens on private channels named `user:<id>`. Migration 0017 adds the policy on `realtime.messages`; check in the project's Realtime settings that private channels are allowed.
 
-The cloud project is at migration 0012. Migrations 0013–0028 are tested on an embedded Postgres only. Run `npx supabase test db supabase/tests/database` on a real local or staging stack before applying them. 0015 deletes availability shares between people who are no longer friends.
+The cloud project is at migration 0012. Migrations 0013–0029 are tested on an embedded Postgres only. Run `npx supabase test db supabase/tests/database` on a real local or staging stack before applying them. 0015 deletes availability shares between people who are no longer friends.
 
 Frontend-safe environment values:
 

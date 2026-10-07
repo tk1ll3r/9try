@@ -1,5 +1,25 @@
 # Development-plan implementation status
 
+## 2026-10-08, later: a bolder Mode screen, 19 activities, simpler screens
+
+The owner asked for the features to work on the live app, simpler use, more prominence on the Mode tab for oneself and for everyone, and more activities with icons.
+
+What changed in the code (local branch, 107 unit tests, 181 database assertions on both Postgres, 32 browser tests in dev and in preview mode):
+
+- Mode: the user's card is large, with the activity's icon inside a time ring; without a mode it offers the activities used last for one tap. A strip "Đang hoạt động" shows everyone with a mode on as a face with the activity's ring and icon. Filter chips carry the activity icons.
+- 13 more activities (19 in all), grouped in the picker. Migration 0029 moves the list out of the database; a new activity is one line in `modes.ts`.
+- A friend who is "Đang rảnh" counts as a reason in the ranking (weight 55).
+- Simpler screens: one field to add a task; the inbox lists notifications first; a friend's row has one action and a "…" menu; the calendar has one button and a menu; one line of help on sign-in.
+
+Cloud, not done: the Supabase CLI is logged in and `supabase db push --dry-run` lists migrations 0013 to 0028 as pending on the project `9try` (0029 was written after that run). The push itself was refused by Claude Code's safety classifier as a production change, so it has to be run by the owner:
+
+```bash
+npx supabase@2.119.0 db push --linked    # applies 0013–0029 to the cloud project
+npm run deploy                           # then publishes this version of the web app
+```
+
+Until then the live site at `9try.gnouht.space` is the version of the first deploy, on a database at migration 0012.
+
 ## 2026-10-08: first deploy, to 9try.gnouht.space
 
 The owner asked for a deploy to `9try.gnouht.space`, logged wrangler in and added the address to the Supabase redirect URLs. The web app is now served from Cloudflare (`wrangler.jsonc`, static assets with the single-page fallback, custom domain). The deploy created the DNS record for `9try` only; `mcp.gnouht.space` still answers as before. The branch is still not pushed: the upload came from the local working tree at commit `ccfe3b8`.
