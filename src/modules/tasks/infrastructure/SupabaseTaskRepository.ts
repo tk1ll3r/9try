@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { DomainError } from "../../../shared/domain/DomainError";
+import { DomainError } from "../../../kernel/errors";
 import { Task, type TaskDetails, type TaskPriority } from "../domain/Task";
 import type { TaskRepository } from "../domain/TaskRepository";
 

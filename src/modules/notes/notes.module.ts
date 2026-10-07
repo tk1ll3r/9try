@@ -1,7 +1,7 @@
 import { NotebookPen } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import type { NoteRepository } from "./domain/Note";
 import { SupabaseNoteRepository } from "./infrastructure/SupabaseNoteRepository";
 

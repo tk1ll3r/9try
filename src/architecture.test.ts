@@ -14,24 +14,23 @@ function resolveImport(file: string, specifier: string): string {
   return parts.join("/");
 }
 
-const isUiOrBackendPackage = (target: string) => /^(react|react-dom|react-router-dom|@tanstack\/|@supabase\/)/.test(target);
+// React, the router, the query cache and Supabase, as packages or as the kernel files built on them.
+const isUiOrBackend = (target: string) => /^(react|react-dom|react-router-dom|@tanstack\/|@supabase\/|kernel\/(auth|realtime|session|supabase|useAction|ui\/))/.test(target);
 
 /** The rule an import breaks, or undefined when it is allowed. */
 function brokenRule(file: string, target: string): string | undefined {
   const [area, name, layer] = file.split("/");
   const otherModule = /^modules\/([^/]+)\/(?!index$)/.exec(target);
 
-  if ((area === "kernel" || area === "shared") && /^(modules|features|app|bootstrap)\//.test(target)) return "shared code must not depend on features";
-  if (area === "features" && target.startsWith("app/")) return "features must not import the composition root";
-  if (area === "features" && otherModule) return "import a module only through its index.ts";
+  if (area === "kernel" && /^(modules|app)\//.test(target)) return "the kernel must not depend on features";
   if (area !== "modules") return undefined;
 
-  if (/^(features|app|bootstrap)\//.test(target)) return "modules must not import legacy features or the composition root";
+  if (target.startsWith("app/")) return "modules must not import the composition root";
   if (otherModule && otherModule[1] !== name) return "import another module only through its index.ts";
   const sameModule = (layers: string) => new RegExp(`^modules/${name}/(${layers})/`).test(target);
-  if (layer === "domain" && (isUiOrBackendPackage(target) || sameModule("application|infrastructure|presentation"))) return "domain depends on nothing but shared domain code";
-  if (layer === "application" && (isUiOrBackendPackage(target) || sameModule("infrastructure|presentation"))) return "application talks to interfaces, not to React or Supabase";
-  if (layer === "presentation" && (target.startsWith("@supabase/") || sameModule("infrastructure"))) return "presentation never imports infrastructure";
+  if (layer === "domain" && (isUiOrBackend(target) || sameModule("application|infrastructure|presentation"))) return "domain depends on nothing but plain kernel code";
+  if (layer === "application" && (isUiOrBackend(target) || sameModule("infrastructure|presentation"))) return "application talks to interfaces, not to React or Supabase";
+  if (layer === "presentation" && (/^(@supabase\/|kernel\/supabase$)/.test(target) || sameModule("infrastructure"))) return "presentation never talks to Supabase";
   return undefined;
 }
 

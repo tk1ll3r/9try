@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, LockKeyhole, Mail, MapPin } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "../../../shared/ui/Button";
-import { isSupabaseConfigured, supabase } from "../../../shared/infrastructure/supabase";
+import { useAuth } from "../../../kernel/auth";
+import { Button } from "../../../kernel/ui/Button";
 import { isLocalBackend, loginError, loginRedirect, returnPathKey } from "../domain/login";
 
 /** `returnPath` is the checked in-app path to open after sign-in. */
 export function AuthPage({ returnPath }: { returnPath: string }) {
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [acceptedEmail, setAcceptedEmail] = useState("");
   const [pending, setPending] = useState(false);
@@ -28,14 +29,14 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
   }, [cooldownUntil]);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!supabase || lock.current || Date.now() < cooldownUntil) return;
+    if (lock.current || Date.now() < cooldownUntil) return;
     const normalized = email.trim();
     if (!normalized) return;
     lock.current = true; setPending(true); setError("");
     try {
       const path = returnPath;
       try { sessionStorage.setItem(returnPathKey, path); } catch { /* Storage may be disabled; redirect still carries the safe route. */ }
-      const { error: authError } = await supabase.auth.signInWithOtp({ email: normalized, options: { emailRedirectTo: loginRedirect(location.origin, path) } });
+      const authError = await auth.sendSignIn(normalized, loginRedirect(location.origin, path));
       if (!mounted.current) return;
       if (authError) {
         setError(loginError(authError));
@@ -49,11 +50,11 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
   // The code works inside an installed app, where the emailed link would open the browser instead.
   async function verify(event: FormEvent) {
     event.preventDefault();
-    if (!supabase || verifying) return;
+    if (verifying) return;
     setVerifying(true); setCodeError("");
     try {
-      const { error: authError } = await supabase.auth.verifyOtp({ email: acceptedEmail, token: code, type: "email" });
-      if (authError && mounted.current) setCodeError("Mã không đúng hoặc đã hết hạn. Kiểm tra lại mã, hoặc gửi lại liên kết.");
+      const signedIn = await auth.verifyCode(acceptedEmail, code);
+      if (!signedIn && mounted.current) setCodeError("Mã không đúng hoặc đã hết hạn. Kiểm tra lại mã, hoặc gửi lại liên kết.");
     } catch { if (mounted.current) setCodeError("Chưa kiểm tra được mã. Kiểm tra kết nối rồi thử lại."); }
     finally { if (mounted.current) setVerifying(false); }
   }
@@ -68,7 +69,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
       <span className="mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--lime)] text-[#1d230e]"><Mail size={24} /></span>
       <h2 className="text-4xl font-black tracking-[-.04em]">Chào bạn.</h2>
       <p className="mt-3 leading-6 text-[var(--muted)]">Đăng nhập bằng liên kết hoặc mã gửi qua email, không cần nhớ mật khẩu.</p>
-      {!isSupabaseConfigured ? <div role="alert" className="mt-8 rounded-3xl bg-amber-100 p-5 text-sm text-amber-950">Supabase chưa cấu hình. Thêm URL và publishable key vào <code>.env.local</code>.</div>
+      {!auth.configured ? <div role="alert" className="mt-8 rounded-3xl bg-amber-100 p-5 text-sm text-amber-950">Supabase chưa cấu hình. Thêm URL và publishable key vào <code>.env.local</code>.</div>
         : <form onSubmit={submit} className="mt-6 space-y-4" aria-busy={pending}>
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
           <input id="login-email" className="field w-full" type="email" autoComplete="email" inputMode="email" required disabled={pending} value={email} onChange={event => setEmail(event.target.value)} placeholder="ban@gmail.com" aria-describedby="email-help" />

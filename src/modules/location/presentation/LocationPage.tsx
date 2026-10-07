@@ -4,8 +4,8 @@ import { type FormEvent, useEffect, useState, useSyncExternalStore } from "react
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import { PeoplePicker, useAcceptedFriends } from "../../friends";
 import type { VisibleLocation } from "../domain/Location";
 import { locationModule } from "../location.module";

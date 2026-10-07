@@ -1,6 +1,6 @@
 import { Check, MapPin, NotebookPen, Repeat, Users, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Card } from "../../../shared/ui/Card";
+import { Card } from "../../../kernel/ui/Card";
 import { UpcomingCard } from "../../calendar";
 import { useMyGroups } from "../../groups";
 import { ProfileReminder } from "../../identity";

@@ -1,7 +1,7 @@
 import { UsersRound } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import type { GroupRepository } from "./domain/Group";
 import { SupabaseGroupRepository } from "./infrastructure/SupabaseGroupRepository";
 

@@ -5,8 +5,8 @@ import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
 

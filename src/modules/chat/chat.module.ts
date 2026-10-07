@@ -1,7 +1,7 @@
 import { MessageCircle } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import type { ChatRepository } from "./domain/Chat";
 import { SupabaseChatRepository } from "./infrastructure/SupabaseChatRepository";
 import { ChatUnreadBadge } from "./presentation/ChatUnreadBadge";

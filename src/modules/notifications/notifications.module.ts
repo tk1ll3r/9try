@@ -1,7 +1,7 @@
 import { Bell } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import type { NotificationRepository } from "./domain/Notification";
 import { PushData } from "./infrastructure/PushData";
 import { SupabaseNotificationRepository } from "./infrastructure/SupabaseNotificationRepository";

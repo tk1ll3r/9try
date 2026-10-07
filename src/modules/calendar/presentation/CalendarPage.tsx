@@ -17,10 +17,10 @@ import { toIcs } from "../domain/icsExport";
 import type { CalendarOccurrence, CalendarVisibility, RecurrenceRule } from "../domain/Occurrence";
 import { PeoplePicker } from "../../friends";
 import { useMyGroups } from "../../groups";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import { lazy, Suspense } from "react";
-import { DialogPanel } from "../../../shared/ui/DialogPanel";
+import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default: m.IcsImportCard })));
 
 type EventKind = "timed" | "all_day";

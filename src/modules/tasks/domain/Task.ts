@@ -1,5 +1,5 @@
 import { localDateKey } from "../../../kernel/dates";
-import { DomainError } from "../../../shared/domain/DomainError";
+import { DomainError } from "../../../kernel/errors";
 
 export type TaskPriority = "low" | "medium" | "high";
 

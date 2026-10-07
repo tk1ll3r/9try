@@ -3,8 +3,8 @@ import { type FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import { notificationsModule } from "../notifications.module";
 
 /** "Remind me at…": the server sends a notification at the chosen time, which opens the screen this card is on. */

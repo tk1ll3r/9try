@@ -3,8 +3,8 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { localDateKey } from "../../../kernel/dates";
 import { errorMessage } from "../../../kernel/errors";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import type { TaskPriority } from "../domain/Task";
 import { useTaskChange, useTodayTasks } from "./useTasks";
 

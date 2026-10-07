@@ -1,10 +1,10 @@
 import { Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "../bootstrap/AuthProvider";
-import { returnPathKey } from "../features/auth/domain/login";
-import { AuthPage } from "../features/auth/presentation/AuthPage";
+import { AuthProvider, useAuth } from "../kernel/auth";
 import { RealtimeBridge } from "../kernel/realtime";
 import { SessionProvider } from "../kernel/session";
+import { returnPathKey } from "../modules/identity/domain/login";
+import { AuthPage } from "../modules/identity/presentation/AuthPage";
 import { AppShell } from "./AppShell";
 import { registry } from "./modules";
 

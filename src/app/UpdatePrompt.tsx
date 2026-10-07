@@ -1,5 +1,5 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { Button } from "../shared/ui/Button";
+import { Button } from "../kernel/ui/Button";
 
 /** Registers the service worker and offers the new version once one has been downloaded. */
 export function UpdatePrompt() {

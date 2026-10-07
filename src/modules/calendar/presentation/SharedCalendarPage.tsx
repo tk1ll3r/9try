@@ -12,7 +12,7 @@ import { Link, useParams } from "react-router-dom";
 import { useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
 import type { CalendarOccurrence, SharedCalendarOccurrence } from "../domain/Occurrence";
-import { Card } from "../../../shared/ui/Card";
+import { Card } from "../../../kernel/ui/Card";
 
 export function SharedCalendarPage() {
   const { ownerId = "" } = useParams();

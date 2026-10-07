@@ -6,8 +6,8 @@ import { localDateKey } from "../../../kernel/dates";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import { calendarModule } from "../calendar.module";
 import { parseTimetable, weekdayNames, type ClassDraft } from "../domain/timetable";
 

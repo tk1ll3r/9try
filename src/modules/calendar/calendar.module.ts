@@ -1,7 +1,7 @@
 import { CalendarDays, CalendarSearch, GraduationCap } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import { SupabaseCalendarRepository } from "./infrastructure/SupabaseCalendarRepository";
 
 export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed, MapPin, RotateCcw } from "lucide-react";
 import { Map, Marker, Popup, NavigationControl, LngLatBounds } from "./maplibre";
-import { Button } from "../../../shared/ui/Button";
+import { Button } from "../../../kernel/ui/Button";
 
 export interface MapPoint {
   id: string;

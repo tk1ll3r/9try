@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Link2Off } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useModule } from "../../../kernel/session";
-import { Card } from "../../../shared/ui/Card";
+import { Card } from "../../../kernel/ui/Card";
 import { groupsModule } from "../groups.module";
 import { groupsKey } from "./useGroups";
 

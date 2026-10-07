@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoPeople, demoMapPoints } from "./people";
+import { demoPeople, demoMapPoints } from "./demoPeople";
 
 describe("isolated map fixtures", () => {
   it("uses two fictional identities and valid public-location coordinates", () => {

@@ -5,8 +5,8 @@ import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { matchesSearch } from "../../../kernel/text";
 import { useAction } from "../../../kernel/useAction";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 import type { Note } from "../domain/Note";
 import { notesModule } from "../notes.module";
 

@@ -1,4 +1,4 @@
-import { SystemClock, type Clock } from "../../../shared/domain/Clock";
+import { SystemClock, type Clock } from "../../../kernel/dates";
 import { Task, type TaskDraft } from "../domain/Task";
 import type { TaskRepository } from "../domain/TaskRepository";
 

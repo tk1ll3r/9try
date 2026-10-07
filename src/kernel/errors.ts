@@ -24,3 +24,11 @@ export function errorMessage(error: unknown, fallback: string): string {
     : "";
   return known.find(([code]) => text.includes(code))?.[1] ?? (text || fallback);
 }
+
+/** A rule of the app was broken. `message` is ready to show; `code` is for code that reacts to it. */
+export class DomainError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(message);
+    this.name = "DomainError";
+  }
+}

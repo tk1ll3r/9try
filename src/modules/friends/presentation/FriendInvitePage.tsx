@@ -3,7 +3,7 @@ import { CheckCircle2, Link2Off } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
-import { Card } from "../../../shared/ui/Card";
+import { Card } from "../../../kernel/ui/Card";
 import { friendsModule } from "../friends.module";
 import { friendsKey } from "./useFriends";
 

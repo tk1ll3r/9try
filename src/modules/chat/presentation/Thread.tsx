@@ -3,7 +3,7 @@ import { Send } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
-import { Button } from "../../../shared/ui/Button";
+import { Button } from "../../../kernel/ui/Button";
 import { chatModule } from "../chat.module";
 import { messagePageSize, type ChatMessage } from "../domain/Chat";
 import { chatKey } from "./useChat";

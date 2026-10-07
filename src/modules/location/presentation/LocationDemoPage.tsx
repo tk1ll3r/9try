@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FlaskConical, Eye, RotateCcw, UserRound } from "lucide-react";
-import { MapCanvas } from "../../../modules/location";
-import { demoPeople, demoMapPoints } from "../domain/people";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { MapCanvas } from "./MapCanvas";
+import { demoMapPoints, demoPeople } from "./demoPeople";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 
 export function LocationDemoPage() {
   const [viewer, setViewer] = useState<(typeof demoPeople)[number]>(demoPeople[0]);

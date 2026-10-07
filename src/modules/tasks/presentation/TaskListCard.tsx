@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { matchesSearch } from "../../../kernel/text";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
-import { DialogPanel } from "../../../shared/ui/DialogPanel";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
+import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 import type { Task, TaskDraft, TaskPriority } from "../domain/Task";
 import { useAllTasks, useTaskChange } from "./useTasks";
 

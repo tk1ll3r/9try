@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
 import { parseIcs, type IcsEvent } from "../domain/ics";
-import { Button } from "../../../shared/ui/Button";
-import { Card } from "../../../shared/ui/Card";
+import { Button } from "../../../kernel/ui/Button";
+import { Card } from "../../../kernel/ui/Card";
 
 export function IcsImportCard({ onImported }: { onImported(): Promise<void> }) {
   const calendar = useModule(calendarModule);

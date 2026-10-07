@@ -1,4 +1,4 @@
-import { DomainError } from "../../../shared/domain/DomainError";
+import { DomainError } from "../../../kernel/errors";
 
 /** How the signed-in user appears to others. `birthday` is "YYYY-MM-DD" or "". */
 export class Profile {

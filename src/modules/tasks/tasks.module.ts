@@ -1,7 +1,7 @@
 import { ListChecks } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import { TaskService } from "./application/TaskService";
 import { SupabaseTaskRepository } from "./infrastructure/SupabaseTaskRepository";
 

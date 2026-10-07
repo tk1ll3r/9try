@@ -1,7 +1,7 @@
 import { CircleUserRound } from "lucide-react";
 import { lazy } from "react";
 import type { FeatureModule } from "../../kernel/module";
-import { requireSupabase } from "../../shared/infrastructure/supabase";
+import { requireSupabase } from "../../kernel/supabase";
 import type { ProfileRepository } from "./domain/Profile";
 import { SupabaseProfileRepository } from "./infrastructure/SupabaseProfileRepository";
 

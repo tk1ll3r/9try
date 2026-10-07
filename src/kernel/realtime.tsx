@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { supabase } from "../shared/infrastructure/supabase";
+import { supabase } from "./supabase";
 
 /**
  * Listens on the signed-in user's private realtime topic. The database names each event after

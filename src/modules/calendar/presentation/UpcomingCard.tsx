@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarClock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useModule } from "../../../kernel/session";
-import { Card } from "../../../shared/ui/Card";
+import { Card } from "../../../kernel/ui/Card";
 import { calendarModule } from "../calendar.module";
 import { formatOccurrence, selectUpcoming } from "../domain/upcoming";
 
