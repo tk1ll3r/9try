@@ -3,7 +3,7 @@ import { DomainError } from "../../../kernel/errors";
 import { Task, type TaskDetails, type TaskPriority } from "../domain/Task";
 import type { TaskRepository } from "../domain/TaskRepository";
 
-const columns = "id,title,priority,due_at,completed_at";
+const columns = "id,title,priority,due_at,completed_at,tags";
 
 interface TaskRow {
   id: string;
@@ -11,9 +11,10 @@ interface TaskRow {
   priority: TaskPriority;
   due_at: string | null;
   completed_at: string | null;
+  tags: string[] | null;
 }
 
-const toTask = (row: TaskRow) => new Task(row.id, row.title, row.priority, row.due_at, row.completed_at);
+const toTask = (row: TaskRow) => new Task(row.id, row.title, row.priority, row.due_at, row.completed_at, row.tags ?? []);
 
 /** `personal_tasks` rows of one owner. Every query is limited to that owner and to one-off tasks. */
 export class SupabaseTaskRepository implements TaskRepository {
@@ -38,12 +39,12 @@ export class SupabaseTaskRepository implements TaskRepository {
 
   async add(details: TaskDetails) {
     const { error } = await this.db.from("personal_tasks")
-      .insert({ owner_id: this.ownerId, title: details.title, priority: details.priority, due_at: details.dueAt });
+      .insert({ owner_id: this.ownerId, title: details.title, priority: details.priority, due_at: details.dueAt, tags: details.tags });
     if (error) throw error;
   }
 
   async update(id: string, details: TaskDetails) {
-    const { error } = await this.change(id, { title: details.title, priority: details.priority, due_at: details.dueAt }).select("id").single();
+    const { error } = await this.change(id, { title: details.title, priority: details.priority, due_at: details.dueAt, tags: details.tags }).select("id").single();
     if (error) throw error;
   }
 

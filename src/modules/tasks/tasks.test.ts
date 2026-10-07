@@ -20,7 +20,37 @@ beforeEach(() => {
 describe("task rules", () => {
   it("requires a title and trims it", () => {
     expect(() => Task.details({ title: "   ", dueDate: "", priority: "medium" })).toThrow(/tên công việc/);
-    expect(Task.details({ title: "  Mua sách ", dueDate: "", priority: "low" })).toEqual({ title: "Mua sách", priority: "low", dueAt: null });
+    expect(Task.details({ title: "  Mua sách ", dueDate: "", priority: "low" })).toEqual({ title: "Mua sách", priority: "low", dueAt: null, tags: [] });
+  });
+  it("moves hashtags out of the title into labels, and puts them back for editing", () => {
+    const details = Task.details({ title: "Nộp bài tập #GiảiTích tuần 5 #gấp #giảitích", dueDate: "", priority: "medium" });
+    expect(details.title).toBe("Nộp bài tập tuần 5");
+    expect(details.tags).toEqual(["giảitích", "gấp"]);
+    expect(new Task("t", details.title, "medium", null, null, details.tags).draftTitle).toBe("Nộp bài tập tuần 5 #giảitích #gấp");
+    // A "#" inside a word is not a label, and a title of labels only is still empty.
+    expect(Task.details({ title: "Phòng B#4 và C#", dueDate: "", priority: "medium" })).toMatchObject({ title: "Phòng B#4 và C#", tags: [] });
+    expect(() => Task.details({ title: "#gấp", dueDate: "", priority: "medium" })).toThrow(/tên công việc/);
+  });
+  it("keeps a due time when one is given, and treats 23:59 as any time that day", () => {
+    const timed = Task.details({ title: "Nộp bài", dueDate: "2026-10-06", dueTime: "14:00", priority: "medium" });
+    expect(timed.dueAt).toBe(new Date(2026, 9, 6, 14, 0).toISOString());
+    const task = new Task("t", "Nộp bài", "medium", timed.dueAt, null);
+    expect([task.dueDate, task.dueTime]).toEqual(["2026-10-06", "14:00"]);
+    expect(task.dueLabel).toContain("14:00");
+    // Overdue from the minute after the time, while the day is still "today" for an untimed task.
+    expect(task.isOverdue(new Date(2026, 9, 6, 13, 59))).toBe(false);
+    expect(task.isOverdue(new Date(2026, 9, 6, 14, 1))).toBe(true);
+    expect(task.section(new Date(2026, 9, 6, 14, 1))).toBe("overdue");
+    const anyTime = new Task("t", "x", "medium", Task.details({ title: "x", dueDate: "2026-10-06", priority: "medium" }).dueAt, null);
+    expect(anyTime.dueTime).toBe("");
+    expect(anyTime.section(new Date(2026, 9, 6, 22))).toBe("today");
+    // Clearing the time of a timed task moves it back to the end of the day.
+    expect(Task.details({ title: "Nộp bài", dueDate: "2026-10-06", dueTime: "", priority: "medium" }, task).dueAt).toBe(new Date(2026, 9, 6, 23, 59).toISOString());
+  });
+  it("sorts an open task into overdue, today, upcoming or undated", () => {
+    const now = new Date(2026, 9, 6, 9);
+    const due = (day: number) => new Task("t", "x", "medium", new Date(2026, 9, day, 23, 59).toISOString(), null);
+    expect([due(5), due(6), due(7), new Task("t", "x", "medium", null, null)].map(task => task.section(now))).toEqual(["overdue", "today", "upcoming", "undated"]);
   });
   it("is overdue only when open and due before today on this device", () => {
     const now = new Date(2026, 9, 6, 9);
@@ -41,8 +71,8 @@ describe("owner-scoped task storage", () => {
   });
   it("preserves unchanged due timestamp on edit and scopes every mutation", async () => {
     const original = new Date(2026, 9, 5, 13, 30).toISOString();
-    await service().edit(new Task("task", "old", "medium", original, null), { title: "  edited  ", dueDate: "2026-10-05", priority: "high" });
-    expect(mock.query.update).toHaveBeenCalledWith({ title: "edited", priority: "high", due_at: original });
+    await service().edit(new Task("task", "old", "medium", original, null), { title: "  edited  ", dueDate: "2026-10-05", dueTime: "13:30", priority: "high" });
+    expect(mock.query.update).toHaveBeenCalledWith({ title: "edited", priority: "high", due_at: original, tags: [] });
     expect(mock.query.eq).toHaveBeenCalledWith("id", "task"); expect(mock.query.eq).toHaveBeenCalledWith("owner_id", "owner"); expect(mock.query.eq).toHaveBeenCalledWith("recurrence", "none");
     await service().remove("task"); expect(mock.query.delete).toHaveBeenCalled(); expect(mock.query.single).toHaveBeenCalledTimes(2);
   });

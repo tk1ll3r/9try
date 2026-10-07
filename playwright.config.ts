@@ -17,8 +17,9 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      // Never run mocked UI tests against the configured cloud project.
-      VITE_SUPABASE_URL: "http://127.0.0.1:54321",
+      // Never run mocked UI tests against the configured cloud project, nor against a local Supabase
+      // stack that happens to be running on its usual port 54321. Nothing listens on this port.
+      VITE_SUPABASE_URL: "http://127.0.0.1:54399",
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ui_test_only",
       VITE_ENABLE_DEMO: "true",
     },

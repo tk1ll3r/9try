@@ -399,6 +399,112 @@ test("calendar feed link is shown once when created and is revoked from the priv
   expect(createdAt).toBeNull();
 });
 
+test("Today gathers what needs an answer, what comes next and the day's habits, each answered in place", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const kha = "22222222-2222-4222-8222-222222222222";
+  const tomorrow = (hour: number) => { const date = new Date(); date.setDate(date.getDate() + 1); date.setHours(hour, 0, 0, 0); return date.toISOString(); };
+  const meetup = (id: string, title: string, status: string, start: string | null, end: string | null) => ({ id, organizer_id: kha, title, description: "", status, timezone: "UTC", start_at: start, end_at: end, capacity: null, location_name: null, group_id: null });
+  let friendship = "pending", coffee = "pending", habitDone = false;
+  await page.route("**/rest/v1/**", route => {
+    const url = new URL(route.request().url()); const path = url.pathname;
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [{ user_id: kha, display_name: "Kha", username: "kha", status: friendship, direction: "incoming", created_at: "2026-01-01T00:00:00Z" }] });
+    if (path.endsWith("/rpc/respond_friend_request")) { friendship = "accepted"; return route.fulfill({ json: null }); }
+    if (path.endsWith("/meetup_invitees")) return route.fulfill({ json: [
+      { rsvp_status: coffee, meetup: meetup("m1", "Cà phê sáng", "proposed", null, null) },
+      { rsvp_status: "going", meetup: meetup("m2", "Học nhóm", "confirmed", tomorrow(9), tomorrow(11)) },
+    ] });
+    if (path.endsWith("/rpc/respond_meetup_rsvp")) { coffee = "going"; return route.fulfill({ json: null }); }
+    if (path.endsWith("/personal_tasks")) return route.fulfill({ json: url.searchParams.get("recurrence")?.startsWith("in.") ? [{ id: "h1", title: "Đọc 20 phút", recurrence: "daily" }] : [] });
+    if (path.endsWith("/profiles")) return route.fulfill({ json: { id: user.id, display_name: "Vy", username: "vy", timezone: "UTC", bio: "", birthday: null } });
+    if (path.endsWith("/routine_completions")) return route.fulfill({ json: habitDone ? [{ task_id: "h1", completion_date: new Date().toISOString().slice(0, 10) }] : [] });
+    if (path.endsWith("/rpc/complete_routine")) { habitDone = true; return route.fulfill({ json: null }); }
+    if (path.endsWith("/activity_modes")) return route.fulfill({ json: [{ user_id: kha, mode: "studying", expires_at: tomorrow(9) }] });
+    return route.fulfill({ json: [] });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const next = page.locator("section", { hasText: "Sắp tới" });
+  await expect(next.getByRole("link", { name: /Học nhóm/ })).toContainText("Hoạt động");
+  await expect(page.getByRole("heading", { name: "Lời mời kết bạn · 1" })).toBeVisible();
+  await page.getByRole("button", { name: "Chấp nhận Kha" }).click();
+  await expect(page.getByRole("heading", { name: /Lời mời kết bạn/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Đi: Cà phê sáng", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Lời mời hoạt động/ })).toHaveCount(0);
+
+  await expect(page.getByRole("heading", { name: "Thói quen · còn 1" })).toBeVisible();
+  await page.getByRole("button", { name: /^Đọc 20 phút/ }).click();
+  await expect(page.getByRole("heading", { name: "Thói quen · xong hết" })).toBeVisible();
+
+  const now = page.locator("section", { hasText: "Bạn bè lúc này" });
+  await expect(now.getByText("Kha")).toBeVisible();
+  await expect(now.getByText("Học bài")).toBeVisible();
+  expect([friendship, coffee, habitDone]).toEqual(["accepted", "going", true]);
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("a task typed with a hashtag gets a label, and the full list groups and filters by it", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const tasks: Record<string, unknown>[] = [{ id: "t0", title: "Mua vở", priority: "medium", due_at: null, completed_at: null, tags: [] }];
+  await page.route("**/rest/v1/**", route => {
+    const request = route.request(); const url = new URL(request.url());
+    if (!url.pathname.endsWith("/personal_tasks") || url.searchParams.get("recurrence")?.startsWith("in.")) return route.fulfill({ json: [] });
+    if (request.method() === "POST") { tasks.push({ id: "t1", completed_at: null, ...request.postDataJSON() }); return route.fulfill({ status: 201, body: "" }); }
+    return route.fulfill({ json: tasks });
+  });
+  await page.goto("/");
+  await page.getByLabel("Nội dung công việc").fill("Nộp bài tập #GiảiTích");
+  await page.getByLabel("Giờ (tùy chọn)").fill("23:58");
+  await page.getByRole("button", { name: "Thêm việc", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Hoàn thành: Nộp bài tập" })).toContainText("#giảitích");
+  await expect(page.getByRole("button", { name: "Hoàn thành: Nộp bài tập" })).toContainText("23:58");
+  expect(tasks[1]).toMatchObject({ title: "Nộp bài tập", tags: ["giảitích"] });
+  const due = new Date(tasks[1].due_at as string);
+  expect([due.getHours(), due.getMinutes()]).toEqual([23, 58]);
+
+  await page.goto("/me/organizer");
+  await expect(page.getByRole("region", { name: "Hôm nay" }).getByRole("heading", { name: "Nộp bài tập" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Không hạn" }).getByRole("heading", { name: "Mua vở" })).toBeVisible();
+  await page.getByRole("button", { name: "#giảitích", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Mua vở" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Sửa", exact: true }).click();
+  await expect(page.getByLabel("Tên việc")).toHaveValue("Nộp bài tập #giảitích");
+});
+
+test("the inbox marks everything read at once", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  let unread = 2; const patches: string[] = [];
+  await page.route("**/rest/v1/**", route => {
+    const request = route.request(); const url = new URL(request.url());
+    if (!url.pathname.endsWith("/notifications")) return route.fulfill({ json: [] });
+    if (request.method() === "HEAD") return route.fulfill({ headers: { "content-range": `*/${unread}`, "access-control-expose-headers": "content-range", "access-control-allow-origin": "*" } });
+    if (request.method() === "PATCH") { unread = 0; patches.push(url.search); return route.fulfill({ status: 204, body: "" }); }
+    return route.fulfill({ json: ["n1", "n2"].map(id => ({ id, title: `Thông báo ${id}`, body: "", read_at: null, created_at: "2026-01-01T00:00:00Z", action_path: null })) });
+  });
+  await page.goto("/notifications");
+  await expect(page.getByRole("heading", { name: "Trung tâm thông báo · 2 chưa đọc" })).toBeVisible();
+  await page.getByRole("button", { name: "Đánh dấu đã đọc hết" }).click();
+  await expect(page.getByRole("heading", { name: "Trung tâm thông báo · 0 chưa đọc" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Đánh dấu đã đọc hết" })).toHaveCount(0);
+  expect(patches).toHaveLength(1);
+  expect(patches[0]).toContain("read_at=is.null");
+  expect(patches[0]).toContain(`user_id=eq.${user.id}`);
+  expect(patches[0]).not.toContain("id=eq.n");
+});
+
 test("friend removal requires confirmation", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {

@@ -14,6 +14,7 @@ export function TodayTasksCard() {
   const { run, pending, error } = useTaskChange();
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(() => localDateKey(new Date()));
+  const [dueTime, setDueTime] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [undo, setUndo] = useState<{ id: string; completedAt: string } | null>(null);
   const tasks = today.data ?? [];
@@ -22,17 +23,18 @@ export function TodayTasksCard() {
   function add(event: FormEvent) {
     event.preventDefault();
     if (!title.trim()) return;
-    run(service => service.add({ title, dueDate, priority }), () => setTitle(""));
+    run(service => service.add({ title, dueDate, dueTime, priority }), () => { setTitle(""); setDueTime(""); });
   }
 
   return <Card title={`Việc cần làm · ${tasks.length}`} action={<Link to="/me/organizer" className="text-sm font-semibold underline">Tất cả việc</Link>}>
     <form onSubmit={add} className="space-y-2">
       <label className="sr-only" htmlFor="quick-task">Nội dung công việc</label>
-      <div className="flex gap-2"><input id="quick-task" className="field min-w-0 flex-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="Thêm việc hôm nay…" required maxLength={200} />
+      <div className="flex gap-2"><input id="quick-task" className="field min-w-0 flex-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="Thêm việc hôm nay… (#nhãn nếu cần)" required maxLength={200} />
         <Button type="submit" variant="secondary" disabled={pending} aria-label="Thêm việc"><Plus size={19} /></Button></div>
       <div className="flex flex-wrap gap-2">
         <label className="sr-only" htmlFor="task-date">Ngày làm</label>
         <input id="task-date" className="field min-w-0 flex-1" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+        <input className="field" type="time" aria-label="Giờ (tùy chọn)" disabled={!dueDate} value={dueTime} onChange={e => setDueTime(e.target.value)} />
         <label className="sr-only" htmlFor="task-priority">Độ ưu tiên</label>
         <select id="task-priority" className="field" value={priority} onChange={e => setPriority(e.target.value as TaskPriority)}>
           <option value="low">Nhẹ</option><option value="medium">Bình thường</option><option value="high">Quan trọng</option>
@@ -46,7 +48,7 @@ export function TodayTasksCard() {
     <div className="mt-4 space-y-1">{tasks.length ? tasks.map(task => <button key={task.id} type="button" disabled={pending} aria-label={`Hoàn thành: ${task.title}`}
       onClick={() => run(service => service.complete(task.id), completedAt => setUndo({ id: task.id, completedAt }))} className="group flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[var(--soft)]">
       <span className="grid size-6 shrink-0 place-items-center rounded-lg border-2 border-[var(--border)] group-hover:border-emerald-600"><Check size={15} className="opacity-0 group-hover:opacity-100" /></span>
-      <span className="min-w-0 flex-1"><span className="block font-semibold">{task.title}</span><span className="text-xs text-[var(--muted)]">{task.dueAt ? new Date(task.dueAt).toLocaleDateString("vi-VN") : "Không hạn"}{task.isOverdue() ? " · Quá hạn" : ""}</span></span>
+      <span className="min-w-0 flex-1"><span className="block font-semibold">{task.title}</span><span className="text-xs text-[var(--muted)]">{task.dueLabel}{task.isOverdue() ? " · Quá hạn" : ""}{task.tags.map(name => ` · #${name}`).join("")}</span></span>
       {task.priority === "high" && <span className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-900">Quan trọng</span>}
     </button>) : !today.isError && <p className="py-8 text-center text-sm text-[var(--muted)]">{today.isPending ? "Đang tải việc…" : "Xong hết rồi! Thêm một việc mới ở trên."}</p>}</div>
   </Card>;

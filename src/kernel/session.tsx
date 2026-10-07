@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { FeatureModule, ModuleRegistry, SearchItem } from "./module";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type { AgendaItem, FeatureModule, ModuleRegistry, SearchItem } from "./module";
 
 /** Everything that belongs to one signed-in user. */
 class Session {
@@ -33,7 +33,14 @@ const Current = createContext<Session | null>(null);
 export function SessionProvider({ userId, registry, children }: { userId: string; registry: ModuleRegistry; children: ReactNode }) {
   const [session] = useState(() => new Session(userId, registry));
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
-  useEffect(() => () => session.dispose(), [session]);
+  // In development React's StrictMode runs this cleanup right after the first mount and mounts again.
+  // Ending the session there would leave the screens holding dead services, so the end waits a moment
+  // and the second mount calls it off. A real unmount (sign-out, another account) lets it happen.
+  const ending = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    window.clearTimeout(ending.current);
+    return () => { ending.current = window.setTimeout(() => session.dispose()); };
+  }, [session]);
   return <Current.Provider value={session}><QueryClientProvider client={queries}>{children}</QueryClientProvider></Current.Provider>;
 }
 
@@ -60,4 +67,11 @@ export function useSearchItems(): () => Promise<SearchItem[]> {
   const session = useSession();
   return async () => (await Promise.all(session.registry.modules.map(async module =>
     module.searchItems ? module.searchItems(session.get(module)).catch(() => []) : []))).flat();
+}
+
+/** Loads what the modules add to the calendar between two instants. A module that fails is left out. */
+export function useAgenda(): (from: Date, to: Date) => Promise<AgendaItem[]> {
+  const session = useSession();
+  return async (from, to) => (await Promise.all(session.registry.modules.map(async module =>
+    module.agenda ? module.agenda(session.get(module), from, to).catch(() => []) : []))).flat();
 }

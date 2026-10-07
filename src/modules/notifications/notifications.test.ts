@@ -35,6 +35,12 @@ describe("notifications", () => {
     expect(mock.query.eq).toHaveBeenCalledWith("id", "notice");
     expect(mock.query.single).toHaveBeenCalled();
   });
+  it("marks only the owner's unread notifications as read, all at once", async () => {
+    await repository().markAllRead();
+    expect(mock.query.update).toHaveBeenCalledWith({ read_at: expect.any(String) });
+    expect(mock.query.eq).toHaveBeenCalledWith("user_id", "owner");
+    expect(mock.query.is).toHaveBeenCalledWith("read_at", null);
+  });
   it("only follows action paths that the app recognizes", () => {
     const safePath = (path: string) => ["/", "/meetups"].includes(path) ? path : "/";
     expect(notificationTarget("/meetups", safePath)).toBe("/meetups");

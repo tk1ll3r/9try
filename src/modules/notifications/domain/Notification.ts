@@ -21,6 +21,7 @@ export interface NotificationRepository {
   list(from: number, pageSize: number): Promise<AppNotification[]>;
   countUnread(): Promise<number>;
   markRead(id: string): Promise<void>;
+  markAllRead(): Promise<void>;
   /** Asks the server to notify the user at `dueAt`. The notification opens `actionPath`. */
   scheduleReminder(reminder: { dueAt: Date; title: string; body: string; actionPath: string }): Promise<void>;
 }

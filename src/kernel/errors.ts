@@ -17,8 +17,14 @@ const known: [code: string, text: string][] = [
   ["routine not found", "Không tìm thấy thói quen này."],
 ];
 
+// The database answers with these codes when a function, table or column of a newer migration is missing.
+const serverTooOld = ["PGRST202", "PGRST204", "PGRST205", "42883", "42P01", "42703"];
+
 /** Text to show for a failed operation. Supabase errors can be plain objects with a `message`. */
 export function errorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "code" in error && serverTooOld.includes(String(error.code))) {
+    return "Tính năng này chưa dùng được vì máy chủ chưa được cập nhật.";
+  }
   const text = error instanceof Error ? error.message
     : error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message
     : "";

@@ -1,35 +1,33 @@
 import { Check, MapPin, NotebookPen, Repeat, Users, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRegistry } from "../../../kernel/session";
 import { Card } from "../../../kernel/ui/Card";
-import { UpcomingCard } from "../../calendar";
-import { useMyGroups } from "../../groups";
 import { ProfileReminder } from "../../identity";
-import { TodayTasksCard } from "../../tasks";
 
-/** The home screen: each card belongs to a module and loads on its own. */
+const shortcuts = [
+  { to: "/meetups", label: "Đề xuất cuộc hẹn", Icon: UsersRound },
+  { to: "/me/friends", label: "Bạn bè và lời mời", Icon: Users },
+  { to: "/me/organizer", label: "Việc cần làm và nhắc việc", Icon: Check },
+  { to: "/habits", label: "Thói quen", Icon: Repeat },
+  { to: "/notes", label: "Ghi chú", Icon: NotebookPen },
+  { to: "/me/location", label: "Chia sẻ vị trí có thời hạn", Icon: MapPin },
+];
+
+/** The home screen. Each module adds its own card through `today`; a card with nothing to say stays away. */
 export function TodayPage() {
-  const groups = useMyGroups();
+  const { today } = useRegistry();
   return <div className="space-y-5">
     <header><p className="text-sm font-semibold text-[var(--muted)]">{new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "numeric", month: "long" }).format(new Date())}</p>
       <h1 className="mt-1 text-4xl font-black tracking-[-.045em] sm:text-5xl">Hôm nay mình có gì?</h1></header>
     <ProfileReminder />
-    <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-      <UpcomingCard />
-      <TodayTasksCard />
+    {/* Two columns on a wide screen, filled top to bottom so that a short card leaves no hole beside a tall one. */}
+    <div className="space-y-5 xl:columns-2 xl:gap-5 xl:space-y-0 xl:*:mb-5 xl:*:break-inside-avoid">
+      {today.map(({ card: TodayCard }, index) => <TodayCard key={index} />)}
     </div>
     <Card title="Lên kế hoạch cùng nhau">
       <div className="grid gap-2 sm:grid-cols-2">
-        <Link to="/meetups" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><UsersRound size={19} /> Đề xuất cuộc hẹn</Link>
-        <Link to="/me/friends" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Users size={19} /> Bạn bè và lời mời</Link>
-        <Link to="/me/organizer" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Check size={19} /> Việc cần làm và nhắc việc</Link>
-        <Link to="/habits" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Repeat size={19} /> Thói quen</Link>
-        <Link to="/notes" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><NotebookPen size={19} /> Ghi chú</Link>
-        <Link to="/me/location" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><MapPin size={19} /> Chia sẻ vị trí có thời hạn</Link>
+        {shortcuts.map(({ to, label, Icon }) => <Link key={to} to={to} className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><Icon size={19} /> {label}</Link>)}
       </div>
-    </Card>
-    <Card title="Nhóm gần đây" action={<Link to="/groups" className="text-sm font-semibold underline">Tất cả nhóm</Link>}>
-      {groups.data?.length ? groups.data.slice(0, 6).map(group => <Link key={group.id} to={`/groups/${group.id}`} className="mr-2 mb-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--soft)] px-3 py-2 font-semibold hover:underline"><UsersRound size={16} />{group.name}</Link>)
-        : <p className="text-sm text-[var(--muted)]">{groups.isPending ? "Đang tải nhóm…" : groups.isError ? "Chưa tải được nhóm." : "Chưa có nhóm nào. Tạo nhóm để lên kế hoạch chung."}</p>}
     </Card>
   </div>;
 }

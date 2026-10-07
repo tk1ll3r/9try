@@ -58,6 +58,15 @@ export function NotificationsPage() {
     },
   });
 
+  const readAll = useMutation({
+    mutationFn: () => inbox.markAllRead(),
+    onSuccess: () => {
+      const now = new Date().toISOString();
+      queries.setQueryData<InfiniteData<AppNotification[]>>(listKey, data => data && { ...data, pages: data.pages.map(page => page.map(row => ({ ...row, readAt: row.readAt ?? now }))) });
+      void queries.invalidateQueries({ queryKey: unreadKey });
+    },
+  });
+
   const settings = useQuery({
     queryKey: pushKey,
     queryFn: async () => ({ prefs: await push.preferences(), subscribed: await push.isSubscribed() }),
@@ -181,7 +190,9 @@ export function NotificationsPage() {
         </Card>
       </div>
 
-      <Card title={`Trung tâm thông báo · ${items.filter((item) => !item.readAt).length} chưa đọc`}>
+      <Card title={`Trung tâm thông báo · ${items.filter((item) => !item.readAt).length} chưa đọc`}
+        action={items.some(item => !item.readAt) ? <Button variant="ghost" disabled={readAll.isPending} onClick={() => readAll.mutate()}><Check size={16} /> Đánh dấu đã đọc hết</Button> : undefined}>
+        {readAll.isError && <p role="alert" className="mb-3 text-sm text-[var(--danger)]">{errorMessage(readAll.error, "Chưa đánh dấu được. Hãy thử lại.")}</p>}
         {listProblem && <p role="alert" className="mb-3 text-sm text-[var(--danger)]">{listProblem} <Button variant="ghost" disabled={list.isFetching}
           onClick={() => void (list.isFetchNextPageError ? list.fetchNextPage() : list.refetch())}>Thử lại</Button></p>}
         {list.isPending && <p role="status">Đang tải thông báo…</p>}

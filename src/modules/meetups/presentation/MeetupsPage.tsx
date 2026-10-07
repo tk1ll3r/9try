@@ -11,8 +11,7 @@ import { useMyGroups } from "../../groups";
 import { ActivityModesCard } from "../../presence";
 import { MeetupPolicy, type MeetupSummary } from "../domain/Meetup";
 import { meetupsModule } from "../meetups.module";
-
-const meetupsKey = ["meetups"] as const;
+import { meetupsKey } from "./MeetupInvitesCard";
 
 const statusLabel = { draft: "Nháp", proposed: "Đang đề xuất", confirmed: "Đã chốt", canceled: "Đã hủy", completed: "Đã xong" } as const;
 const rsvpLabel = { going: "Đi", maybe: "Có thể", pending: "Chưa trả lời", declined: "Không đi" } as const;

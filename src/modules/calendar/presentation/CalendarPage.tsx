@@ -11,7 +11,9 @@ import "@fullcalendar/react/themes/monarch/palettes/purple.css";
 import { CalendarPlus, Download, Link2, Repeat2, Trash2, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Temporal } from "temporal-polyfill";
-import { useModule } from "../../../kernel/session";
+import { useNavigate } from "react-router-dom";
+import type { AgendaItem } from "../../../kernel/module";
+import { useAgenda, useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
 import { toIcs } from "../domain/icsExport";
 import { CalendarFeedCard } from "./CalendarFeedCard";
@@ -28,7 +30,11 @@ type EventKind = "timed" | "all_day";
 
 export function CalendarPage() {
   const calendar = useModule(calendarModule);
+  const loadAgenda = useAgenda();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<CalendarOccurrence[]>([]);
+  // What other modules put on the calendar, such as confirmed meetups. Shown, but changed on their own screens.
+  const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [range, setRange] = useState<{ start: Date; end: Date } | null>(null);
   const [kind, setKind] = useState<EventKind>("timed");
   const [title, setTitle] = useState("");
@@ -54,7 +60,9 @@ export function CalendarPage() {
   async function refresh(startDate = range?.start, endDate = range?.end) {
     if (!startDate || !endDate) return;
     try {
-      setEvents(await calendar.listOccurrences(startDate, endDate));
+      const [occurrences, items] = await Promise.all([calendar.listOccurrences(startDate, endDate), loadAgenda(startDate, endDate)]);
+      setEvents(occurrences);
+      setAgenda(items);
       setMessage("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải lịch.");
@@ -400,14 +408,19 @@ export function CalendarPage() {
           locale={viLocale}
           firstDay={1}
           height="auto"
-          events={events.map((event) => ({
+          events={[...events.map((event) => ({
             id: event.id,
             title: event.place ? `${event.title} · ${event.place}` : event.title,
             start: event.start,
             end: event.end,
             allDay: event.allDay,
-          }))}
-          eventClick={(info) => chooseOccurrence(info.event.id)}
+          })), ...agenda.map(item => ({
+            id: `agenda:${item.id}`, title: `${item.title} · ${item.kind}`, start: item.start, end: item.end, allDay: false, extendedProps: { to: item.to },
+          }))]}
+          eventClick={(info) => {
+            const to = info.event.extendedProps.to as string | undefined;
+            if (to) navigate(to); else chooseOccurrence(info.event.id);
+          }}
           dateClick={(info) => {
             setMessage(""); setKind(info.allDay ? "all_day" : "timed");
             if (info.allDay) { setStart(info.dateStr); setEnd(info.dateStr); }

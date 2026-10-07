@@ -27,6 +27,26 @@ export interface NavContribution {
   readonly badge?: ComponentType;
 }
 
+/** A card on the Today screen. A card with nothing to say renders nothing. */
+export interface TodayContribution {
+  /** Lower comes first: things waiting for an answer use 0–9, plans 10–39, people 40 and up. */
+  readonly order: number;
+  readonly card: ComponentType;
+}
+
+/** Something with a time that another module puts on the calendar and under "Sắp tới", such as a confirmed meetup. */
+export interface AgendaItem {
+  readonly id: string;
+  readonly title: string;
+  /** Start and end as ISO instants. */
+  readonly start: string;
+  readonly end: string;
+  /** What it is, shown next to the title: "Hoạt động". */
+  readonly kind: string;
+  /** Where a tap leads. */
+  readonly to: string;
+}
+
 /** One thing the global search can find. */
 export interface SearchItem {
   readonly title: string;
@@ -52,6 +72,9 @@ export interface FeatureModule<Services = unknown> {
   readonly privacy?: ComponentType;
   /** Everything of this module that a person may look for by name. The search filters it as they type. */
   searchItems?(services: Services): Promise<readonly SearchItem[]>;
+  readonly today?: TodayContribution;
+  /** What this module adds to the calendar between two instants. The calendar's own events are not listed here. */
+  agenda?(services: Services, from: Date, to: Date): Promise<readonly AgendaItem[]>;
 }
 
 /** A path of plain segments. Used in a link, it cannot lead outside the app. */
@@ -60,10 +83,12 @@ export const isPlainPath = (path: string) => /^\/[A-Za-z0-9_\-/]*$/.test(path) &
 export class ModuleRegistry {
   readonly routes: readonly RouteContribution[];
   readonly navigation: readonly NavContribution[];
+  readonly today: readonly TodayContribution[];
 
   constructor(readonly modules: readonly FeatureModule[]) {
     this.routes = modules.flatMap(module => module.routes ?? []);
     this.navigation = modules.flatMap(module => module.navigation ?? []).sort((a, b) => a.order - b.order);
+    this.today = modules.flatMap(module => module.today ?? []).sort((a, b) => a.order - b.order);
   }
 
   /**
