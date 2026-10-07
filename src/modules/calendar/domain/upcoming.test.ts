@@ -3,7 +3,7 @@ import type { CalendarOccurrence } from "./Occurrence";
 import { localDateKey } from "../../../kernel/dates";
 import { formatOccurrence, selectUpcoming } from "./upcoming";
 function event(id: string, start: string, end: string, allDay = false): CalendarOccurrence {
-  return { id, eventId: id, occurrenceDate: start.slice(0, 10), title: id, start, end, allDay, recurring: false, visibility: "only_me", timezone: "Asia/Ho_Chi_Minh", masterStart: start, masterEnd: end };
+  return { id, eventId: id, occurrenceDate: start.slice(0, 10), title: id, start, end, allDay, recurring: false, visibility: "only_me", timezone: "Asia/Ho_Chi_Minh", masterStart: start, masterEnd: end, category: "event", place: null };
 }
 describe("upcoming", () => {
   it("keeps ongoing events, filters ended ones and sorts date-only/timed correctly", () => {

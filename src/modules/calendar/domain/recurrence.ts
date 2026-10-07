@@ -122,6 +122,8 @@ function timedOccurrence(
     timezone: row.timezone,
     masterStart: row.start_at!,
     masterEnd: row.end_at!,
+    category: row.category ?? "event",
+    place: row.place ?? null,
   };
 }
 
@@ -148,6 +150,8 @@ function allDayOccurrence(
     timezone: row.timezone,
     masterStart: row.all_day_start!,
     masterEnd: row.all_day_end_exclusive!,
+    category: row.category ?? "event",
+    place: row.place ?? null,
   };
 }
 

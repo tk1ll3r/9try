@@ -8,15 +8,6 @@ export interface FriendConnection {
   createdAt: string;
 }
 
-/** A time when a friend is busy. Titles and places never leave the owner. */
-export interface BusyRange {
-  eventKind: "timed" | "all_day";
-  startAt: string | null;
-  endAt: string | null;
-  allDayStart: string | null;
-  allDayEndExclusive: string | null;
-}
-
 export interface BlockedUser {
   userId: string;
   displayName: string;
@@ -39,5 +30,4 @@ export interface FriendRepository {
   /** Ids of the friends who may see this user's busy times. */
   availabilitySharedWith(): Promise<Set<string>>;
   setAvailabilityShare(otherId: string, enabled: boolean): Promise<void>;
-  busyFor(otherId: string, from: Date, to: Date): Promise<BusyRange[]>;
 }

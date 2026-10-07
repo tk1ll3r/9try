@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { BlockedUser, BusyRange, FriendConnection, FriendRepository } from "../domain/Friend";
+import type { BlockedUser, FriendConnection, FriendRepository } from "../domain/Friend";
 
 /** Friend connections through SQL functions, which act as the signed-in user. */
 export class SupabaseFriendRepository implements FriendRepository {
@@ -46,18 +46,6 @@ export class SupabaseFriendRepository implements FriendRepository {
     const { data, error } = await this.db.from("availability_shares").select("user_id").not("user_id", "is", null);
     if (error) throw error;
     return new Set((data ?? []).map(row => row.user_id as string));
-  }
-
-  async busyFor(otherId: string, from: Date, to: Date): Promise<BusyRange[]> {
-    const { data, error } = await this.db.rpc("get_shared_busy", { p_owner_id: otherId, p_from: from.toISOString(), p_to: to.toISOString() });
-    if (error) throw error;
-    return (data ?? []).map((row: any) => ({
-      eventKind: row.event_kind,
-      startAt: row.start_at,
-      endAt: row.end_at,
-      allDayStart: row.all_day_start,
-      allDayEndExclusive: row.all_day_end_exclusive,
-    }));
   }
 
   private async call(name: string, args: Record<string, unknown>): Promise<void> {

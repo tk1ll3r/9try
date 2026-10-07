@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
-import type { SharedCalendarOccurrence } from "../domain/Occurrence";
+import type { CalendarOccurrence, SharedCalendarOccurrence } from "../domain/Occurrence";
 import { Card } from "../../../shared/ui/Card";
 
 export function SharedCalendarPage() {
@@ -21,15 +21,24 @@ export function SharedCalendarPage() {
   const [name, setName] = useState("Lịch được chia sẻ");
   const [message, setMessage] = useState("");
 
+  // Busy times come from a separate permission. `null` means this person does not share them.
+  const [busy, setBusy] = useState<CalendarOccurrence[] | null>([]);
+
   async function load(start: Date, end: Date) {
     if (!ownerId) return;
     try {
-      const next = await calendar.listSharedOccurrences(ownerId, start, end);
+      const [next, nextBusy] = await Promise.all([
+        calendar.listSharedOccurrences(ownerId, start, end),
+        calendar.busyFor(ownerId, start, end).catch(() => null),
+      ]);
       setEvents(next);
+      // A shared event is also a busy time; show it once, with its title.
+      setBusy(nextBusy && nextBusy.filter(time => !next.some(event => event.id === time.id)));
       if (next[0]) setName(next[0].ownerDisplayName);
       setMessage("");
     } catch (error) {
       setEvents([]);
+      setBusy([]);
       setMessage(error instanceof Error ? error.message : "Không thể tải lịch được chia sẻ.");
     }
   }
@@ -49,6 +58,9 @@ export function SharedCalendarPage() {
       </div>
 
       {message && <div className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
+      <p className="text-sm text-[var(--muted)]">{busy === null
+        ? "Người này chưa chia sẻ trạng thái bận/rảnh với bạn, nên chỉ có các sự kiện họ chia sẻ. Khoảng trống không có nghĩa là họ rảnh."
+        : "Ô xám “Bận” là lúc người này có việc. Tên và địa điểm của những việc đó không được chia sẻ."}</p>
 
       <Card className="overflow-hidden p-3 sm:p-5">
         <FullCalendar
@@ -57,13 +69,10 @@ export function SharedCalendarPage() {
           locale={viLocale}
           firstDay={1}
           height="auto"
-          events={events.map((event) => ({
-            id: event.id,
-            title: event.title,
-            start: event.start,
-            end: event.end,
-            allDay: event.allDay,
-          }))}
+          events={[
+            ...events.map((event) => ({ id: event.id, title: event.title, start: event.start, end: event.end, allDay: event.allDay })),
+            ...(busy ?? []).map((time) => ({ id: `busy:${time.id}`, title: "Bận", start: time.start, end: time.end, allDay: time.allDay, color: "#9ca3af" })),
+          ]}
           datesSet={(info) => void load(info.start, info.end)}
           headerToolbar={{ left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" }}
         />

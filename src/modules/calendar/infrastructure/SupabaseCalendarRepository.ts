@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Temporal } from "temporal-polyfill";
 import type { CalendarEventRow, CalendarExceptionRow, CalendarOccurrence, CreateCalendarEventInput, SharedCalendarOccurrence } from "../domain/Occurrence";
 import { expand } from "../domain/recurrence";
+import { classTimes, firstClassDate, type ClassDraft, type ClassEntry } from "../domain/timetable";
 
 /** The signed-in user's calendar in Supabase. Repeating events are expanded on this side. */
 export class SupabaseCalendarRepository {
@@ -14,8 +15,7 @@ export class SupabaseCalendarRepository {
     const { data, error } = await this.db
       .from("calendar_events")
       .select(`
-        id,title,event_kind,start_at,end_at,all_day_start,all_day_end_exclusive,
-        timezone,visibility,recurrence_rule,recurrence_until,
+        *,
         calendar_event_exceptions(
           occurrence_date,canceled,override_title,override_start_at,override_end_at,
           override_all_day_start,override_all_day_end_exclusive
@@ -43,6 +43,10 @@ export class SupabaseCalendarRepository {
       visibility: input.visibility,
       recurrence_rule: input.recurrence,
       recurrence_until: input.recurrenceUntil,
+      // Only sent when used, so plain events also save on a database without these columns.
+      ...(input.category ? { category: input.category } : {}),
+      ...(input.place ? { place: input.place.trim() } : {}),
+      ...(input.externalUid ? { external_uid: input.externalUid } : {}),
     };
 
     const payload = input.kind === "timed"
@@ -77,6 +81,51 @@ export class SupabaseCalendarRepository {
       await db.from("calendar_events").delete().eq("id", created.id);
       throw audienceError;
     }
+  }
+
+  /**
+   * When a person is busy, as untitled occurrences. Fails with "availability not shared"
+   * unless that person shares their busy times with the signed-in user.
+   */
+  async busyFor(ownerId: string, rangeStart: Date, rangeEnd: Date): Promise<CalendarOccurrence[]> {
+    const { data, error } = await this.db.rpc("list_shared_busy", { p_owner_id: ownerId, p_from: rangeStart.toISOString(), p_to: rangeEnd.toISOString() });
+    if (error) throw error;
+    return (data ?? []).flatMap((raw: any) => expand({
+      ...raw, title: "Bận", visibility: "only_me",
+      calendar_event_exceptions: Array.isArray(raw.exceptions) ? raw.exceptions : [],
+    }, rangeStart, rangeEnd)).sort((a: CalendarOccurrence, b: CalendarOccurrence) => a.start.localeCompare(b.start));
+  }
+
+  /** The weekly classes of the timetable. */
+  async listClasses(): Promise<ClassEntry[]> {
+    const { data, error } = await this.db.from("calendar_events")
+      .select("id,title,place,start_at,end_at,timezone,recurrence_until")
+      .eq("owner_id", this.ownerId).eq("category", "class").order("start_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(row => ({
+      id: row.id, title: row.title, place: row.place ?? "", until: row.recurrence_until,
+      ...classTimes(row.start_at, row.end_at, row.timezone),
+    }));
+  }
+
+  /** Adds a class that repeats every week from the first matching day of the term to its end. */
+  async createClass(draft: ClassDraft, termStart: string, termEnd: string): Promise<void> {
+    const date = firstClassDate(termStart, draft.weekday);
+    if (date > termEnd) throw new Error(`“${draft.title}” không có buổi nào trong học kỳ này.`);
+    await this.create({
+      title: draft.title, kind: "timed", start: `${date}T${draft.start}`, end: `${date}T${draft.end}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, visibility: "only_me",
+      recurrence: "weekly", recurrenceUntil: termEnd, category: "class", place: draft.place,
+    });
+  }
+
+  /** Every stored event with its exceptions, for export. */
+  async listEvents(): Promise<CalendarEventRow[]> {
+    const { data, error } = await this.db.from("calendar_events")
+      .select("*, calendar_event_exceptions(occurrence_date,canceled,override_title,override_start_at,override_end_at,override_all_day_start,override_all_day_end_exclusive)")
+      .eq("owner_id", this.ownerId).order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as CalendarEventRow[];
   }
 
   async listSharedOccurrences(

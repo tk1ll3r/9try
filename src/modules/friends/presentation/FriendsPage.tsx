@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Ban, CalendarDays, Check, Clock3, Copy, Link2, MessageCircle, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
+import { Ban, CalendarDays, Check, Copy, Link2, MessageCircle, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
@@ -7,7 +7,6 @@ import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
-import type { BusyRange, FriendConnection } from "../domain/Friend";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
 
@@ -20,7 +19,6 @@ export function FriendsPage() {
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
   const [invite, setInvite] = useState<{ url: string; expiresAt: string } | null>(null);
-  const [busyViewer, setBusyViewer] = useState<{ friend: FriendConnection; ranges: BusyRange[] } | null>(null);
 
   const items = connections.data ?? [];
   const accepted = items.filter(item => item.status === "accepted");
@@ -38,12 +36,6 @@ export function FriendsPage() {
   function send(event: FormEvent) {
     event.preventDefault();
     if (username.trim()) act(() => friends.sendRequest(username), "Đã gửi lời mời.", () => setUsername(""));
-  }
-
-  function showBusy(friend: FriendConnection) {
-    const from = new Date();
-    const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000);
-    run(() => friends.busyFor(friend.userId, from, to), ranges => setBusyViewer({ friend, ranges }));
   }
 
   async function copyInvite() {
@@ -131,17 +123,16 @@ export function FriendsPage() {
                 <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
                   <>
                     <Link to={`/chat/with/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><MessageCircle size={16} /> Nhắn tin</Link>
-                    <Link to={`/calendar/shared/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><CalendarDays size={16} /> Lịch chia sẻ</Link>
-                    <Button disabled={pending} variant="ghost" className="px-3" onClick={() => showBusy(item)}><Clock3 size={16} /> Xem bận/rảnh</Button>
+                    <Link to={`/calendar/shared/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><CalendarDays size={16} /> Lịch và bận/rảnh</Link>
                     <Button variant={sharing ? "secondary" : "ghost"} className="px-3" disabled={pending} aria-pressed={sharing}
                       onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}>
                       <Share2 size={16} /> {sharing ? "Đang chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh"}
                     </Button>
                     <Button disabled={pending} variant="ghost" className="px-3" onClick={() => {
-                      if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) act(() => friends.remove(item.userId), "", () => setBusyViewer(null));
+                      if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) act(() => friends.remove(item.userId));
                     }}><UserMinus size={16} /> Xóa</Button>
                     <Button disabled={pending} variant="ghost" className="px-3" onClick={() => {
-                      if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) act(() => friends.block(item.userId), "", () => setBusyViewer(null));
+                      if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) act(() => friends.block(item.userId));
                     }}><Ban size={16} /> Chặn</Button>
                   </>
                 } />
@@ -150,25 +141,6 @@ export function FriendsPage() {
           </div>
         )}
       </Card>
-
-      {busyViewer && (
-        <Card title={`Bận/rảnh 7 ngày tới · ${busyViewer.friend.displayName}`}>
-          {busyViewer.ranges.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Không có khoảng bận nào trong 7 ngày tới.</p>
-          ) : (
-            <div className="space-y-2">
-              {busyViewer.ranges.map((range, index) => (
-                <div key={index} className="rounded-2xl bg-[var(--soft)] p-3 text-sm font-semibold">
-                  {range.eventKind === "all_day"
-                    ? `Bận cả ngày · ${range.allDayStart}`
-                    : `Bận · ${new Date(range.startAt!).toLocaleString("vi-VN")} → ${new Date(range.endAt!).toLocaleTimeString("vi-VN")}`}
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="mt-3 text-xs text-[var(--muted)]">Gnouht chỉ hiển thị bận/rảnh; tên, mô tả và địa điểm sự kiện không được trả về.</p>
-        </Card>
-      )}
 
       {(blocked.data?.length ?? 0) > 0 && (
         <Card title={`Đã chặn · ${blocked.data!.length}`}>

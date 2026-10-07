@@ -373,6 +373,31 @@ test("location: share with a chosen friend, publish a position, stop from anothe
   await expect(page.getByRole("button", { name: "Dừng chia sẻ" })).toHaveCount(0);
 });
 
+test("timetable: paste two classes and see them by weekday", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const stored: Record<string, unknown>[] = [];
+  await page.route("**/rest/v1/**", route => {
+    const request = route.request(); const url = new URL(request.url());
+    if (!url.pathname.endsWith("/calendar_events")) return route.fulfill({ json: [] });
+    if (request.method() === "POST") { stored.push({ id: `class-${stored.length + 1}`, ...request.postDataJSON() }); return route.fulfill({ status: 201, json: { id: `class-${stored.length}` } }); }
+    return route.fulfill({ json: url.searchParams.get("category") === "eq.class" ? stored : [] });
+  });
+  await page.goto("/timetable");
+  await page.getByLabel("Mỗi dòng một lớp").fill("T2 07:30-09:45 Cấu trúc dữ liệu @ B1.02\nT5 13:00-15:15 Toán rời rạc\nT9 sai");
+  await expect(page.getByText("2 lớp đọc được, 1 dòng không đọc được: T9 sai.")).toBeVisible();
+  await page.getByRole("button", { name: "Thêm 2 lớp" }).click();
+  await expect(page.getByText("Đã thêm 2 lớp.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Thứ 2" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Thứ 5" })).toBeVisible();
+  await expect(page.getByText("07:30–09:45")).toBeVisible();
+  expect(stored).toHaveLength(2);
+  expect(stored[0]).toMatchObject({ title: "Cấu trúc dữ liệu", category: "class", place: "B1.02", recurrence_rule: "weekly", visibility: "only_me" });
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`demo and login fit viewport ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await mockStyle(page); await loggedOut(page);

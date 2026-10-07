@@ -29,20 +29,26 @@ export function IcsImportCard({ onImported }: { onImported(): Promise<void> }) {
   async function importEvents() {
     if (!preview?.events.length || busy) return;
     setBusy(true);
-    let imported = 0;
+    let imported = 0, alreadyThere = 0;
     try {
       for (const event of preview.events) {
-        await calendar.create({
-          title: event.title, kind: event.kind, start: event.start, end: event.end,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          visibility: "only_me", recurrence: null, recurrenceUntil: null,
-        });
-        imported++;
+        try {
+          await calendar.create({
+            title: event.title, kind: event.kind, start: event.start, end: event.end,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            visibility: "only_me", recurrence: null, recurrenceUntil: null, externalUid: event.uid,
+          });
+          imported++;
+        } catch (error) {
+          // 23505: the database already holds an event with this id from an earlier import.
+          if ((error as { code?: string }).code !== "23505") throw error;
+          alreadyThere++;
+        }
       }
       setPreview(null);
-      setMessage(`Đã nhập ${imported} sự kiện riêng tư.`);
+      setMessage(`Đã nhập ${imported} sự kiện riêng tư.${alreadyThere ? ` Bỏ qua ${alreadyThere} sự kiện đã có từ lần nhập trước.` : ""}`);
     } catch (error) {
-      setPreview({ ...preview, events: preview.events.slice(imported) });
+      setPreview({ ...preview, events: preview.events.slice(imported + alreadyThere) });
       setMessage(`Đã nhập ${imported} sự kiện; dừng khi gặp lỗi: ${error instanceof Error ? error.message : "không xác định"}. Có thể thử lại phần còn lại.`);
     } finally {
       await onImported();
@@ -56,7 +62,7 @@ export function IcsImportCard({ onImported }: { onImported(): Promise<void> }) {
     {preview && <div className="mt-4 rounded-2xl bg-[var(--soft)] p-4 text-sm">
       <p className="font-semibold">{preview.events.length} sự kiện sẵn sàng · {preview.skipped} bỏ qua (lặp, hủy, trùng trong file hoặc không hợp lệ)</p>
       <ul className="mt-2 max-h-36 list-inside list-disc overflow-y-auto text-[var(--muted)]">{preview.events.map((event) => <li key={event.uid}>{event.title} · {event.kind === "all_day" ? event.start : new Date(event.start).toLocaleString("vi-VN")}</li>)}</ul>
-      <p className="mt-2 text-xs">Không nhập chuỗi lặp/ngoại lệ để tránh sai lịch. Nhập lại cùng file sẽ tạo bản sao.</p>
+      <p className="mt-2 text-xs">Sự kiện lặp và ngoại lệ không được nhập, để tránh sai lịch. Nhập lại cùng file không tạo bản sao.</p>
       {preview.events.length > 0 && <Button className="mt-3" disabled={busy} onClick={() => void importEvents()}><FileUp size={16} /> {busy ? "Đang nhập…" : `Nhập ${preview.events.length} sự kiện`}</Button>}
     </div>}
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}

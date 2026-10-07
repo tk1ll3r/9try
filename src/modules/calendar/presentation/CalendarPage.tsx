@@ -8,11 +8,12 @@ import viLocale from "@fullcalendar/react/locales/vi";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/monarch/theme.css";
 import "@fullcalendar/react/themes/monarch/palettes/purple.css";
-import { CalendarPlus, Repeat2, Trash2, XCircle } from "lucide-react";
+import { CalendarPlus, Download, Repeat2, Trash2, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import { useModule } from "../../../kernel/session";
 import { calendarModule } from "../calendar.module";
+import { toIcs } from "../domain/icsExport";
 import type { CalendarOccurrence, CalendarVisibility, RecurrenceRule } from "../domain/Occurrence";
 import { PeoplePicker } from "../../friends";
 import { useMyGroups } from "../../groups";
@@ -111,6 +112,19 @@ export function CalendarPage() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tạo sự kiện.");
     } finally { createLock.current = false; setCreating(false); }
+  }
+
+  async function exportIcs() {
+    try {
+      const url = URL.createObjectURL(new Blob([toIcs(await calendar.listEvents())], { type: "text/calendar" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "gnouht-lich.ics";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không thể xuất lịch.");
+    }
   }
 
   function chooseOccurrence(id: string) {
@@ -213,6 +227,7 @@ export function CalendarPage() {
       <div className="flex flex-wrap gap-2">
         <Button id="create-event-trigger" onClick={() => { setMessage(""); setCreateOpen(true); }}><CalendarPlus size={17} /> Thêm sự kiện</Button>
         <Button variant="ghost" onClick={() => setShowImport(value => !value)} aria-expanded={showImport}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</Button>
+        <Button variant="ghost" onClick={() => void exportIcs()}><Download size={17} /> Xuất lịch .ics</Button>
       </div>
       <DialogPanel open={createOpen} onOpenChange={setCreateOpen} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn được xem theo mặc định. Chọn chia sẻ hoặc lặp khi cần." busy={creating}>
         {message && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{message}</p>}
@@ -383,7 +398,7 @@ export function CalendarPage() {
           height="auto"
           events={events.map((event) => ({
             id: event.id,
-            title: event.title,
+            title: event.place ? `${event.title} · ${event.place}` : event.title,
             start: event.start,
             end: event.end,
             allDay: event.allDay,

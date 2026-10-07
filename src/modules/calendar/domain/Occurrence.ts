@@ -1,5 +1,7 @@
 export type CalendarVisibility = "only_me" | "selected_friends" | "group" | "public";
 export type RecurrenceRule = "daily" | "weekly" | "monthly";
+/** A class is a weekly event that belongs to the timetable. */
+export type EventCategory = "event" | "class";
 
 /** One changed or skipped date of a repeating event, as stored. */
 export interface CalendarExceptionRow {
@@ -26,6 +28,9 @@ export interface CalendarEventRow {
   recurrence_rule: RecurrenceRule | null;
   recurrence_until: string | null;
   calendar_event_exceptions: CalendarExceptionRow[] | null;
+  /** Missing on databases that do not have the timetable columns yet. */
+  category?: EventCategory | null;
+  place?: string | null;
 }
 
 export interface CalendarOccurrence {
@@ -41,6 +46,9 @@ export interface CalendarOccurrence {
   timezone: string;
   masterStart: string;
   masterEnd: string;
+  category: EventCategory;
+  /** A room or an address. */
+  place: string | null;
 }
 
 export interface CreateCalendarEventInput {
@@ -54,6 +62,10 @@ export interface CreateCalendarEventInput {
   recurrenceUntil: string | null;
   audienceUserIds?: string[];
   audienceGroupId?: string | null;
+  category?: EventCategory;
+  place?: string;
+  /** The id an imported event had in its source, so importing it again adds nothing. */
+  externalUid?: string;
 }
 
 export interface SharedCalendarOccurrence extends CalendarOccurrence {

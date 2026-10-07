@@ -44,7 +44,7 @@ await db.exec(`
   create function extensions.throws_ok(code text, errcode text, errmsg text, description text) returns text language plpgsql as $$
     begin execute code; return 'not ok - ' || description || ' (no error)';
     exception when others then
-      if sqlstate = errcode and sqlerrm = errmsg then return 'ok - ' || description; end if;
+      if sqlstate = errcode and (errmsg is null or sqlerrm = errmsg) then return 'ok - ' || description; end if;
       return 'not ok - ' || description || ' (got ' || sqlstate || ': ' || sqlerrm || ')'; end $$;
   create function extensions.finish() returns setof text language sql as $$ select 'finish'::text where false $$;
   set search_path = "$user", public, extensions;
