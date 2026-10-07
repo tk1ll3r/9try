@@ -7,6 +7,7 @@ import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { MoreMenu } from "../../../kernel/ui/MoreMenu";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
 
@@ -47,11 +48,72 @@ export function FriendsPage() {
   return (
     <div className="space-y-5">
       <header>
-        <p className="text-sm font-semibold text-[var(--muted)]">Kết nối có chủ đích</p>
+        <p className="text-sm font-semibold text-[var(--muted)]">Những người bạn đã kết nối</p>
         <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Bạn bè</h1>
       </header>
 
-      <Card title="Tìm bằng username">
+      {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={connections.isFetching} onClick={() => void connections.refetch()}>Thử tải lại</Button></div>}
+      {message && <div role="status" className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
+
+      {loading && <p role="status">Đang tải bạn bè…</p>}
+
+      {incoming.length > 0 && (
+        <Card title={`Đang chờ bạn · ${incoming.length}`}>
+          <div className="space-y-2">
+            {incoming.map((item) => (
+              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+                <>
+                  <Button disabled={pending} className="px-3" onClick={() => act(() => friends.respond(item.userId, true))}><Check size={16} /> Chấp nhận</Button>
+                  <Button disabled={pending} variant="ghost" className="px-3" onClick={() => act(() => friends.respond(item.userId, false))}><X size={16} /> Từ chối</Button>
+                </>
+              } />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card title={`Bạn bè · ${accepted.length}`}>
+        {!loading && !problem && accepted.length === 0 ? (
+          <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào.</p>
+        ) : (
+          <div className="space-y-2">
+            {accepted.map((item) => {
+              const sharing = sharedWith.has(item.userId);
+              return (
+                <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+                  <>
+                    <Link to={`/chat/with/${item.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--surface)] px-3 py-2.5 text-sm font-semibold"><MessageCircle size={16} /> Nhắn tin</Link>
+                    <MoreMenu label={`Thao tác khác với ${item.displayName}`}>
+                      <Link to={`/calendar/shared/${item.userId}`}><CalendarDays size={16} /> Xem lịch và bận/rảnh</Link>
+                      <button type="button" disabled={pending} aria-pressed={sharing} onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}><Share2 size={16} /> {sharing ? "Ngừng chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh của tôi"}</button>
+                      <button type="button" disabled={pending} onClick={() => {
+                        if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) act(() => friends.remove(item.userId));
+                      }}><UserMinus size={16} /> Xóa bạn</button>
+                      <button type="button" disabled={pending} className="text-[var(--danger)]" onClick={() => {
+                        if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) act(() => friends.block(item.userId));
+                      }}><Ban size={16} /> Chặn</button>
+                    </MoreMenu>
+                  </>
+                } />
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {outgoing.length > 0 && (
+        <Card title={`Đã gửi · ${outgoing.length}`}>
+          <div className="space-y-2">
+            {outgoing.map((item) => (
+              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.cancelRequest(item.userId))}><X size={16} /> Hủy lời mời</Button>
+              } />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card title="Thêm bạn bằng username">
         <form onSubmit={send} className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3.5 text-[var(--muted)]" size={17} />
@@ -60,8 +122,6 @@ export function FriendsPage() {
           </div>
           <Button type="submit" variant="secondary" disabled={pending}><UserPlus size={17} /> Gửi lời mời</Button>
         </form>
-        {message && <p role="status" className="mt-3 text-sm text-[var(--muted)]">{message}</p>}
-        {problem && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={connections.isFetching} onClick={() => void connections.refetch()}>Thử tải lại</Button></p>}
       </Card>
 
       <Card title="Mời bằng liên kết" action={<Link2 size={18} className="text-[var(--muted)]" />}>
@@ -83,65 +143,6 @@ export function FriendsPage() {
         )}
       </Card>
 
-      {loading && <p role="status">Đang tải bạn bè…</p>}
-
-      {incoming.length > 0 && (
-        <Card title={`Đang chờ bạn · ${incoming.length}`}>
-          <div className="space-y-2">
-            {incoming.map((item) => (
-              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
-                <>
-                  <Button disabled={pending} className="px-3" onClick={() => act(() => friends.respond(item.userId, true))}><Check size={16} /> Chấp nhận</Button>
-                  <Button disabled={pending} variant="ghost" className="px-3" onClick={() => act(() => friends.respond(item.userId, false))}><X size={16} /> Từ chối</Button>
-                </>
-              } />
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {outgoing.length > 0 && (
-        <Card title={`Đã gửi · ${outgoing.length}`}>
-          <div className="space-y-2">
-            {outgoing.map((item) => (
-              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
-                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.cancelRequest(item.userId))}><X size={16} /> Hủy lời mời</Button>
-              } />
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card title={`Bạn bè · ${accepted.length}`}>
-        {!loading && !problem && accepted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào.</p>
-        ) : (
-          <div className="space-y-2">
-            {accepted.map((item) => {
-              const sharing = sharedWith.has(item.userId);
-              return (
-                <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
-                  <>
-                    <Link to={`/chat/with/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><MessageCircle size={16} /> Nhắn tin</Link>
-                    <Link to={`/calendar/shared/${item.userId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"><CalendarDays size={16} /> Lịch và bận/rảnh</Link>
-                    <Button variant={sharing ? "secondary" : "ghost"} className="px-3" disabled={pending} aria-pressed={sharing}
-                      onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}>
-                      <Share2 size={16} /> {sharing ? "Đang chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh"}
-                    </Button>
-                    <Button disabled={pending} variant="ghost" className="px-3" onClick={() => {
-                      if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) act(() => friends.remove(item.userId));
-                    }}><UserMinus size={16} /> Xóa</Button>
-                    <Button disabled={pending} variant="ghost" className="px-3" onClick={() => {
-                      if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) act(() => friends.block(item.userId));
-                    }}><Ban size={16} /> Chặn</Button>
-                  </>
-                } />
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
       {(blocked.data?.length ?? 0) > 0 && (
         <Card title={`Đã chặn · ${blocked.data!.length}`}>
           <div className="space-y-2">
@@ -159,7 +160,7 @@ export function FriendsPage() {
 
 function PersonRow({ name, username, actions }: { name: string; username: string | null; actions: ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--soft)] p-3 lg:flex-row lg:items-center">
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--soft)] p-3">
       <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--ink)] font-bold text-[var(--paper)]">
         {name.slice(0, 1).toUpperCase()}
       </div>
@@ -167,7 +168,7 @@ function PersonRow({ name, username, actions }: { name: string; username: string
         <p className="truncate font-bold">{name}</p>
         <p className="text-xs text-[var(--muted)]">{username ? `@${username}` : "Chưa có username"}</p>
       </div>
-      <div className="flex flex-wrap gap-2">{actions}</div>
+      <div className="flex flex-wrap items-center gap-1">{actions}</div>
     </div>
   );
 }

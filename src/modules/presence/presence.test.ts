@@ -51,6 +51,13 @@ describe("friend ranking", () => {
     // A mode alone does not earn a large card.
     expect(featured(ranked)).toEqual([]);
   });
+  it("treats a friend who says they are free as a reason to look at them", () => {
+    const free: ActiveMode = { ...mode("thu", 60), mode: "free" };
+    const ranked = new FriendRanking().rank([lan, thu], [mode("lan", 60), free], [], new Set(), now);
+    expect(ranked.map(item => [item.friend.displayName, item.score])).toEqual([["Thu", 79], ["Lan", 24]]);
+    expect(ranked[0].reasons.map(reason => reason.label)).toEqual(["Đang rảnh"]);
+    expect(featured(ranked).map(item => item.friend.displayName)).toEqual(["Thu"]);
+  });
   it("breaks a tie by who has a mode on, then by name in Vietnamese order", () => {
     const anh = person("Ánh"), an = person("An"), binh = person("Bình");
     const signals: Reason[] = [{ userId: "bình", kind: "chat", strength: 24 / 45 }];

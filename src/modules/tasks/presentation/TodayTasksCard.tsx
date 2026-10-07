@@ -16,6 +16,7 @@ export function TodayTasksCard() {
   const [dueDate, setDueDate] = useState(() => localDateKey(new Date()));
   const [dueTime, setDueTime] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [options, setOptions] = useState(false);
   const [undo, setUndo] = useState<{ id: string; completedAt: string } | null>(null);
   const tasks = today.data ?? [];
   const problem = error || (today.isError ? errorMessage(today.error, "Chưa tải được công việc.") : "");
@@ -29,9 +30,10 @@ export function TodayTasksCard() {
   return <Card title={`Việc cần làm · ${tasks.length}`} action={<Link to="/me/organizer" className="text-sm font-semibold underline">Tất cả việc</Link>}>
     <form onSubmit={add} className="space-y-2">
       <label className="sr-only" htmlFor="quick-task">Nội dung công việc</label>
-      <div className="flex gap-2"><input id="quick-task" className="field min-w-0 flex-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="Thêm việc hôm nay… (#nhãn nếu cần)" required maxLength={200} />
+      <div className="flex gap-2"><input id="quick-task" className="field min-w-0 flex-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="Thêm việc hôm nay…" required maxLength={200} />
         <Button type="submit" variant="secondary" disabled={pending} aria-label="Thêm việc"><Plus size={19} /></Button></div>
-      <div className="flex flex-wrap gap-2">
+      <button type="button" aria-expanded={options} onClick={() => setOptions(value => !value)} className="min-h-9 text-xs font-semibold text-[var(--muted)] underline">{options ? "Ẩn ngày, giờ và mức ưu tiên" : "Thêm ngày, giờ, mức ưu tiên"}</button>
+      {options && <div className="flex flex-wrap gap-2">
         <label className="sr-only" htmlFor="task-date">Ngày làm</label>
         <input id="task-date" className="field min-w-0 flex-1" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
         <input className="field" type="time" aria-label="Giờ (tùy chọn)" disabled={!dueDate} value={dueTime} onChange={e => setDueTime(e.target.value)} />
@@ -39,8 +41,7 @@ export function TodayTasksCard() {
         <select id="task-priority" className="field" value={priority} onChange={e => setPriority(e.target.value as TaskPriority)}>
           <option value="low">Nhẹ</option><option value="medium">Bình thường</option><option value="high">Quan trọng</option>
         </select>
-      </div>
-      <p className="text-xs text-[var(--muted)]">Xóa ngày để thêm việc không có hạn. Xem việc tương lai trong “Tất cả việc”.</p>
+      </div>}
     </form>
     {problem && <div role="alert" className="mt-3 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={pending || today.isFetching} onClick={() => void today.refetch()}>Thử lại</Button></div>}
     {undo && <div role="status" className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--soft)] p-3">Đã hoàn thành việc.

@@ -377,6 +377,7 @@ test("calendar feed link is shown once when created and is revoked from the priv
     return route.fulfill({ json: [] });
   });
   await page.goto("/calendar");
+  await page.getByLabel("Nhập, xuất và liên kết lịch").click();
   await page.getByRole("button", { name: "Liên kết lịch", exact: true }).click();
   await page.getByRole("button", { name: "Tạo liên kết lịch", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Liên kết lịch" })).toHaveValue(/\/functions\/v1\/calendar-feed\?token=a{64}$/);
@@ -452,6 +453,7 @@ test("a task typed with a hashtag gets a label, and the full list groups and fil
   });
   await page.goto("/today");
   await page.getByLabel("Nội dung công việc").fill("Nộp bài tập #GiảiTích");
+  await page.getByRole("button", { name: "Thêm ngày, giờ, mức ưu tiên" }).click();
   await page.getByLabel("Giờ (tùy chọn)").fill("23:58");
   await page.getByRole("button", { name: "Thêm việc", exact: true }).click();
   await expect(page.getByRole("button", { name: "Hoàn thành: Nộp bài tập" })).toContainText("#giảitích");
@@ -582,25 +584,32 @@ test("Mode is the home screen: friends ranked by what matters now, each with the
   await expect(page.getByRole("button", { name: "Bỏ ghim Thu" })).toHaveAttribute("aria-pressed", "true");
   expect(pinned).toEqual([thu]);
 
-  await page.getByRole("button", { name: "Đang bật · 2" }).click();
+  // Everyone with a mode on, at a glance and in ranked order; an activity chip narrows the list to it.
+  await expect(page.getByRole("region", { name: "Đang hoạt động" }).getByRole("link")).toHaveText([/Lan.*Chơi game/, /Bảo.*Học bài/]);
+  const filters = page.getByRole("group", { name: "Lọc bạn bè" });
+  await filters.getByRole("button", { name: "Học bài · 1" }).click();
   await expect(top).toHaveCount(0);
-  await expect(rows).toHaveText([/Lan/, /Bảo/]);
-  await page.getByRole("button", { name: "Tất cả" }).click();
+  await expect(rows).toHaveText([/Bảo/]);
+  await filters.getByRole("button", { name: "Tất cả" }).click();
 
   // The user's own mode: one tap to turn one on, the dialog to change it and its duration.
   const myMode = page.getByRole("region", { name: "Mode của bạn" });
   await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
   await myMode.getByRole("button", { name: "Chơi game" }).click();
   await expect(myMode.getByRole("status")).toHaveText("Chơi game");
-  await myMode.getByRole("button", { name: "Đổi" }).click();
+  await myMode.getByRole("button", { name: "Đổi mode" }).click();
   const picker = page.getByRole("dialog", { name: "Mode của bạn" });
+  // The picker has every activity, in groups; one added to the app after the first six works the same way.
+  await expect(picker.getByRole("heading", { name: "Gặp gỡ" })).toBeVisible();
   await picker.getByRole("button", { name: "1 giờ", exact: true }).click();
-  await picker.getByRole("button", { name: "Học bài", exact: true }).click();
+  await picker.getByRole("button", { name: "Cà phê", exact: true }).click();
   await expect(picker).toHaveCount(0);
-  await expect(myMode.getByRole("status")).toHaveText("Học bài");
+  await expect(myMode.getByRole("status")).toHaveText("Cà phê");
   await myMode.getByRole("button", { name: "Tắt mode" }).click();
   await expect(myMode.getByRole("status")).toHaveText("Chưa bật mode");
-  expect(calls).toEqual([{ p_mode: "gaming", p_minutes: 120 }, { p_mode: "studying", p_minutes: 60 }, { p_mode: null, p_minutes: 60 }]);
+  expect(calls).toEqual([{ p_mode: "gaming", p_minutes: 120 }, { p_mode: "coffee", p_minutes: 60 }, { p_mode: null, p_minutes: 60 }]);
+  // The activities used last come first in the one-tap row.
+  await expect(myMode.getByRole("button").first()).toHaveText("Cà phê");
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Hôm nay" }).click();
@@ -678,11 +687,14 @@ test("friend removal requires confirmation", async ({ page }) => {
   });
   await page.goto("/me/friends");
   await expect(page.getByText("Kha", { exact: true })).toBeVisible();
+  // Removing a friend is under the "…" menu of their row.
   page.once("dialog", dialog => dialog.dismiss());
-  await page.getByRole("button", { name: "Xóa", exact: true }).click();
+  await page.getByLabel("Thao tác khác với Kha").click();
+  await page.getByRole("button", { name: "Xóa bạn" }).click();
   expect(removed).toBe(0);
   page.once("dialog", dialog => dialog.accept());
-  await page.getByRole("button", { name: "Xóa", exact: true }).click();
+  await page.getByLabel("Thao tác khác với Kha").click();
+  await page.getByRole("button", { name: "Xóa bạn" }).click();
   await expect.poll(() => removed).toBe(1);
 });
 

@@ -77,7 +77,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
           {error && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{error}</p>}
           {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Yêu cầu đã được tiếp nhận.</b><p>Kiểm tra hộp thư của {acceptedEmail}, kể cả Spam và Tất cả thư. Phản hồi này chưa xác nhận email đã đến Gmail.</p></div>}
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
-          <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Có thể sửa email rồi gửi lại khi hết thời gian chờ. Giới hạn ở máy chủ có thể dài hơn; app không tự gửi lại.</p>
+          <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Bạn sẽ nhận một thư có liên kết và mã đăng nhập.</p>
         </form>}
       {acceptedEmail && <form onSubmit={verify} className="mt-5 space-y-3" aria-busy={verifying}>
         <label className="block text-sm font-semibold" htmlFor="login-code">Mã 6 số trong email (nếu có)</label>

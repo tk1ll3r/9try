@@ -27,7 +27,7 @@ export interface RankedFriend<Friend extends Person = Person> {
 }
 
 /** What each kind of reason is worth at full strength. A kind that is not listed is worth `otherWeight`. */
-export const defaultWeights: Readonly<Record<string, number>> = { meetup: 100, invite: 70, unread: 60, location: 50, chat: 45, mode: 40 };
+export const defaultWeights: Readonly<Record<string, number>> = { meetup: 100, invite: 70, unread: 60, free: 55, location: 50, chat: 45, mode: 40 };
 const otherWeight = 20;
 /** A mode counts in full for this long after it was set, then for less. */
 const freshMs = 15 * 60_000;
@@ -48,6 +48,8 @@ export class FriendRanking {
       if (mode) {
         const fresh = at - Date.parse(mode.startedAt) < freshMs;
         own.push({ userId: friend.userId, kind: "mode", strength: fresh ? 1 : 0.6, label: fresh ? "Vừa bật" : undefined });
+        // Someone who says they are free is someone to ask out, so it counts as a reason of its own.
+        if (mode.mode === "free") own.push({ userId: friend.userId, kind: "free", strength: 1, label: "Đang rảnh" });
       }
       // Several reasons of one kind count once, at their strongest.
       const strongest = new Map<string, Reason>();

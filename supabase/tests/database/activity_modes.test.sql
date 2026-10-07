@@ -2,7 +2,7 @@
 -- Fixtures and role switches are contained in a transaction; no production identities.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 insert into auth.users(id, instance_id, aud, role, email)
 values
@@ -17,7 +17,10 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000101'
 select public.set_my_activity_mode('studying', 30);
 select is((select count(*) from public.activity_modes), 1::bigint, 'owner sees own mode');
 select is((select mode from public.activity_modes limit 1), 'studying', 'owner set allowed mode');
-select throws_ok($$select public.set_my_activity_mode('unknown',120)$$, 'P0001', 'invalid activity mode or duration', 'reject invalid mode');
+select throws_ok($$select public.set_my_activity_mode('Not a key!',120)$$, 'P0001', 'invalid activity mode or duration', 'reject a key that is not a lower-case word');
+select throws_ok($$select public.set_my_activity_mode('x',120)$$, 'P0001', 'invalid activity mode or duration', 'reject a key that is too short');
+select lives_ok($$select public.set_my_activity_mode('coffee',30)$$, 'an activity added to the app later needs no migration');
+select public.set_my_activity_mode('studying', 30);
 select throws_ok($$select public.set_my_activity_mode('gaming',1440)$$, 'P0001', 'invalid activity mode or duration', 'reject invalid duration');
 select throws_ok($$insert into public.activity_modes(user_id,mode,expires_at) values('00000000-0000-4000-8000-000000000103','sleeping',now()+interval '1 hour')$$, '42501', 'permission denied for table activity_modes', 'cannot directly write another user mode');
 

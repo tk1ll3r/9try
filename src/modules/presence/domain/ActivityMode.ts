@@ -1,5 +1,8 @@
-export const activityModes = ["studying", "school", "gaming", "billiards", "drinks", "sleeping"] as const;
-export type ActivityMode = typeof activityModes[number];
+/**
+ * The key of an activity, such as "studying". The catalog of activities (name, icon, color) is in
+ * `presentation/modes.ts`; the server stores any key of this shape, so a new activity needs no migration.
+ */
+export type ActivityMode = string;
 
 /** What someone says they are doing until `expiresAt`. People choose it themselves; it is never derived from GPS. */
 export interface ActiveMode {

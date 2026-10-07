@@ -22,6 +22,7 @@ import { PeoplePicker } from "../../friends";
 import { useMyGroups } from "../../groups";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { MoreMenu } from "../../../kernel/ui/MoreMenu";
 import { lazy, Suspense } from "react";
 import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default: m.IcsImportCard })));
@@ -236,9 +237,11 @@ export function CalendarPage() {
 
       <div className="flex flex-wrap gap-2">
         <Button id="create-event-trigger" onClick={() => { setMessage(""); setCreateOpen(true); }}><CalendarPlus size={17} /> Thêm sự kiện</Button>
-        <Button variant="ghost" onClick={() => setShowImport(value => !value)} aria-expanded={showImport}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</Button>
-        <Button variant="ghost" onClick={() => void exportIcs()}><Download size={17} /> Xuất lịch .ics</Button>
-        <Button variant="ghost" onClick={() => setShowFeed(value => !value)} aria-expanded={showFeed}><Link2 size={17} /> {showFeed ? "Ẩn liên kết lịch" : "Liên kết lịch"}</Button>
+        <MoreMenu label="Nhập, xuất và liên kết lịch">
+          <button type="button" onClick={() => setShowImport(value => !value)}>{showImport ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</button>
+          <button type="button" onClick={() => void exportIcs()}><Download size={17} /> Xuất lịch .ics</button>
+          <button type="button" onClick={() => setShowFeed(value => !value)}><Link2 size={17} /> {showFeed ? "Ẩn liên kết lịch" : "Liên kết lịch"}</button>
+        </MoreMenu>
       </div>
       <DialogPanel open={createOpen} onOpenChange={setCreateOpen} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn được xem theo mặc định. Chọn chia sẻ hoặc lặp khi cần." busy={creating}>
         {message && <p role="alert" className="mb-4 text-sm text-[var(--danger)]">{message}</p>}
