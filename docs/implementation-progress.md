@@ -1,5 +1,39 @@
 # Development-plan implementation status
 
+## 2026-10-07, later the same day: Today dashboard, task labels and times, meetup pages
+
+Still the local branch `refactor/foundation`, nothing pushed, no Supabase project changed. None of this adds a migration, so it works on a database that stops at migration 0012.
+
+What changed:
+
+- Today is built from cards that the modules contribute (`today` on `FeatureModule`). New cards: friend requests and meetup invitations with the answer buttons on the card, the day's habits, friends' status modes, friends sharing their location, the user's groups, and a hint to install the app. A card with nothing to show stays away. On a wide screen the cards flow in two columns.
+- A module can put timed items on the calendar (`agenda`). A meetup with a confirmed time now shows under "Sắp tới" and on the calendar of everyone who has not declined it.
+- Tasks take labels typed as hashtags ("Nộp bài #giảitích"), stored in the existing `tags` column, and an optional due time. The full list is grouped into overdue, today, upcoming and undated, and filters by label. A task with a time is overdue from that minute.
+- Each meetup has its own page, `/meetups/:id`. The list shows one short row per meetup and no longer loads every poll and discussion. Creating a meetup opens its page. Search, the calendar and Today link to it.
+- The inbox has "Đánh dấu đã đọc hết".
+- The install hint uses the browser's install offer on Android and desktop, and explains the Safari share menu on iPhone and iPad.
+- When a function, table or column of a newer migration is missing, the screen says "Tính năng này chưa dùng được vì máy chủ chưa được cập nhật." instead of the raw database message.
+
+Fixed on the way: in development React's StrictMode unmounts and remounts once, and the session ended its services on that first unmount. Screens then held a dead location controller, so the sharing banner and the privacy screen could stay on "Đang kiểm tra…" until something re-rendered. The session now ends its services a moment after a real unmount. A production build was not affected.
+
+From the earlier "left out" list this closes: task labels, due time and sections (tasks v2 in part), the meetup detail page, inline answers to requests, the install hint. Lists, subtasks and defect 15 are still open.
+
+Checks run with Node 22.23.3:
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests, also under `TZ=America/Los_Angeles` | 90 of 90 in 20 files |
+| `npm run test:db` | 26 migrations applied; 161 of 161 assertions in 15 files |
+| Browser tests, mocked backend, dev server | 30 of 30 |
+| Production build | Pass |
+
+Download size, gzip: sign-in 144 kB, Today 206 kB (172 kB before the plan).
+
+Not verified: the install card on a real Android phone and on an iPhone, and everything listed as not verified in the entry below.
+
+Noticed, not used: a local Supabase stack was answering on ports 54321, 54322 and 55324 during this work. The mocked browser tests used to point at port 54321; they now use a port nothing listens on, so they cannot reach that stack. The database tests were not run against it, because that needs its migrations brought up to 0026 and Docker access was declined earlier.
+
 ## 2026-10-07: phases 2 to 10 of the master plan, in a reduced form
 
 Work is on the local branch `refactor/foundation` (`git log main..refactor/foundation` lists the commits). Nothing is pushed, so CI has not run. No Supabase project, DNS record or deployment was changed. Migrations 0013–0026 are not applied to any Supabase project.

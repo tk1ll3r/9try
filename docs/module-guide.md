@@ -19,6 +19,8 @@
 |---|---|
 | Show a counter on the navigation icon | `badge` on the navigation entry |
 | Show a banner on every screen | `indicator` |
+| Show a card on Today | `today: { order, card }`. Return `null` from the card when there is nothing to show |
+| Put timed items on the calendar and under "Sắp tới" | `agenda` |
 | List what the feature shares on the privacy screen, with a stop button | `privacy` |
 | Make the feature's items findable in the global search | `searchItems` |
 | Reload a screen when the server changes something | Emit an event named after the query key from a database trigger with `private.emit` |

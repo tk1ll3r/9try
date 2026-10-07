@@ -332,7 +332,7 @@ The work followed one rule: build a piece when something uses it. The layers and
 |---|---|---|
 | One class per use case | A service class per module only where a rule sits between the screen and the repository (`TaskService`); elsewhere screens call the repository interface | The single-use classes were pass-through code |
 | `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
-| `ExtensionPoint` class and ten extension points | Six optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems` | Each field was added when a second module needed it |
+| `ExtensionPoint` class and ten extension points | Eight optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems`, `today`, `agenda` | Each field was added when a second module needed it |
 | `Entity`, `ValueObject`, `Audience`, `EventBus`, `UserTime`, message catalog | Not built. Entities are plain classes: `Task`, `Habit`, `Membership`, `Profile`, `MeetupPolicy` | Nothing needed the base classes |
 | `Controller<State>` base class | `LocationController` alone, with `subscribe` and `getState` | There is one long-lived process |
 | `RealtimeGateway` with typed handlers per module | `RealtimeBridge`: an event reloads the queries whose key starts with its name | Reloading is enough at this size, and no handler can drift from the query it serves |

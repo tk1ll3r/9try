@@ -9,10 +9,11 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - Friends: requests, invite links, block and unblock.
 - Groups: roles, invite links with expiry and use limits, ownership transfer, archive.
 - Chat between friends and inside groups, with unread counts.
-- Meetups: proposal, time poll, RSVP with capacity enforced on the server, discussion. A meetup in a group invites every member.
+- Meetups: proposal, time poll, RSVP with capacity enforced on the server, discussion, one page per meetup. A meetup in a group invites every member, and a confirmed one shows on the calendar.
 - Calendar: timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group, `.ics` import and export, and a private feed address for Google or Apple Calendar.
 - Timetable of weekly classes, and "Rảnh lúc nào?" to find times when chosen friends are all free.
-- Tasks, habits with streaks, notes, and reminders sent by the server.
+- A Today screen that every feature adds a card to: requests waiting for an answer, what comes next, tasks, habits, what friends are doing.
+- Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders sent by the server.
 - Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
 - Status modes that friends can see for a chosen time.
 - Notification center, with optional Web Push, quiet hours and per-category choices.

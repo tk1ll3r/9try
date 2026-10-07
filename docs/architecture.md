@@ -32,6 +32,7 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `useAction.ts` | Runs one change at a time, then reloads a group of queries |
 | `errors.ts` | `DomainError`, and the Vietnamese text for error codes raised by SQL functions |
 | `dates.ts`, `text.ts` | Date keys, a clock, and search that ignores Vietnamese marks |
+| `install.ts` | The browser's offer to install the app, kept from page load |
 | `ui/` | `Button`, `Card`, `DialogPanel` |
 
 ## Inside a module
@@ -61,12 +62,14 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 | `indicator` | A banner on every screen, such as "Đang chia sẻ vị trí" |
 | `privacy` | A section of the privacy screen: what the module shows to other people now, with a way to stop |
 | `searchItems(services)` | What the global search can find in this module |
+| `today` | A card on the Today screen, with its position. A card with nothing to say renders nothing |
+| `agenda(services, from, to)` | Timed things the module puts on the calendar and under "Sắp tới", such as a confirmed meetup |
 
-Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, the privacy screen and the search need no edit.
+Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen and the search need no edit.
 
 ## Sessions and data
 
-The sign-in screen loads without the module list. After sign-in the app loads `app/SignedInApp.tsx`, which renders `<SessionProvider key={user.id}>`. The provider builds each module's services on first use and owns a TanStack Query cache. Signing in as someone else remounts the tree with a new provider, so data loaded for the previous user cannot reach the screen.
+The sign-in screen loads without the module list. After sign-in the app loads `app/SignedInApp.tsx`, which renders `<SessionProvider key={user.id}>`. The provider builds each module's services on first use and owns a TanStack Query cache. It ends the services a moment after it unmounts, because React's StrictMode unmounts and remounts once in development. Signing in as someone else remounts the tree with a new provider, so data loaded for the previous user cannot reach the screen.
 
 Screens read with `useQuery` and change data with `useAction(rootKey)`, which ignores a second tap while the first change is running and reloads every query under `rootKey` afterwards. The first element of a query key is the module's name: `["tasks", ...]`, `["chat", ...]`.
 
