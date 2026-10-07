@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { FeatureModule, ModuleRegistry } from "./module";
 
 /** Everything that belongs to one signed-in user. */
@@ -16,6 +16,12 @@ class Session {
     }
     return this.services.get(module) as Services;
   }
+
+  /** Ends long-lived work such as GPS watching. Services are built again if they are needed later. */
+  dispose() {
+    for (const services of this.services.values()) (services as { dispose?: () => void } | null)?.dispose?.();
+    this.services.clear();
+  }
 }
 
 const Current = createContext<Session | null>(null);
@@ -27,6 +33,7 @@ const Current = createContext<Session | null>(null);
 export function SessionProvider({ userId, registry, children }: { userId: string; registry: ModuleRegistry; children: ReactNode }) {
   const [session] = useState(() => new Session(userId, registry));
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  useEffect(() => () => session.dispose(), [session]);
   return <Current.Provider value={session}><QueryClientProvider client={queries}>{children}</QueryClientProvider></Current.Provider>;
 }
 

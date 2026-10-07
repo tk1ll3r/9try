@@ -5,11 +5,10 @@ import { useAuth } from "../../../bootstrap/AuthProvider";
 import { useMyGroups } from "../../../modules/groups";
 import { ProfileReminder } from "../../../modules/identity";
 import { TodayTasksCard } from "../../../modules/tasks";
-import { appData } from "../../../shared/infrastructure/AppData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
-import type { CalendarOccurrence } from "../../calendars/infrastructure/CalendarData";
-import { formatOccurrence } from "../domain/upcoming";
+import { calendarData, type CalendarOccurrence } from "../../calendars/infrastructure/CalendarData";
+import { formatOccurrence, selectUpcoming } from "../domain/upcoming";
 import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 
 
@@ -26,7 +25,9 @@ export function HomePage() {
     const current = scope.current.beginRequest(user.id);
     if (!current()) return;
     setLoading(true);
-    try { const result = await appData.home(user.id); if (current()) { setEvents(result.events); setError(""); } }
+    try { const now = new Date(); const monthAhead = new Date(now.getTime() + 30 * 86_400_000);
+      const result = selectUpcoming(await calendarData.listOccurrences(user.id, now, monthAhead), now).slice(0, 6);
+      if (current()) { setEvents(result); setError(""); } }
     catch (e) { if (current()) setError(e instanceof Error ? e.message : "Không thể tải dữ liệu"); }
     finally { if (current()) setLoading(false); }
   }

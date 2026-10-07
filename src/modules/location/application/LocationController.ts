@@ -1,4 +1,4 @@
-import type { OwnedLocationSession } from "../../../shared/infrastructure/AppData";
+import type { OwnedLocationSession } from "../domain/Location";
 
 export interface LocationState {
   sessions: OwnedLocationSession[];
@@ -13,7 +13,7 @@ interface Dependencies {
   stop: (id: string) => Promise<unknown>;
   publish: (id: string, position: GeolocationPosition, approximate: boolean) => Promise<unknown>;
   gps: Pick<Geolocation, "watchPosition" | "clearWatch"> | undefined;
-  changed: (state: LocationState) => void;
+  changed?: (state: LocationState) => void;
 }
 
 export class LocationController {
@@ -24,11 +24,21 @@ export class LocationController {
   private generation = 0;
   private refreshVersion = 0;
   private lastSent: { at: number; lat: number; lon: number } | null = null;
+  private listeners = new Set<() => void>();
   constructor(private deps: Dependencies) {}
+
+  /** For React's useSyncExternalStore. */
+  getState = () => this.state;
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  };
 
   private update(patch: Partial<LocationState>) {
     this.state = { ...this.state, ...patch };
-    if (!this.disposed) this.deps.changed(this.state);
+    if (this.disposed) return;
+    this.deps.changed?.(this.state);
+    this.listeners.forEach(listener => listener());
   }
   async refresh() {
     if (this.disposed || this.state.pending) return;
@@ -67,7 +77,8 @@ export class LocationController {
         const now = Date.now();
         this.update({ status: `GPS nhận lúc ${new Date(position.timestamp).toLocaleTimeString("vi-VN")} · ±${Math.round(position.coords.accuracy)} m` });
         const previous = this.lastSent;
-        if (previous && (now - previous.at < 15_000 || (distanceMeters(previous.lat, previous.lon, position.coords.latitude, position.coords.longitude) < 25 && now - previous.at < 60_000))) return;
+        // At most one position every 5 s while moving, and one every 30 s while standing still.
+        if (previous && (now - previous.at < 5_000 || (distanceMeters(previous.lat, previous.lon, position.coords.latitude, position.coords.longitude) < 10 && now - previous.at < 30_000))) return;
         this.lastSent = { at: now, lat: position.coords.latitude, lon: position.coords.longitude };
         void this.deps.publish(id, position, approximate).catch(e => {
           if (!this.disposed && generation === this.generation) this.update({ error: message(e, "Không cập nhật được vị trí.") });
@@ -79,7 +90,7 @@ export class LocationController {
           this.update({ error: "Bạn đã từ chối định vị. Đang thu hồi phiên…" });
           queueMicrotask(() => { void this.stop(id); });
         } else this.update({ error: `Không lấy được vị trí: ${error.message}` });
-      }, { enableHighAccuracy: !approximate, maximumAge: 15_000, timeout: 20_000 });
+      }, { enableHighAccuracy: !approximate, maximumAge: 5_000, timeout: 20_000 });
     } catch (e) {
       this.clearWatcher();
       if (createdId && !this.disposed) {

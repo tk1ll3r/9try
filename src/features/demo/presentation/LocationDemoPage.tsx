@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FlaskConical, Eye, RotateCcw, UserRound } from "lucide-react";
-import { MapCanvas } from "../../location-sharing/presentation/MapCanvas";
+import { MapCanvas } from "../../../modules/location";
 import { demoPeople, demoMapPoints } from "../domain/people";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";

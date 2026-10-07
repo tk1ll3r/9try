@@ -34,7 +34,7 @@ function Badges({ items }: { items: readonly NavContribution[] }) {
 /** Navigation comes from the modules: bottom tabs with a row of sub-screens on a phone, a sidebar on a desktop. */
 export function AppShell() {
   const [online, setOnline] = useState(navigator.onLine);
-  const { navigation } = useRegistry();
+  const { navigation, modules } = useRegistry();
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -90,6 +90,7 @@ export function AppShell() {
       )}
 
       <main className="mx-auto min-h-dvh max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:ml-64 lg:px-8 lg:pb-10 lg:pt-8">
+        {modules.map(({ id, indicator: Indicator }) => Indicator && <Indicator key={id} />)}
         {siblings.length > 1 && (
           <nav aria-label="Trong mục này" className={`-mx-4 mb-4 flex gap-2 overflow-x-auto pb-1 pl-4 sm:-mx-6 sm:pl-6 lg:hidden ${hasChat ? "pr-16" : "pr-4 sm:pr-6"}`}>
             {siblings.map(item => (

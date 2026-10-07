@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed, MapPin, RotateCcw } from "lucide-react";
-import { Map, Marker, Popup, NavigationControl, LngLatBounds } from "../infrastructure/maplibre";
+import { Map, Marker, Popup, NavigationControl, LngLatBounds } from "./maplibre";
 import { Button } from "../../../shared/ui/Button";
 
 export interface MapPoint {
@@ -71,7 +71,11 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
     if (!map.current || state !== "ready") return;
     for (const point of usable) {
       const popup = new Popup({ offset: 20 }).setText(`${point.name} · ${point.stale ? "Vị trí cũ" : "Mới cập nhật"}${point.approximate ? " · gần đúng" : ""}`);
-      const marker = new Marker({ color: point.stale ? "#6b7280" : "#171a12" })
+      // A round badge with the person's initial; grey once the position is old.
+      const element = document.createElement("div");
+      element.textContent = point.name.slice(0, 1).toUpperCase();
+      element.className = `grid size-9 place-items-center rounded-full border-2 border-white font-bold text-white shadow-lg ${point.stale ? "bg-gray-500" : "bg-[#171a12]"}`;
+      const marker = new Marker({ element })
         .setLngLat([point.longitude, point.latitude]).setPopup(popup).addTo(map.current);
       marker.getElement().setAttribute("aria-label", `Vị trí ${point.name}`);
       markers.current.push(marker);

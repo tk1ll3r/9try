@@ -36,6 +36,8 @@ export interface FeatureModule<Services = unknown> {
   readonly create?: (session: SessionContext) => Services;
   readonly routes?: readonly RouteContribution[];
   readonly navigation?: readonly NavContribution[];
+  /** A banner shown on every screen while it has something to say, such as "sharing location". */
+  readonly indicator?: ComponentType;
 }
 
 export class ModuleRegistry {

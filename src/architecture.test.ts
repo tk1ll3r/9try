@@ -36,11 +36,7 @@ function brokenRule(file: string, target: string): string | undefined {
 }
 
 // Old code that still breaks a rule. Entries may only be removed.
-const knownDebt = [
-  "shared/infrastructure/AppData.ts -> features/calendars/infrastructure/CalendarData",
-  "shared/infrastructure/AppData.ts -> features/home/domain/upcoming",
-  "shared/infrastructure/AppData.test.ts -> features/calendars/infrastructure/CalendarData",
-];
+const knownDebt: string[] = [];
 
 const found = Object.entries(sources).flatMap(([path, code]) => {
   const file = path.slice(2);

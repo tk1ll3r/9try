@@ -337,6 +337,42 @@ test("chat: open a conversation, read it and send one message", async ({ page })
   expect(sends).toBe(1);
 });
 
+test("location: share with a chosen friend, publish a position, stop from another screen", async ({ page, context }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  const kha = "22222222-2222-4222-8222-222222222222";
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 10.7725, longitude: 106.698 });
+  await page.addInitScript(account => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
+  }, user);
+  await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  await mockStyle(page);
+  const inAnHour = new Date(Date.now() + 3_600_000).toISOString();
+  let started: Record<string, unknown> = {}; let published = 0, stopped = 0, active = false;
+  await page.route("**/rest/v1/**", route => {
+    const request = route.request(); const path = new URL(request.url()).pathname;
+    if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [{ user_id: kha, display_name: "Kha", username: "kha", status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" }] });
+    if (path.endsWith("/rpc/list_visible_locations")) return route.fulfill({ json: [{ session_id: "s9", owner_id: kha, owner_display_name: "Kha", owner_username: "kha", expires_at: inAnHour, approximate: false, latitude: 10.776, longitude: 106.703, accuracy_m: 8, recorded_at: new Date().toISOString() }] });
+    if (path.endsWith("/rpc/start_location_session_for")) { started = request.postDataJSON(); active = true; return route.fulfill({ json: "s1" }); }
+    if (path.endsWith("/rpc/stop_location_session")) { stopped++; active = false; return route.fulfill({ json: null }); }
+    if (path.endsWith("/location_positions")) { published++; return route.fulfill({ status: 201, body: "" }); }
+    if (path.endsWith("/location_sessions")) return route.fulfill({ json: active ? [{ id: "s1", expires_at: inAnHour, approximate: false }] : [] });
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/me/location");
+  await expect(page.locator(".maplibregl-marker")).toHaveCount(1);
+  await expect(page.getByText("Đang cập nhật")).toBeVisible();
+  await page.getByLabel("Kha", { exact: true }).check();
+  await page.getByRole("button", { name: "Bắt đầu chia sẻ" }).click();
+  await expect.poll(() => published).toBeGreaterThan(0);
+  expect(started).toMatchObject({ p_recipient_ids: [kha], p_duration_minutes: 60, p_approximate: false });
+  // The session keeps running on other screens, where the banner offers to stop it.
+  await page.getByRole("link", { name: "Hôm nay" }).filter({ visible: true }).click();
+  await page.getByRole("button", { name: "Dừng chia sẻ" }).click();
+  await expect.poll(() => stopped).toBe(1);
+  await expect(page.getByRole("button", { name: "Dừng chia sẻ" })).toHaveCount(0);
+});
+
 for (const width of [320, 390, 768, 1280]) {
   test(`demo and login fit viewport ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await mockStyle(page); await loggedOut(page);

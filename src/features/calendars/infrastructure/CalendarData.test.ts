@@ -1,18 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ from: vi.fn(), query: {} as Record<string, any>, result: { data: [] as any[], error: null as unknown } }));
-vi.mock("./supabase", () => ({ requireSupabase: () => ({ from: mock.from }) }));
-import { AppData } from "./AppData";
-import { CalendarData } from "../../features/calendars/infrastructure/CalendarData";
-const app = new AppData();
+vi.mock("../../../shared/infrastructure/supabase", () => ({ requireSupabase: () => ({ from: mock.from }) }));
+import { CalendarData } from "./CalendarData";
 beforeEach(() => {
   mock.result = { data: [], error: null };
   mock.query = {};
-  for (const method of ["select", "eq", "is", "gt", "order", "limit", "update", "delete"]) mock.query[method] = vi.fn(() => mock.query);
-  mock.query.single = vi.fn(async () => mock.result);
+  for (const method of ["select", "eq", "order", "limit"]) mock.query[method] = vi.fn(() => mock.query);
   mock.query.then = (resolve: (value: unknown) => unknown) => Promise.resolve(mock.result).then(resolve);
   mock.from.mockReset().mockReturnValue(mock.query);
 });
-describe("calendar occurrences and GPS recovery", () => {
+describe("calendar occurrences", () => {
   it("calendar recurrence shares cancellations and overrides with Home", async () => {
     mock.result.data = [{
       id: "series", title: "Original", event_kind: "timed", start_at: "2026-10-05T01:00:00Z", end_at: "2026-10-05T02:00:00Z",
@@ -52,9 +49,5 @@ describe("calendar occurrences and GPS recovery", () => {
     const data = new CalendarData();
     expect(await data.listOccurrences("owner", new Date(2026,9,5,23,59), new Date(2026,9,6,1))).toHaveLength(1);
     expect(await data.listOccurrences("owner", new Date(2026,9,6,0), new Date(2026,9,7,0))).toHaveLength(0);
-  });
-  it("recovers owner sessions only, active and not expired", async () => {
-    await app.listOwnedLocationSessions("owner"); expect(mock.from).toHaveBeenCalledWith("location_sessions");
-    expect(mock.query.eq).toHaveBeenCalledWith("owner_id", "owner"); expect(mock.query.is).toHaveBeenCalledWith("stopped_at", null); expect(mock.query.gt).toHaveBeenCalledWith("expires_at", expect.any(String));
   });
 });

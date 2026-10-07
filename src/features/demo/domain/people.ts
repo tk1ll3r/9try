@@ -1,4 +1,4 @@
-import type { MapPoint } from "../../location-sharing/presentation/MapCanvas";
+import type { MapPoint } from "../../../modules/location";
 
 export const demoPeople = [
   { id: "an", name: "An", email: "an@example.test", username: "demo_an", place: "Chợ Bến Thành (điểm công cộng)", latitude: 10.7725, longitude: 106.6980, task: "An: chuẩn bị lịch cuối tuần" },
