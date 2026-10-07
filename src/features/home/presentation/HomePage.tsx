@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarClock, Check, MapPin, Users, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../bootstrap/AuthProvider";
+import { useMyGroups } from "../../../modules/groups";
 import { TodayTasksCard } from "../../../modules/tasks";
 import { appData } from "../../../shared/infrastructure/AppData";
 import { Button } from "../../../shared/ui/Button";
@@ -10,14 +11,11 @@ import type { CalendarOccurrence } from "../../calendars/infrastructure/Calendar
 import { formatOccurrence } from "../domain/upcoming";
 import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 
-interface HomeData {
-  events: CalendarOccurrence[];
-  groups: { group: { id: string; name: string }[] | { id: string; name: string } | null }[];
-}
 
 export function HomePage() {
   const { user } = useAuth();
-  const [data, setData] = useState<HomeData>({ events: [], groups: [] });
+  const [events, setEvents] = useState<CalendarOccurrence[]>([]);
+  const groups = useMyGroups();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const scope = useRef(new AsyncOwnerScope());
@@ -27,13 +25,13 @@ export function HomePage() {
     const current = scope.current.beginRequest(user.id);
     if (!current()) return;
     setLoading(true);
-    try { const result = await appData.home(user.id) as HomeData; if (current()) { setData(result); setError(""); } }
+    try { const result = await appData.home(user.id); if (current()) { setEvents(result.events); setError(""); } }
     catch (e) { if (current()) setError(e instanceof Error ? e.message : "Không thể tải dữ liệu"); }
     finally { if (current()) setLoading(false); }
   }
   useEffect(() => {
     scope.current.activate(user?.id);
-    setData({ events: [], groups: [] }); setError("");
+    setEvents([]); setError("");
     void refresh(); return () => { scope.current.dispose(); };
   }, [user?.id]);
 
@@ -44,7 +42,7 @@ export function HomePage() {
     {loading && <p role="status">Đang tải hôm nay…</p>}
     <div aria-busy={loading} className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
       <Card title="Sắp tới" action={<Link className="text-sm font-semibold underline" to="/calendar">Mở lịch</Link>}>
-        {data.events.length ? data.events.map((e) => <div key={e.id} className="mb-2 rounded-2xl bg-[var(--soft)] p-4"><b>{e.title}</b><p className="text-sm text-[var(--muted)]">{formatOccurrence(e)}</p></div>) :
+        {events.length ? events.map((e) => <div key={e.id} className="mb-2 rounded-2xl bg-[var(--soft)] p-4"><b>{e.title}</b><p className="text-sm text-[var(--muted)]">{formatOccurrence(e)}</p></div>) :
           <div className="py-10 text-center text-[var(--muted)]"><CalendarClock className="mx-auto mb-2"/>{loading ? "Đang tải lịch…" : error ? "Chưa tải được lịch." : "Chưa có sự kiện trong 30 ngày tới"}</div>}
       </Card>
       <TodayTasksCard />
@@ -57,9 +55,9 @@ export function HomePage() {
         <Link to="/me/location" className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] px-4 py-3 font-semibold hover:underline"><MapPin size={19}/> Chia sẻ vị trí có thời hạn</Link>
       </div>
     </Card>
-    <Card title="Nhóm gần đây" action={<Link to="/groups" className="text-sm font-semibold underline">Tất cả nhóm</Link>}>{data.groups.length ? data.groups.map((m, index) => {
-      const group = Array.isArray(m.group) ? m.group[0] : m.group;
-      return group ? <Link key={group.id} to={`/groups/${group.id}`} className="mr-2 mb-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--soft)] px-3 py-2 font-semibold hover:underline"><UsersRound size={16}/>{group.name}</Link> : <span key={index} />;
-    }) : <p className="text-sm text-[var(--muted)]">{loading ? "Đang tải nhóm…" : error ? "Chưa tải được nhóm." : "Chưa có nhóm nào. Tạo nhóm để lên kế hoạch chung."}</p>}</Card>
+    <Card title="Nhóm gần đây" action={<Link to="/groups" className="text-sm font-semibold underline">Tất cả nhóm</Link>}>
+      {groups.data?.length ? groups.data.slice(0, 6).map(group => <Link key={group.id} to={`/groups/${group.id}`} className="mr-2 mb-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--soft)] px-3 py-2 font-semibold hover:underline"><UsersRound size={16}/>{group.name}</Link>)
+        : <p className="text-sm text-[var(--muted)]">{groups.isPending ? "Đang tải nhóm…" : groups.isError ? "Chưa tải được nhóm." : "Chưa có nhóm nào. Tạo nhóm để lên kế hoạch chung."}</p>}
+    </Card>
   </div>;
 }

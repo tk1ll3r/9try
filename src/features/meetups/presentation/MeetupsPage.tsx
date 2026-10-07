@@ -1,7 +1,7 @@
 import { CalendarCheck2, Check, Clock3, MessageCircle, Plus, Send, UsersRound, X, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../bootstrap/AuthProvider";
-import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
+import { useMyGroups } from "../../../modules/groups";
 import { meetupsData, type MeetupComment, type MeetupListItem, type PollOption } from "../infrastructure/MeetupsData";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
@@ -11,7 +11,7 @@ import { AsyncOwnerScope } from "../../../shared/domain/AsyncOwnerScope";
 export function MeetupsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<MeetupListItem[]>([]);
-  const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const groups = useMyGroups().data ?? [];
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [description, setDescription] = useState("");
@@ -29,8 +29,8 @@ export function MeetupsPage() {
     if (!current()) return;
     setLoading(true);
     try {
-      const [nextMeetups, nextGroups] = await Promise.all([meetupsData.list(user.id), groupsData.list(user.id)]);
-      if (current()) { setItems(nextMeetups); setGroups(nextGroups); setMessage(""); }
+      const nextMeetups = await meetupsData.list(user.id);
+      if (current()) { setItems(nextMeetups); setMessage(""); }
     } catch (error) {
       if (current()) setMessage(error instanceof Error ? error.message : "Không thể tải hoạt động.");
     } finally { if (current()) setLoading(false); }
@@ -38,7 +38,7 @@ export function MeetupsPage() {
 
   useEffect(() => {
     scope.current.activate(user?.id); createLock.current = false;
-    setItems([]); setGroups([]); setMessage(""); setLoading(true); setCreating(false); setShowCreate(false);
+    setItems([]); setMessage(""); setLoading(true); setCreating(false); setShowCreate(false);
     void refresh();
     return () => scope.current.dispose();
   }, [user?.id]);

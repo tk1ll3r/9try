@@ -22,17 +22,13 @@ export interface VisibleLocation {
 }
 
 export class AppData {
-  /** Today's upcoming events and recent groups. Tasks load on their own in the tasks module. */
+  /** The next events, for Today. */
   async home(userId: string) {
     const now = new Date();
     const rangeEnd = new Date(now);
     rangeEnd.setDate(rangeEnd.getDate() + 30);
-    const [events, groups] = await Promise.all([
-      calendarData.listOccurrences(userId, now, rangeEnd),
-      requireSupabase().from("group_memberships").select("role,group:groups(id,name,description)").eq("user_id", userId).limit(6),
-    ]);
-    if (groups.error) throw groups.error;
-    return { events: selectUpcoming(events, now).slice(0, 6), groups: groups.data ?? [] };
+    const events = await calendarData.listOccurrences(userId, now, rangeEnd);
+    return { events: selectUpcoming(events, now).slice(0, 6) };
   }
 
   async profile(userId: string) {

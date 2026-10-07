@@ -43,3 +43,7 @@ export function useModule<Services>(module: FeatureModule<Services>): Services {
 export function useRegistry(): ModuleRegistry {
   return useSession().registry;
 }
+
+export function useUserId(): string {
+  return useSession().userId;
+}

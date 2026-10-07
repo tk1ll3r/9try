@@ -18,7 +18,7 @@ import {
   type RecurrenceRule,
 } from "../infrastructure/CalendarData";
 import { PeoplePicker } from "../../../modules/friends";
-import { groupsData, type GroupSummary } from "../../groups/infrastructure/GroupsData";
+import { useMyGroups } from "../../../modules/groups";
 import { Button } from "../../../shared/ui/Button";
 import { Card } from "../../../shared/ui/Card";
 import { lazy, Suspense } from "react";
@@ -38,7 +38,7 @@ export function CalendarPage() {
   const [recurrence, setRecurrence] = useState<"" | RecurrenceRule>("");
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [visibility, setVisibility] = useState<CalendarVisibility>("only_me");
-  const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const groups = useMyGroups().data ?? [];
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [audienceGroupId, setAudienceGroupId] = useState("");
   const [selected, setSelected] = useState<CalendarOccurrence | null>(null);
@@ -50,11 +50,6 @@ export function CalendarPage() {
   const [showImport, setShowImport] = useState(false);
   const [creating, setCreating] = useState(false);
   const createLock = useRef(false);
-
-  useEffect(() => {
-    if (!user) return;
-    void groupsData.list(user.id).then(setGroups).catch(() => setGroups([]));
-  }, [user?.id]);
 
   async function refresh(startDate = range?.start, endDate = range?.end) {
     if (!user || !startDate || !endDate) return;
