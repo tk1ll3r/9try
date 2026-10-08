@@ -955,13 +955,14 @@ test("timetable: paste two classes and see them by weekday", async ({ page }) =>
   expect(stored[0]).toMatchObject({ title: "Cấu trúc dữ liệu", category: "class", place: "B1.02", recurrence_rule: "weekly", visibility: "only_me" });
 });
 
-test("free time: shows common slots and names friends whose busy times are unknown", async ({ page }) => {
+test("free time: shows common slots, names friends whose busy times are unknown, and turns a slot into a proposal", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   const kha = "22222222-2222-4222-8222-222222222222", minhAnh = "33333333-3333-4333-8333-333333333333";
   await page.addInitScript(account => {
     localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
   }, user);
   await page.route("**/auth/v1/**", route => route.fulfill({ json: user }));
+  const made: Record<string, unknown>[] = [], timed: unknown[] = [], invited: unknown[] = [];
   await page.route("**/rest/v1/**", route => {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path.endsWith("/rpc/list_friend_connections")) return route.fulfill({ json: [
@@ -970,6 +971,13 @@ test("free time: shows common slots and names friends whose busy times are unkno
     if (path.endsWith("/rpc/list_shared_busy")) return request.postDataJSON().p_owner_id === kha
       ? route.fulfill({ json: [] })
       : route.fulfill({ status: 400, json: { message: "availability not shared" } });
+    if (path.endsWith("/rpc/create_meetup")) { made.push(request.postDataJSON()); return route.fulfill({ json: "44444444-4444-4444-8444-444444444444" }); }
+    if (path.endsWith("/rpc/create_meetup_time_option")) {
+      // The first try fails after the meetup was made.
+      if (!timed.length) { timed.push(null); return route.fulfill({ status: 400, json: { message: "Máy chủ bận." } }); }
+      timed.push(request.postDataJSON()); return route.fulfill({ json: null });
+    }
+    if (path.endsWith("/rpc/invite_users_to_meetup")) { invited.push(request.postDataJSON()); return route.fulfill({ json: 2 }); }
     return route.fulfill({ json: [] });
   });
   await page.goto("/free-time");
@@ -978,6 +986,23 @@ test("free time: shows common slots and names friends whose busy times are unkno
   await page.getByRole("button", { name: "Tìm giờ rảnh" }).click();
   await expect(page.getByText("Chưa rõ lịch của Minh Anh")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Giờ cùng rảnh · [1-9]/ })).toBeVisible();
+
+  // A slot is the start of a proposal: the time and the people are already filled in.
+  await page.getByRole("button", { name: /^Rủ mọi người,/ }).first().click();
+  const propose = page.getByRole("dialog", { name: "Rủ mọi người" });
+  await expect(propose).toContainText("Mời: Kha, Minh Anh");
+  await propose.getByLabel("Tên hoạt động").fill("Cà phê");
+  await propose.getByRole("button", { name: "Tạo và mời" }).click();
+  await expect(propose.getByRole("alert")).toHaveText("Máy chủ bận.");
+  // Trying again goes on with the meetup that was made; it does not make a second one.
+  await propose.getByRole("button", { name: "Tạo và mời" }).click();
+  await expect(page).toHaveURL(/\/meetups\/44444444-4444-4444-8444-444444444444$/);
+  expect(made).toHaveLength(1);
+  expect(made[0]).toMatchObject({ p_title: "Cà phê", p_group_id: null });
+  const option = timed[1] as { p_meetup_id: string; p_starts_at: string; p_ends_at: string };
+  expect(option.p_meetup_id).toBe("44444444-4444-4444-8444-444444444444");
+  expect(Date.parse(option.p_ends_at) - Date.parse(option.p_starts_at)).toBe(60 * 60_000);
+  expect(invited).toEqual([{ p_meetup_id: "44444444-4444-4444-8444-444444444444", p_user_ids: [kha, minhAnh] }]);
 });
 
 for (const width of [320, 390, 768, 1280]) {

@@ -5,6 +5,7 @@ import { useModule } from "../../../kernel/session";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { PeoplePicker, useAcceptedFriends } from "../../friends";
+import { ProposeMeetupDialog } from "../../meetups";
 import { calendarModule } from "../calendar.module";
 import { findFreeSlots, toInterval, type Interval } from "../domain/freeSlots";
 
@@ -22,7 +23,10 @@ export function FreeTimePage() {
   const [toHour, setToHour] = useState(22);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<{ slots: Interval[]; unknown: string[] } | null>(null);
+  const [result, setResult] = useState<{ slots: Interval[]; unknown: string[]; people: string[]; minutes: number } | null>(null);
+  // The free time the user picked to turn into a proposal: as long as was asked for, from the start of the gap.
+  const [picked, setPicked] = useState<Interval | null>(null);
+  const [proposing, setProposing] = useState(false);
 
   async function search(event: FormEvent) {
     event.preventDefault();
@@ -36,7 +40,7 @@ export function FreeTimePage() {
       const theirs = await Promise.all(people.map(id => calendar.busyFor(id, from, to).catch(() => null)));
       const unknown = people.filter((_, index) => theirs[index] === null).map(id => friends.find(friend => friend.userId === id)?.displayName ?? "Một người bạn");
       const busy = [...mine, ...theirs.flatMap(list => list ?? [])].map(toInterval);
-      setResult({ slots: findFreeSlots(busy, from, days, fromHour, toHour, minutes), unknown });
+      setResult({ slots: findFreeSlots(busy, from, days, fromHour, toHour, minutes), unknown, people, minutes });
     } catch (cause) {
       setError(errorMessage(cause, "Không tìm được giờ rảnh. Hãy thử lại."));
     } finally { setSearching(false); }
@@ -82,14 +86,20 @@ export function FreeTimePage() {
           {result.unknown.length > 0 && <p className="mb-3 rounded-2xl bg-amber-100 p-3 text-sm text-amber-950">Chưa rõ lịch của {result.unknown.join(", ")} vì họ chưa chia sẻ bận/rảnh với bạn. Kết quả dưới đây không tính đến họ.</p>}
           {result.slots.length === 0 ? <p className="py-4 text-sm text-[var(--muted)]">Không có khoảng nào đủ dài. Thử giảm thời lượng hoặc mở rộng khung giờ.</p> : (
             <div className="space-y-4">
+              <p className="text-sm text-[var(--muted)]">Chạm một khung giờ để rủ mọi người vào giờ đó.</p>
               {[...byDay].map(([label, slots]) => <section key={label}>
                 <h2 className="mb-2 text-sm font-bold capitalize text-[var(--muted)]">{label}</h2>
-                <ul className="flex flex-wrap gap-2">{slots.map(slot => <li key={slot.start} className="rounded-2xl bg-[var(--soft)] px-3 py-2 text-sm font-semibold tabular-nums">{time.format(slot.start)}–{time.format(slot.end)}</li>)}</ul>
+                <ul className="flex flex-wrap gap-2">{slots.map(slot => <li key={slot.start}>
+                  <button type="button" aria-label={`Rủ mọi người, ${label}, ${time.format(slot.start)}–${time.format(slot.end)}`}
+                    onClick={() => { setPicked({ start: slot.start, end: Math.min(slot.end, slot.start + result.minutes * 60_000) }); setProposing(true); }}
+                    className="pressable min-h-11 rounded-2xl bg-[var(--soft)] px-3 py-2 text-sm font-semibold tabular-nums hover:bg-[var(--lime)] hover:text-[#1d230e]">{time.format(slot.start)}–{time.format(slot.end)}</button>
+                </li>)}</ul>
               </section>)}
             </div>
           )}
         </Card>
       )}
+      {result && picked && <ProposeMeetupDialog key={picked.start} open={proposing} onOpenChange={setProposing} start={picked.start} end={picked.end} inviteeIds={result.people} />}
     </div>
   );
 }
