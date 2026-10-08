@@ -65,9 +65,31 @@ Steps, all in dashboards:
 5. Back in Supabase, on the Google provider: turn it on, paste the client ID and the client secret, save. The secret goes into the dashboard only, never into a file of this repository.
 6. Open `https://9try.gnouht.space` signed out: the Google button is there. Sign in with it and check that the app opens on the page that was asked for.
 
-Google's screen names the Supabase address (`<project ref>.supabase.co`) as the place the person continues to. Showing `gnouht.space` there needs Supabase's custom-domain add-on, which is paid.
+### Which domain Google's screen names
 
-Not verified: a real round trip through Google (the provider was off on the project on 2026-10-08), and sign-in from an installed app on iOS and Android.
+Google's screen says "continue to" followed by the domain it will return to. Through Supabase that is the project's address, `<project ref>.supabase.co`. Three ways change it:
+
+| Way | Cost | What Google shows |
+|---|---|---|
+| Google returns straight to the app (`VITE_GOOGLE_CLIENT_ID`) | Free, built in | The app's own domain |
+| Supabase custom domain, for example `auth.gnouht.space` | A paid Supabase plan plus the add-on, about $35 a month for one project | That subdomain |
+| Google brand verification | Free, takes days | The app's name and logo. People report that Google refused it, or that the Supabase address stayed after approval, so do not count on it |
+
+The first way is what the app does when the build knows the client ID (`src/kernel/google.ts`):
+
+1. The app sends the browser to Google with `response_type=id_token`, the app's own origin as `redirect_uri`, and the SHA-256 hash of a random nonce. The nonce itself stays in this browser's storage.
+2. Google returns to the app with an ID token in the address fragment. The app takes it out of the address and hands it to Supabase with the nonce (`signInWithIdToken`).
+3. Supabase checks Google's signature, that the token was made for the project's client ID, and that the nonce matches the hash inside the token. A token that this browser did not ask for has no nonce here and is not sent on.
+
+To turn it on:
+
+1. Google Cloud console → Clients → the web client → Authorized redirect URIs: add `https://9try.gnouht.space`, exactly, with no slash at the end. For local work add `http://127.0.0.1:5173` too. Google can take some minutes to apply it.
+2. `.env.local`: `VITE_GOOGLE_CLIENT_ID=<the client ID>`. It is public, and it must be the client ID entered on Supabase's Google provider. The line is there since 2026-10-08, read from the address the project itself sends people to.
+3. `npm run deploy`.
+
+Deploying before step 1 breaks the Google button: Google answers `redirect_uri_mismatch` on its own page. Without the line in `.env.local`, or in a browser that cannot keep the nonce, the button goes through Supabase's address as before. After sign-in the app opens the page that was asked for from the tab's own memory, because the address Google returns to is fixed.
+
+Not verified: a real round trip through Google the direct way, the text Google shows for it, and sign-in from an installed app on iOS and Android. The way through Supabase's address reached Google's account chooser for the owner on 2026-10-08. The browser tests cover both ways against stand-ins for Google and for Supabase.
 
 The sections below are the full checklist for a production launch.
 

@@ -27,6 +27,7 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `module.ts` | The `FeatureModule` contract and the `ModuleRegistry` |
 | `session.tsx` | Per-user services and query cache: `SessionProvider`, `useModule`, `useRegistry`, `useUserId`, `useSearchItems` |
 | `auth.tsx` | The signed-in user, and sign-in with Google (when the project offers it), by emailed link or 6-digit code |
+| `google.ts` | Sign-in with Google that returns straight to the app: the trip to Google, and the token it leaves in the address |
 | `supabase.ts` | The Supabase client. Only `*.module.ts` files and the kernel import it |
 | `realtime.tsx` | One private channel per user; an event reloads the queries named after it |
 | `useAction.ts` | Runs one change at a time, then reloads a group of queries |

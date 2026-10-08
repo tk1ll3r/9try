@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
 
 // A deterministic style exercises real WebGL + the bundled worker without
@@ -119,9 +120,49 @@ test("the button in the sign-in email opens the app on its own address and signs
   expect(verified).toMatchObject({ token_hash: "fresh-token", type: "email" });
 });
 
-test("Google sign-in is offered when the project has it on, and comes back signed in", async ({ page, baseURL }) => {
+test("Google sign-in returns straight to the app, and Supabase gets the nonce behind the hash Google saw", async ({ page, baseURL }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: { provider: "google" }, user_metadata: { full_name: "Vy Trần" }, created_at: "2026-01-01T00:00:00Z" };
+  let sent = new URLSearchParams(), exchanged: Record<string, string> = {};
+  await page.route("https://accounts.google.com/**", route => {
+    // What Google does once an account is chosen: back to the listed address, with an ID token in the fragment.
+    sent = new URL(route.request().url()).searchParams;
+    const back = `${sent.get("redirect_uri")}#id_token=google.id.token&authuser=0&prompt=none`;
+    return route.fulfill({ contentType: "text/html", body: `<script>location.replace(${JSON.stringify(back)})</script>` });
+  });
+  await page.route("**/auth/v1/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/settings")) return route.fulfill({ json: { external: { email: true, google: true } } });
+    if (url.pathname.endsWith("/token") && url.searchParams.get("grant_type") === "id_token") {
+      exchanged = route.request().postDataJSON();
+      return route.fulfill({ json: { access_token: "mock-token", refresh_token: "mock-refresh", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer", user } });
+    }
+    return route.fulfill({ json: url.pathname.endsWith("/user") ? user : {} });
+  });
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: route.request().url().includes("/profiles") ? { display_name: "", username: null, bio: "", timezone: "UTC", birthday: null } : [] }));
+
+  await page.goto("/calendar");
+  await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
+  await expect(page.getByRole("heading", { name: "Lịch", level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar$/);
+  // Google is asked to return to the app itself, so its screen names the app's domain.
+  expect(Object.fromEntries(sent)).toMatchObject({ client_id: "ui-test.apps.googleusercontent.com", response_type: "id_token", scope: "openid email profile", redirect_uri: baseURL });
+  // Supabase gets the token with the nonce itself; Google saw only its hash.
+  expect(exchanged).toMatchObject({ provider: "google", id_token: "google.id.token" });
+  expect(createHash("sha256").update(exchanged.nonce).digest("hex")).toBe(sent.get("nonce"));
+
+  // The name Google gave is offered in the profile form.
+  await page.goto("/me");
+  await expect(page.getByLabel("Tên hiển thị")).toHaveValue("Vy Trần");
+});
+
+test("Google is offered only while the project has it on; without a kept nonce it goes through the Supabase address", async ({ page, baseURL }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: { provider: "google" }, user_metadata: { full_name: "Vy Trần" }, created_at: "2026-01-01T00:00:00Z" };
   let google = false, asked = new URLSearchParams();
+  // A browser that cannot keep the nonce for the direct way.
+  await page.addInitScript(() => {
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) { if (key === "gnouht-google-nonce") throw new Error("storage refused"); set.call(this, key, value); };
+  });
   await page.route("**/auth/v1/**", route => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/settings")) return route.fulfill({ json: { external: { email: true, google } } });
@@ -150,10 +191,6 @@ test("Google sign-in is offered when the project has it on, and comes back signe
   await expect(page).toHaveURL(/\/calendar#?$/);
   expect(asked.get("provider")).toBe("google");
   expect(asked.get("redirect_to")).toBe(`${baseURL}/calendar`);
-
-  // The name Google gave is offered in the profile form.
-  await page.goto("/me");
-  await expect(page.getByLabel("Tên hiển thị")).toHaveValue("Vy Trần");
 });
 
 test("a sign-in that comes back with an error says so and cleans the address", async ({ page }) => {
@@ -167,6 +204,13 @@ test("a sign-in that comes back with an error says so and cleans the address", a
   await page.goto("/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
   await expect(page.getByRole("alert")).toContainText("Chưa đăng nhập được bằng liên kết này");
   await expect(page).toHaveURL(/\/$/);
+  // A Google token this browser did not ask for: there is no nonce for it, so it is not sent on.
+  const exchanges: string[] = [];
+  page.on("request", request => { if (request.url().includes("grant_type=id_token")) exchanges.push(request.url()); });
+  await page.goto("/calendar#id_token=someone.elses.token");
+  await expect(page.getByRole("alert")).toHaveText("Lần đăng nhập vừa rồi chưa xong. Bạn thử lại nhé.");
+  await expect(page).toHaveURL(/\/calendar$/);
+  expect(exchanges).toEqual([]);
 });
 
 test("sign-in works with the 6-digit code from the email", async ({ page }) => {

@@ -12,6 +12,8 @@ Read from outside on the cloud project, without signing in: only the `email` pro
 
 Left to the owner: the Google Cloud client and the provider switch in Supabase (`docs/deployment.md`, "Sign-in with Google"), the Site URL, pasting the new email template into both templates, and one deploy for the Google button.
 
+Later the same night the owner had done the Google steps and the deploy: the provider is on and the live app has the button. Google's screen said "continue to `<project ref>.supabase.co`" and the owner asked for `gnouht.space` there. The app can now have Google return straight to its own address with an ID token that Supabase checks (`src/kernel/google.ts`, turned on by `VITE_GOOGLE_CLIENT_ID`). 36 browser tests in dev and preview mode. Not tried against the real Google. Left to the owner: add `https://9try.gnouht.space` to the client's redirect URIs, then deploy. The Site URL was still `https://9try.gnouht.space/**`.
+
 ## 2026-10-08, evening: the cloud database and the live site are current
 
 The owner ran `supabase db push --linked` and `npm run deploy`. Checked afterwards, read-only:

@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { googleClientId, leaveForGoogle, takeGoogleToken } from "./google";
 import { isSupabaseConfigured, signInProviders, supabase } from "./supabase";
 
 /** What Supabase reports when a sign-in request fails. */
@@ -24,7 +25,10 @@ interface Auth {
   verifyCode(email: string, code: string): Promise<boolean>;
   /** True when the project offers sign-in with Google. */
   google: boolean;
-  /** Leaves for Google's sign-in page; the browser comes back to `redirectTo` signed in. Resolves with the failure when it could not start. */
+  /**
+   * Leaves for Google's sign-in page. The browser comes back signed in: to `redirectTo`, or to the
+   * start page when Google returns straight to this app. Resolves with the failure when it could not start.
+   */
   signInWithGoogle(redirectTo: string): Promise<AuthFailure | null>;
   /** Set when the page was opened by a sign-in that did not finish. */
   failed: SignInFailure | null;
@@ -75,22 +79,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     const client = supabase;
     // The button in the sign-in email opens this app with a one-time token in the address
-    // (`?token_hash=…`), so the link stays on the app's own domain. The token is exchanged for a
-    // session, and a failed return is noted, once per page load; StrictMode replays this effect
-    // in development.
+    // (`?token_hash=…`), so the link stays on the app's own domain; Google comes back with its
+    // token in the fragment. Either is exchanged for a session, and a failed return is noted, once
+    // per page load; StrictMode replays this effect in development.
     link.current ??= (async () => {
       const returned = takeReturnError();
       if (returned) setFailed(returned);
+      const google = takeGoogleToken();
       const token = takeLinkToken();
-      if (!token) return;
       try {
-        const { error } = await client.auth.verifyOtp({ token_hash: token, type: "email" });
-        if (error) setFailed("link");
-      } catch { setFailed("link"); }
+        if (google) {
+          // A token this browser did not ask for has no nonce here, and is not sent on.
+          const { error } = google.nonce ? await client.auth.signInWithIdToken({ provider: "google", token: google.token, nonce: google.nonce }) : { error: true };
+          if (error) setFailed("provider");
+        } else if (token) {
+          const { error } = await client.auth.verifyOtp({ token_hash: token, type: "email" });
+          if (error) setFailed("link");
+        }
+      } catch { setFailed(google ? "provider" : "link"); }
     })();
     // Until the exchange ends the screen keeps waiting, so the sign-in form does not flash by.
     let exchanging = true;
-    const { data } = client.auth.onAuthStateChange((_event, session) => { setUser(session?.user ?? null); if (!exchanging) setLoading(false); });
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session) setFailed(null);
+      if (!exchanging) setLoading(false);
+    });
     void link.current
       .then(() => { exchanging = false; return client.auth.getSession(); })
       .then(({ data }) => { setUser(data.session?.user ?? null); setLoading(false); });
@@ -122,6 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return !error;
     },
     async signInWithGoogle(redirectTo) {
+      // With the Google client ID in the build, Google returns straight to this app and names its
+      // domain on the sign-in screen. Without it, or in a browser that cannot keep the nonce, the
+      // way goes through Supabase's address.
+      if (googleClientId) {
+        try { await leaveForGoogle(googleClientId); return null; } catch { /* Take the other way. */ }
+      }
       const { error } = await supabase!.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
       return error;
     },

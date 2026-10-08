@@ -23,6 +23,7 @@ export default defineConfig({
       VITE_SUPABASE_URL: "http://127.0.0.1:54399",
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ui_test_only",
       VITE_ENABLE_DEMO: "true",
+      VITE_GOOGLE_CLIENT_ID: "ui-test.apps.googleusercontent.com",
     },
   },
 });
