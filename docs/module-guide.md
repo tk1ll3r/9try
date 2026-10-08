@@ -20,6 +20,7 @@
 | Show a counter on the navigation icon | `badge` on the navigation entry |
 | Show a banner on every screen | `indicator` |
 | Show a card on Today | `today: { order, card }`. Return `null` from the card when there is nothing to show |
+| Show numbers on the statistics screen | `stats: { order, card }`. The card gets `days`, the number of days to count, today included. `StatTile` and `BarChart` in `kernel/ui/Stat.tsx` draw them |
 | Put timed items on the calendar and under "Sắp tới" | `agenda` |
 | Move a friend up on the Mode screen, with a reason | `friendSignals`: return `{ userId, kind, strength, label, to }`. Give a new `kind` a weight in `FriendRanking` if 20 is not right |
 | Put a screen under another menu entry instead of in the menu | `parent: "/path-of-the-parent"` on the navigation entry |
@@ -29,6 +30,10 @@
 | Ask before a step that cannot be undone | `const confirm = useConfirm()`, then `if (await confirm({ title, body, action })) …`. Do not use `window.confirm` |
 | Make the feature's items findable in the global search | `searchItems` |
 | Reload a screen when the server changes something | Emit an event named after the query key from a database trigger with `private.emit` |
+
+## Text
+
+Write the text in Vietnamese and pass it to `t()` from `kernel/i18n`: `t("Lưu")`, and with values `t("Đã thêm {0} lớp.", count)`. Then add its English to `src/kernel/locales/en.ts`. `npm test` fails until that is done, and also when Vietnamese text is left outside `t()`. Write whole sentences: a sentence glued together from pieces cannot be put in another word order. Format dates and numbers with `locale` from the same file.
 
 ## Tests
 

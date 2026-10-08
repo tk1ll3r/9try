@@ -1,6 +1,45 @@
 # Development-plan implementation status
 
-## 2026-10-08, late night: a calendar that is easy to read, an account menu, and the half-finished parts
+Newest first. The times of day in the titles of 2026-10-08 follow the commit times (`git log --date=iso`), +07.
+
+## 2026-10-08, midday: English, and a statistics screen
+
+The owner asked for English in the menu in the corner, and for "Thống kê" in the navigation bar. Local branch `refactor/foundation`, not pushed, not deployed; no database change.
+
+Statistics:
+
+- "Thống kê" is a sixth tab, in the sidebar and in the phone's bottom bar. The bar still fits at 320 px, with each label on one line.
+- The screen counts nothing itself. A module adds a card through `stats`: tasks finished day by day, open and overdue; how well each habit was kept, with its streak; the hours with a class, an event or a meetup on them, stacked in the calendar's colors; meetups that took place, are coming or wait for an answer; the conversations with the most messages. The period is the last 7 or 30 days. Chat keeps to 14 days, which is what the server counts.
+
+English:
+
+- Every text of the app now goes through `t("…")`, with the Vietnamese text as the key, and `src/kernel/locales/en.ts` holds the English for all of them, 918 entries. A one-off script rewrote 114 files; sentences with values in them became one text with numbered places, so that English can put the values elsewhere.
+- The language is chosen in the account menu and on the sign-in screen, kept on the device, and applied by loading the app again. English is its own file of about 20 kB (gzip); a Vietnamese reader does not download it.
+- Dates and numbers follow the language ("Thursday, 8 October", "October 2026", 4.5). The timetable reads "Mon 07:30-09:45 …" as well as "T2 …".
+- Notifications in the inbox are written by the database in Vietnamese; the fixed ones are shown in the reader's language.
+- Not translated: what people write, the sign-in email, the installed app's name and shortcuts, and the text of a push notification.
+
+Kept whole by tests: `src/i18n.test.ts` fails when a text has no English, when the dictionary holds a text the app no longer says, and when Vietnamese text is in the code outside `t()`. A browser test opens all eighteen screens in English with an empty account and fails on any Vietnamese text.
+
+Found on the way: one browser test failed about once in twelve runs. After "Thôi" the confirmation dialog is in the page for a few more frames, and during those the test's next click landed on the dialog's own button of the same name. Nothing happened in the app, because a closed question ignores an answer; the test now waits for the dialog to be gone. It passed 24 times in a row afterwards.
+
+Checks run with Node 22.23.3:
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests, also under `TZ=America/Los_Angeles` | 134 of 134 in 25 files |
+| Browser tests, mocked backend, dev server | 46 of 46 |
+| Browser tests against the production build | 46 of 46 |
+| Production build | Pass |
+
+The database tests were not run again; nothing under `supabase/` changed since the 189 of 189 of the entry below.
+
+Looked at in screenshots: the statistics screen at 320 px, 390 px and 1280 px, and the calendar, statistics and settings screens in English.
+
+Not verified: the English wording by a native reader (I wrote all of it); screens with real data in English, beyond the calendar and the statistics sample; anything on a real phone or on the live site.
+
+## 2026-10-08, late morning: a calendar that is easy to read, an account menu, and the half-finished parts
 
 The owner said the calendar was not easy on the eyes, asked for a menu in the top right corner for their own account and settings, and asked for the unfinished features to be finished. Local branch `refactor/foundation`, not pushed, not deployed; the cloud database is untouched.
 
@@ -45,7 +84,7 @@ Not verified: any of this on a real phone or on the live site; the calendar with
 
 Left to the owner: `npx supabase@2.119.0 db push --linked` for migration 0030, then `npm run deploy`. Still missing on production and not changed by this work: the Edge Functions `delete-account` and `calendar-feed`, and the worker with its keys for push.
 
-## 2026-10-08, night: sign-in with Google, and the email's button on the app's own domain
+## 2026-10-08, morning: sign-in with Google, and the email's button on the app's own domain
 
 The owner found the sign-in email in Gmail's Spam, then asked for sign-in with a Google account because waiting for an email is harder.
 
@@ -57,9 +96,9 @@ Read from outside on the cloud project, without signing in: only the `email` pro
 
 Left to the owner: the Google Cloud client and the provider switch in Supabase (`docs/deployment.md`, "Sign-in with Google"), the Site URL, pasting the new email template into both templates, and one deploy for the Google button.
 
-Later the same night the owner had done the Google steps and the deploy: the provider is on and the live app has the button. Google's screen said "continue to `<project ref>.supabase.co`" and the owner asked for `gnouht.space` there. The app can now have Google return straight to its own address with an ID token that Supabase checks (`src/kernel/google.ts`, turned on by `VITE_GOOGLE_CLIENT_ID`). 36 browser tests in dev and preview mode. Not tried against the real Google. Left to the owner: add `https://9try.gnouht.space` to the client's redirect URIs, then deploy. The Site URL was still `https://9try.gnouht.space/**`.
+Later the same morning the owner had done the Google steps and the deploy: the provider is on and the live app has the button. Google's screen said "continue to `<project ref>.supabase.co`" and the owner asked for `gnouht.space` there. The app can now have Google return straight to its own address with an ID token that Supabase checks (`src/kernel/google.ts`, turned on by `VITE_GOOGLE_CLIENT_ID`). 36 browser tests in dev and preview mode. Not tried against the real Google. Left to the owner: add `https://9try.gnouht.space` to the client's redirect URIs, then deploy. The Site URL was still `https://9try.gnouht.space/**`.
 
-## 2026-10-08, evening: the cloud database and the live site are current
+## 2026-10-08, about 02:00: the cloud database and the live site are current
 
 The owner ran `supabase db push --linked` and `npm run deploy`. Checked afterwards, read-only:
 
@@ -72,7 +111,7 @@ Not verified: a real sign-in email through Resend (the SMTP fields and templates
 
 Still missing on production: no Edge Function is deployed (`supabase functions list` is empty), so account deletion, reminders and the calendar feed address do not work there; push keys are not set.
 
-## 2026-10-08, later: a bolder Mode screen, 19 activities, simpler screens
+## 2026-10-08, about 01:00: a bolder Mode screen, 19 activities, simpler screens
 
 The owner asked for the features to work on the live app, simpler use, more prominence on the Mode tab for oneself and for everyone, and more activities with icons.
 

@@ -18,7 +18,7 @@ e2e/                    browser tests on a mocked backend
 scripts/db-smoke.mjs    runs the migrations and pgTAP files without Docker
 ```
 
-There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifications`, `chat`, `friends`, `groups`, `meetups`, `presence`, `location`, `identity`.
+There are 14 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifications`, `chat`, `friends`, `groups`, `meetups`, `presence`, `location`, `stats`, `identity`.
 
 ## Kernel
 
@@ -34,9 +34,10 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 | `errors.ts` | `DomainError`, and the Vietnamese text for error codes raised by SQL functions |
 | `dates.ts`, `text.ts` | Date and date-time keys, a clock, and search that ignores Vietnamese marks |
 | `theme.ts` | The look of the app: light, dark, or the device's own setting, kept on the device |
+| `i18n.ts`, `locales/` | The language of the app: `t("…")` and one dictionary for each language besides Vietnamese |
 | `install.ts` | The browser's offer to install the app, kept from page load |
 | `useFlip.ts` | Lets the parts of a list glide to their new places when the list is reordered |
-| `ui/` | `Button`, `Card`, `DialogPanel`; `Popover` and `MoreMenu` (a "…" button for the actions a row needs less often); `ConfirmProvider` and `useConfirm` (the question before a step that cannot be undone); `ThemeSwitch` |
+| `ui/` | `Button`, `Card`, `DialogPanel`; `Popover` and `MoreMenu` (a "…" button for the actions a row needs less often); `ConfirmProvider` and `useConfirm` (the question before a step that cannot be undone); `ThemeSwitch`, `LanguageSwitch`; `StatTile` and `BarChart` for the statistics |
 
 Motion lives in `src/styles.css`: two easing curves, a handful of keyframes and the classes built on them (`page-slot`, `pressable`, `glass`, `aurora`, `skeleton`, `mode-ring`, `animate-pop`). There is no animation library. One rule at the end of the file turns all of it off under `prefers-reduced-motion`, and the browser tests run with that setting.
 
@@ -44,7 +45,7 @@ The look is the `data-theme` attribute on `<html>`, `light` or `dark`. A line of
 
 ## The shell
 
-`app/AppShell.tsx` builds the navigation from what the modules contribute. Five tabs hold the screens of the app: a bottom bar on a phone, a sidebar on a desktop. The other two tabs are in the top right corner on every screen size: `inbox` is the bell, and `me` is the account menu (`AccountMenu` of the identity module), which shows who is signed in, lists the screens of that tab, switches the look and signs out.
+`app/AppShell.tsx` builds the navigation from what the modules contribute. Six tabs hold the screens of the app: a bottom bar on a phone, a sidebar on a desktop. The other two tabs are in the top right corner on every screen size: `inbox` is the bell, and `me` is the account menu (`AccountMenu` of the identity module), which shows who is signed in, lists the screens of that tab, switches the look and signs out.
 
 ## Inside a module
 
@@ -75,10 +76,21 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 | `settings` | A section of the settings screen: what the module lets the person set up. Push notifications come from `notifications`; the user's data, sign-out and account deletion from `identity` |
 | `searchItems(services)` | What the global search can find in this module |
 | `today` | A card on the Today screen, with its position. A card with nothing to say renders nothing |
+| `stats` | A card on the statistics screen, with its position. It gets the number of days to count |
 | `agenda(services, from, to)` | Timed things the module puts on the calendar and under "Sắp tới", such as a confirmed meetup |
 | `friendSignals(services, { userId, now })` | What the module knows about the user's friends right now: a meetup soon, unread messages, a live location. The Mode screen ranks friends by these |
 
-Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen, the settings screen and the search need no edit.
+Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the statistics, the privacy screen, the settings screen and the search need no edit.
+
+## Languages
+
+The app is written in Vietnamese, and every text a person reads goes through `t("…")` from `kernel/i18n.ts`. The Vietnamese text is the key; `kernel/locales/en.ts` gives the English for it. A text with values has numbered places, `t("Xóa {0} khỏi nhóm?", name)`, which a translation may reorder; a translation written "one|many" is chosen by the first value. A text without a translation is shown as written.
+
+The language is fixed for as long as a page lives. Choosing another one, in the account menu or on the sign-in screen, stores it on the device and loads the app again; `main.tsx` waits for the dictionary before it draws anything. This is why a file may call `t()` once, when it is loaded, for a list of labels. English is a separate file of about 20 kB (gzip) that a Vietnamese reader never downloads. Dates and numbers take `locale` from the same module (`vi-VN` or `en-GB`).
+
+`src/i18n.test.ts` keeps this whole: it fails when a text passed to `t()` has no English, when the dictionary holds a text the app no longer says, and when Vietnamese text appears in the code outside `t()`. A browser test opens every screen in English and fails on any Vietnamese text of the app's own.
+
+Not translated: what people write (names, events, messages), the sign-in email, the installed app's name and shortcuts, and the text of a push notification. Notifications in the inbox are written by the database in Vietnamese; `notifications/domain/serverTexts.ts` lists the fixed ones and shows them in the reader's language.
 
 ## The calendar
 

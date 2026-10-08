@@ -18,6 +18,8 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - Mode, the home screen: what each friend says they are doing right now, with the friends who matter most at the moment on top (a meetup soon, unread messages, a live location, a pin) and the reason on each card. Your own mode is one tap.
 - Notification center, with optional Web Push, quiet hours and per-category choices.
 - A privacy screen that lists what other people can see right now, with a stop button for each.
+- Statistics: tasks finished day by day, how well each habit was kept, hours on the calendar, meetups, and the busiest conversations, for the last 7 or 30 days.
+- Vietnamese and English. The language is chosen in the account menu or on the sign-in screen.
 - Search across the app (Ctrl/Cmd+K).
 - An account menu in the top right corner and a settings screen: light or dark look, push, data export, sign-out and guarded account deletion.
 - Installable PWA. The service worker caches the app shell only; Supabase and location responses are never cached.
