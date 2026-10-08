@@ -8,9 +8,6 @@
 <title>Mã đăng nhập Gnouht Together</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f1e8;">
-<!-- Dòng xem trước trong hộp thư. Không chứa mã, để mã không hiện trên màn hình khóa. -->
-<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">Dùng mã trong thư này để đăng nhập. Mã hết hạn sau 1 giờ.</div>
-
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f1e8;">
   <tr>
     <td align="center" style="padding:32px 16px;">
@@ -54,7 +51,7 @@
             <table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
               <tr>
                 <td align="center" style="background-color:#d9ff79;border-radius:16px;">
-                  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:#1d230e;text-decoration:none;border-radius:16px;">Đăng nhập</a>
+                  <a href="{{ if .RedirectTo }}{{ .RedirectTo }}{{ else }}{{ .SiteURL }}{{ end }}?token_hash={{ .TokenHash }}&amp;type=email" target="_blank" style="display:inline-block;padding:14px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:20px;font-weight:700;color:#1d230e;text-decoration:none;border-radius:16px;">Đăng nhập</a>
                 </td>
               </tr>
             </table>
@@ -68,7 +65,7 @@
               </tr>
             </table>
 
-            <p style="margin:20px 0 0 0;font-size:12px;line-height:19px;color:#8a8d82;">Nút không bấm được? Mở liên kết này:<br><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#507100;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+            <p style="margin:20px 0 0 0;font-size:12px;line-height:19px;color:#8a8d82;">Nút không bấm được? Mở ứng dụng và nhập mã 6 số ở trên.</p>
           </td>
         </tr>
 

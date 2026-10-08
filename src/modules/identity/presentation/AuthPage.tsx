@@ -75,6 +75,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
           <input id="login-email" className="field w-full" type="email" autoComplete="email" inputMode="email" required disabled={pending} value={email} onChange={event => setEmail(event.target.value)} placeholder="ban@gmail.com" aria-describedby="email-help" />
           {error && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{error}</p>}
+          {auth.linkFailed && !error && !acceptedEmail && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">Chưa đăng nhập được bằng liên kết này. Có thể nó đã hết hạn hoặc đã được dùng. Nhập email để nhận thư mới.</p>}
           {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Đã gửi thư tới {acceptedEmail}.</b><p>Mở thư để lấy mã 6 số hoặc bấm liên kết đăng nhập. Chưa thấy thì xem mục Spam.</p></div>}
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
           <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Bạn sẽ nhận một thư có liên kết và mã đăng nhập.</p>

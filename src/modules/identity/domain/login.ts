@@ -1,5 +1,8 @@
 export const returnPathKey = "gnouht-login-return-path";
-/** `path` must be a plain in-app path (`isPlainPath`), or the link could lead to another site. */
+/**
+ * `path` must be a plain in-app path (`isPlainPath`), or the link could lead to another site. The
+ * sign-in email appends `?token_hash=…` to this address, so it must not carry a query of its own.
+ */
 export function loginRedirect(origin: string, path: string): string {
   return new URL(path, origin).href;
 }

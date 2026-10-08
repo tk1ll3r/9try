@@ -82,6 +82,43 @@ test("login quota failures are actionable, not successful delivery", async ({ pa
   await expect(page.getByRole("button", { name: /Có thể gửi lại sau/ })).toBeDisabled();
 });
 
+test("the button in the sign-in email opens the app on its own address and signs in", async ({ page }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
+  let verified: Record<string, unknown> = {}, valid = false;
+  let release = () => {};
+  let held: Promise<void> = Promise.resolve();
+  await page.route("**/auth/v1/**", async route => {
+    const url = route.request().url();
+    if (url.includes("/auth/v1/verify")) {
+      verified = route.request().postDataJSON();
+      await held;
+      return valid
+        ? route.fulfill({ json: { access_token: "mock-token", refresh_token: "mock-refresh", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer", user } })
+        : route.fulfill({ status: 403, json: { code: 403, error_code: "otp_expired", msg: "Email link is invalid or has expired" } });
+    }
+    return route.fulfill({ json: url.includes("/auth/v1/user") ? user : {} });
+  });
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
+
+  // A link that was used before: the visitor is told, and the token is gone from the address.
+  await page.goto("/calendar?token_hash=used-token&type=email");
+  await expect(page.getByRole("alert")).toContainText("Chưa đăng nhập được bằng liên kết này");
+  await expect(page).toHaveURL(/\/calendar$/);
+
+  // A fresh link signs in and lands on the page it was made for.
+  valid = true;
+  held = new Promise(resolve => { release = resolve; });
+  await page.goto("/calendar?token_hash=fresh-token&type=email");
+  // While the token is being exchanged the sign-in form does not flash by.
+  await expect(page.getByRole("status")).toHaveText("Đang kiểm tra đăng nhập…");
+  await page.waitForTimeout(400);
+  await expect(page.getByLabel("Email của bạn")).toHaveCount(0);
+  release();
+  await expect(page.getByRole("heading", { name: "Lịch", level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar$/);
+  expect(verified).toMatchObject({ token_hash: "fresh-token", type: "email" });
+});
+
 test("sign-in works with the 6-digit code from the email", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   let verified: Record<string, unknown> = {};
