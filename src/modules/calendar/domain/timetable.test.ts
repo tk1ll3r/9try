@@ -15,6 +15,11 @@ describe("timetable", () => {
     ]);
     expect(rejected).toEqual(["T8 07:30-09:00 Sai thứ", "T3 10:00-09:00 Ngược giờ"]);
   });
+  it("reads English day names as well, short or in full", () => {
+    const { classes, rejected } = parseTimetable("Mon 07:30-09:45 Data structures @ B1.02\nthursday 13:00-15:15 Discrete maths\nSun 8:00-9:00 Reading\nMoon 07:30-09:00 No such day");
+    expect(classes.map(item => [item.weekday, item.start, item.title, item.place])).toEqual([[1, "07:30", "Data structures", "B1.02"], [4, "13:00", "Discrete maths", ""], [7, "08:00", "Reading", ""]]);
+    expect(rejected).toEqual(["Moon 07:30-09:00 No such day"]);
+  });
   it("finds the first class date on or after the start of term", () => {
     expect(firstClassDate("2026-10-07", 3)).toBe("2026-10-07"); // a Wednesday
     expect(firstClassDate("2026-10-07", 1)).toBe("2026-10-12");

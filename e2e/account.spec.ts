@@ -74,6 +74,8 @@ test("settings: push says why it cannot be turned on here; deleting the account 
   await remove.click();
   const question = page.getByRole("alertdialog", { name: "Xóa tài khoản?" });
   await question.getByRole("button", { name: "Thôi" }).click();
+  // While the dialog is still closing, its own button of the same name is the only one a reader can reach.
+  await expect(question).toHaveCount(0);
   expect(asked).toBe(0);
   await remove.click();
   await question.getByRole("button", { name: "Xóa tài khoản" }).click();

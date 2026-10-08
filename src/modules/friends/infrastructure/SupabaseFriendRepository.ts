@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BlockedUser, FriendConnection, FriendRepository } from "../domain/Friend";
+import { t } from "../../../kernel/i18n";
 
 /** Friend connections through SQL functions, which act as the signed-in user. */
 export class SupabaseFriendRepository implements FriendRepository {
@@ -10,7 +11,7 @@ export class SupabaseFriendRepository implements FriendRepository {
     if (error) throw error;
     return (data ?? []).map((row: any) => ({
       userId: row.user_id,
-      displayName: row.display_name || row.username || "Người dùng",
+      displayName: row.display_name || row.username || t("Người dùng"),
       username: row.username,
       avatarUrl: row.avatar_url,
       direction: row.direction,
@@ -31,14 +32,14 @@ export class SupabaseFriendRepository implements FriendRepository {
   async listBlocked(): Promise<BlockedUser[]> {
     const { data, error } = await this.db.rpc("list_blocked_users");
     if (error) throw error;
-    return (data ?? []).map((row: any) => ({ userId: row.user_id, displayName: row.display_name || row.username || "Người dùng", username: row.username }));
+    return (data ?? []).map((row: any) => ({ userId: row.user_id, displayName: row.display_name || row.username || t("Người dùng"), username: row.username }));
   }
 
   async createInvite() {
     const { data, error } = await this.db.rpc("create_friend_invite");
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row) throw new Error("Không tạo được liên kết kết bạn.");
+    if (!row) throw new Error(t("Không tạo được liên kết kết bạn."));
     return { token: row.token as string, expiresAt: row.expires_at as string };
   }
 

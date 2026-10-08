@@ -7,6 +7,7 @@ import { Button } from "../../../kernel/ui/Button";
 import { chatModule } from "../chat.module";
 import { messagePageSize, type ChatMessage } from "../domain/Chat";
 import { chatKey } from "./useChat";
+import { locale, t } from "../../../kernel/i18n";
 
 type Pages = InfiniteData<ChatMessage[], string | undefined>;
 
@@ -67,27 +68,27 @@ export function Thread({ conversationId, showNames }: { conversationId: string; 
 
   return <>
     <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-1 py-3" aria-live="polite">
-      {pages.hasNextPage && <div className="text-center"><Button variant="ghost" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>{pages.isFetchingNextPage ? "Đang tải…" : "Tải tin cũ hơn"}</Button></div>}
-      {pages.isPending && <p role="status">Đang tải tin nhắn…</p>}
-      {pages.isError && <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(pages.error, "Không tải được tin nhắn.")}</p>}
-      {pages.isSuccess && messages.length === 0 && <p className="py-10 text-center text-sm text-[var(--muted)]">Chưa có tin nhắn. Viết lời chào đầu tiên.</p>}
+      {pages.hasNextPage && <div className="text-center"><Button variant="ghost" disabled={pages.isFetchingNextPage} onClick={() => void pages.fetchNextPage()}>{pages.isFetchingNextPage ? t("Đang tải…") : t("Tải tin cũ hơn")}</Button></div>}
+      {pages.isPending && <p role="status">{t("Đang tải tin nhắn…")}</p>}
+      {pages.isError && <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(pages.error, t("Không tải được tin nhắn."))}</p>}
+      {pages.isSuccess && messages.length === 0 && <p className="py-10 text-center text-sm text-[var(--muted)]">{t("Chưa có tin nhắn. Viết lời chào đầu tiên.")}</p>}
       {messages.map(message => {
         const mine = message.senderId === me;
         return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
           <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-6 ${mine ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)]"} ${message.pending ? "opacity-60" : ""}`}>
             {showNames && !mine && <p className="text-xs font-bold">{message.senderName}</p>}
             <p className="whitespace-pre-wrap break-words">{message.body}</p>
-            <p className="text-right text-[10px] opacity-70">{message.pending ? "Đang gửi…" : new Date(message.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</p>
+            <p className="text-right text-[10px] opacity-70">{message.pending ? t("Đang gửi…") : new Date(message.createdAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
           </div>
         </div>;
       })}
       <div ref={bottom} />
     </div>
-    {send.isError && <p role="alert" className="pb-2 text-sm text-[var(--danger)]">{errorMessage(send.error, "Chưa gửi được tin nhắn. Hãy thử lại.")}</p>}
+    {send.isError && <p role="alert" className="pb-2 text-sm text-[var(--danger)]">{errorMessage(send.error, t("Chưa gửi được tin nhắn. Hãy thử lại."))}</p>}
     <form onSubmit={submit} className="flex items-end gap-2">
-      <label className="sr-only" htmlFor="chat-message">Tin nhắn</label>
-      <textarea id="chat-message" className="field max-h-32 min-w-0 flex-1 resize-none" rows={1} maxLength={4000} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKeyDown} placeholder="Viết tin nhắn…" />
-      <Button type="submit" disabled={!text.trim() || send.isPending} aria-label="Gửi tin nhắn"><Send size={17} /></Button>
+      <label className="sr-only" htmlFor="chat-message">{t("Tin nhắn")}</label>
+      <textarea id="chat-message" className="field max-h-32 min-w-0 flex-1 resize-none" rows={1} maxLength={4000} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKeyDown} placeholder={t("Viết tin nhắn…")} />
+      <Button type="submit" disabled={!text.trim() || send.isPending} aria-label={t("Gửi tin nhắn")}><Send size={17} /></Button>
     </form>
   </>;
 }

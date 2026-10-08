@@ -1,4 +1,5 @@
 import type { FriendSignal } from "../../../kernel/module";
+import { locale, t } from "../../../kernel/i18n";
 
 export type MeetupStatus = "draft" | "proposed" | "confirmed" | "canceled" | "completed";
 export type Rsvp = "pending" | "going" | "maybe" | "declined";
@@ -109,9 +110,9 @@ export function isSoon(meetup: MeetupSummary, now: Date): boolean {
 
 function whenLabel(startAt: string, now: Date): string {
   const start = new Date(startAt);
-  if (start.getTime() <= now.getTime()) return "Đang diễn ra";
+  if (start.getTime() <= now.getTime()) return t("Đang diễn ra");
   const days = Math.round((new Date(start).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / (24 * hour));
-  return `Hẹn ${start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${days === 0 ? "hôm nay" : days === 1 ? "mai" : "ngày kia"}`;
+  return t("Hẹn {0} {1}", start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }), days === 0 ? t("hôm nay") : days === 1 ? t("mai") : t("ngày kia"));
 }
 
 /**
@@ -123,7 +124,7 @@ export function meetupSignals(meetups: readonly MeetupSummary[], goingByMeetup: 
   return meetups.flatMap(meetup => {
     const to = `/meetups/${meetup.id}`;
     if (meetup.status === "proposed" && meetup.rsvp === "pending" && meetup.organizerId !== userId) {
-      return [{ userId: meetup.organizerId, kind: "invite", strength: 1, label: `Đang rủ bạn: ${meetup.title}`, to }];
+      return [{ userId: meetup.organizerId, kind: "invite", strength: 1, label: t("Đang rủ bạn: {0}", meetup.title), to }];
     }
     if (!isSoon(meetup, now)) return [];
     const hoursLeft = Math.max(0, (Date.parse(meetup.startAt!) - now.getTime()) / hour);

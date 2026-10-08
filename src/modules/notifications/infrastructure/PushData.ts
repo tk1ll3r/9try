@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NotificationPreferences } from "../domain/Notification";
+import { t } from "../../../kernel/i18n";
 
 function base64UrlToArrayBuffer(value: string): ArrayBuffer {
   const padding = "=".repeat((4 - value.length % 4) % 4);
@@ -30,13 +31,13 @@ export class PushData {
   }
 
   async enable(): Promise<void> {
-    if (!this.supported()) throw new Error("Trình duyệt này không hỗ trợ thông báo đẩy.");
+    if (!this.supported()) throw new Error(t("Trình duyệt này không hỗ trợ thông báo đẩy."));
     const publicKey = import.meta.env.VITE_WEB_PUSH_VAPID_PUBLIC_KEY as string | undefined;
-    if (!publicKey) throw new Error("Bản ứng dụng này chưa bật thông báo đẩy.");
-    if (!await navigator.serviceWorker.getRegistration()) throw new Error("Thông báo đẩy chưa dùng được ở bản chạy thử này.");
+    if (!publicKey) throw new Error(t("Bản ứng dụng này chưa bật thông báo đẩy."));
+    if (!await navigator.serviceWorker.getRegistration()) throw new Error(t("Thông báo đẩy chưa dùng được ở bản chạy thử này."));
 
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") throw new Error("Bạn chưa cấp quyền gửi thông báo.");
+    if (permission !== "granted") throw new Error(t("Bạn chưa cấp quyền gửi thông báo."));
 
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
@@ -50,7 +51,7 @@ export class PushData {
     const json = subscription.toJSON();
     const p256dh = json.keys?.p256dh;
     const auth = json.keys?.auth;
-    if (!p256dh || !auth) throw new Error("Trình duyệt chưa đăng ký được thông báo đẩy. Hãy thử lại.");
+    if (!p256dh || !auth) throw new Error(t("Trình duyệt chưa đăng ký được thông báo đẩy. Hãy thử lại."));
 
     const { error } = await this.db.from("push_subscriptions").upsert({
       user_id: this.userId,

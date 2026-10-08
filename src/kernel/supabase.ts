@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { t } from "./i18n";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
@@ -19,6 +20,6 @@ export async function signInProviders(): Promise<Record<string, boolean>> {
 }
 
 export function requireSupabase() {
-  if (!supabase) throw new Error("Supabase chưa được cấu hình.");
+  if (!supabase) throw new Error(t("Supabase chưa được cấu hình."));
   return supabase;
 }

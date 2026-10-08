@@ -1,4 +1,5 @@
 import type { FriendSignal } from "../../../kernel/module";
+import { t } from "../../../kernel/i18n";
 
 /** A sharing session the signed-in user started and has not stopped. */
 export interface OwnedLocationSession {
@@ -37,7 +38,7 @@ export interface LocationRepository {
 /** A friend who shares their location with the user right now. A position older than a minute counts for less. */
 export function locationSignals(visible: readonly VisibleLocation[], now: Date): FriendSignal[] {
   return visible.map(item => ({
-    userId: item.ownerId, kind: "location", label: "Đang chia sẻ vị trí", to: "/me/location",
+    userId: item.ownerId, kind: "location", label: t("Đang chia sẻ vị trí"), to: "/me/location",
     strength: item.recordedAt && now.getTime() - Date.parse(item.recordedAt) < 60_000 ? 1 : 0.6,
   }));
 }

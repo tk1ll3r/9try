@@ -1,6 +1,7 @@
 import { localDateKey } from "../../../kernel/dates";
 import type { AgendaItem } from "../../../kernel/module";
 import type { CalendarOccurrence } from "./Occurrence";
+import { locale, t } from "../../../kernel/i18n";
 
 // Date-only events belong to local calendar days, not UTC midnight.
 export function selectUpcoming(events: CalendarOccurrence[], now: Date): CalendarOccurrence[] {
@@ -15,11 +16,11 @@ function startTime(event: CalendarOccurrence): number {
 }
 
 /** A start time as "Th 5, 08/10, 09:00". */
-const formatStart = (start: string) => new Date(start).toLocaleString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const formatStart = (start: string) => new Date(start).toLocaleString(locale, { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 export function formatOccurrence(event: CalendarOccurrence): string {
   if (!event.allDay) return formatStart(event.start);
-  return `${new Date(`${event.start}T00:00:00`).toLocaleDateString("vi-VN")} · Cả ngày`;
+  return t("{0} · Cả ngày", new Date(`${event.start}T00:00:00`).toLocaleDateString(locale));
 }
 
 /** One line of "Sắp tới": an event of the calendar, or something another module put on it. */

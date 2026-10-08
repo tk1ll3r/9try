@@ -2,14 +2,15 @@ import type { CSSProperties } from "react";
 import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 import type { ActiveMode, ActivityMode } from "../domain/ActivityMode";
 import { activityGroups, durations } from "./modes";
+import { t } from "../../../kernel/i18n";
 
 /** Every activity, in groups, and how long the mode should last. Choosing an activity closes the dialog. */
 export function ModePicker({ open, onOpenChange, mine, minutes, onMinutes, pending, onSet }: {
   open: boolean; onOpenChange(open: boolean): void; mine?: ActiveMode; minutes: number; onMinutes(minutes: number): void; pending: boolean; onSet(mode: ActivityMode): void;
 }) {
-  return <DialogPanel open={open} onOpenChange={onOpenChange} busy={pending} title="Mode của bạn" description="Chỉ bạn bè đã kết nối thấy mode. Nó tự tắt khi hết giờ, và không dựa vào GPS.">
-    <div role="group" aria-label="Tự tắt sau" className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="font-semibold text-[var(--muted)]">Tự tắt sau</span>
+  return <DialogPanel open={open} onOpenChange={onOpenChange} busy={pending} title={t("Mode của bạn")} description={t("Chỉ bạn bè đã kết nối thấy mode. Nó tự tắt khi hết giờ, và không dựa vào GPS.")}>
+    <div role="group" aria-label={t("Tự tắt sau")} className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="font-semibold text-[var(--muted)]">{t("Tự tắt sau")}</span>
       {durations.map(([value, label]) => <button key={value} type="button" aria-pressed={minutes === value} onClick={() => onMinutes(value)}
         className={`min-h-9 rounded-full px-3 font-semibold transition-colors duration-200 ${minutes === value ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>{label}</button>)}
     </div>

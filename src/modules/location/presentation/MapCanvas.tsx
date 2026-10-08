@@ -3,6 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed, MapPin, RotateCcw } from "lucide-react";
 import { Map, Marker, Popup, NavigationControl, LngLatBounds } from "./maplibre";
 import { Button } from "../../../kernel/ui/Button";
+import { t } from "../../../kernel/i18n";
 
 export interface MapPoint {
   id: string;
@@ -31,7 +32,7 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
     let frame = 0;
     setState("loading"); setError(""); autoFocused.current = false;
     const timeout = window.setTimeout(() => {
-      if (!disposed) { setState("error"); setError("Bản đồ tải quá lâu. Kiểm tra mạng hoặc thử tải lại; các nút dừng chia sẻ vẫn sử dụng được."); }
+      if (!disposed) { setState("error"); setError(t("Bản đồ tải quá lâu. Kiểm tra mạng hoặc thử tải lại; các nút dừng chia sẻ vẫn sử dụng được.")); }
     }, 15_000);
     try {
       current = new Map({ container: container.current, style: styleUrl, center: [106.66, 10.78], zoom: 11 });
@@ -41,7 +42,7 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
         if (!disposed) { window.clearTimeout(timeout); setState("ready"); setError(""); }
       });
       current.on("error", () => {
-        if (!disposed) { window.clearTimeout(timeout); setState("error"); setError("Không tải được tài nguyên bản đồ. Thử tải lại hoặc kiểm tra kết nối. Danh sách người và quyền chia sẻ không bị thay đổi."); }
+        if (!disposed) { window.clearTimeout(timeout); setState("error"); setError(t("Không tải được tài nguyên bản đồ. Thử tải lại hoặc kiểm tra kết nối. Danh sách người và quyền chia sẻ không bị thay đổi.")); }
       });
       current.getCanvas().addEventListener("webglcontextlost", contextLost);
       resize = new ResizeObserver(() => {
@@ -51,10 +52,10 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
       resize.observe(container.current);
     } catch {
       window.clearTimeout(timeout);
-      setState("error"); setError("Không khởi tạo được bản đồ. Hãy kiểm tra hỗ trợ WebGL/tăng tốc đồ họa trong trình duyệt. Bạn vẫn có thể dừng chia sẻ ở bảng bên cạnh.");
+      setState("error"); setError(t("Không khởi tạo được bản đồ. Hãy kiểm tra hỗ trợ WebGL/tăng tốc đồ họa trong trình duyệt. Bạn vẫn có thể dừng chia sẻ ở bảng bên cạnh."));
     }
     function contextLost() {
-      if (!disposed) { setState("error"); setError("Trình duyệt mất kết nối đồ họa. Hãy tải lại bản đồ."); }
+      if (!disposed) { setState("error"); setError(t("Trình duyệt mất kết nối đồ họa. Hãy tải lại bản đồ.")); }
     }
     return () => {
       disposed = true; window.clearTimeout(timeout); cancelAnimationFrame(frame); resize?.disconnect();
@@ -70,14 +71,14 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
     markers.current.forEach(marker => marker.remove()); markers.current = [];
     if (!map.current || state !== "ready") return;
     for (const point of usable) {
-      const popup = new Popup({ offset: 20 }).setText(`${point.name} · ${point.stale ? "Vị trí cũ" : "Mới cập nhật"}${point.approximate ? " · gần đúng" : ""}`);
+      const popup = new Popup({ offset: 20 }).setText(`${point.name} · ${point.stale ? t("Vị trí cũ") : t("Mới cập nhật")}${point.approximate ? t(" · gần đúng") : ""}`);
       // A round badge with the person's initial; grey once the position is old.
       const element = document.createElement("div");
       element.textContent = point.name.slice(0, 1).toUpperCase();
       element.className = `grid size-9 place-items-center rounded-full border-2 border-white font-bold text-white shadow-lg ${point.stale ? "bg-gray-500" : "marker-live bg-[#171a12]"}`;
       const marker = new Marker({ element })
         .setLngLat([point.longitude, point.latitude]).setPopup(popup).addTo(map.current);
-      marker.getElement().setAttribute("aria-label", `Vị trí ${point.name}`);
+      marker.getElement().setAttribute("aria-label", t("Vị trí {0}", point.name));
       markers.current.push(marker);
     }
     if (usable.length && !autoFocused.current) { autoFocused.current = true; showAll(); }
@@ -97,18 +98,18 @@ export function MapCanvas({ points, ownerKey, focusRequest, styleUrl = import.me
       map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 600 });
     }
   }
-  return <section aria-label="Bản đồ vị trí" className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+  return <section aria-label={t("Bản đồ vị trí")} className="overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-      <div className="flex items-center gap-2 font-semibold"><MapPin size={18} /> Bản đồ <span className="text-sm font-normal text-[var(--muted)]">· {usable.length} vị trí</span></div>
-      <Button variant="ghost" disabled={!usable.length || state !== "ready"} onClick={showAll}><LocateFixed size={17} /> Xem tất cả</Button>
+      <div className="flex items-center gap-2 font-semibold"><MapPin size={18} /> {t("Bản đồ")} <span className="text-sm font-normal text-[var(--muted)]">{t("· {0} vị trí", usable.length)}</span></div>
+      <Button variant="ghost" disabled={!usable.length || state !== "ready"} onClick={showAll}><LocateFixed size={17} /> {t("Xem tất cả")}</Button>
     </div>
     <div className="relative">
-      <div ref={container} className="h-[360px] w-full sm:h-[520px]" aria-label="Khung bản đồ" data-testid="map-container" data-map-state={state} />
-      {state === "loading" && <p role="status" className="absolute left-3 top-3 rounded-xl bg-[var(--surface)] px-4 py-2 text-sm shadow">Đang tải bản đồ…</p>}
+      <div ref={container} className="h-[360px] w-full sm:h-[520px]" aria-label={t("Khung bản đồ")} data-testid="map-container" data-map-state={state} />
+      {state === "loading" && <p role="status" className="absolute left-3 top-3 rounded-xl bg-[var(--surface)] px-4 py-2 text-sm shadow">{t("Đang tải bản đồ…")}</p>}
       {state === "error" && <div role="alert" className="absolute inset-x-3 top-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-lg">
-        <p className="text-sm">{error}</p><Button className="mt-3" variant="secondary" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={16} /> Tải lại bản đồ</Button>
+        <p className="text-sm">{error}</p><Button className="mt-3" variant="secondary" onClick={() => setAttempt(value => value + 1)}><RotateCcw size={16} /> {t("Tải lại bản đồ")}</Button>
       </div>}
     </div>
-    <p className="px-4 py-3 text-xs leading-5 text-[var(--muted)]">Bản đồ và định vị là hai phần riêng. Không có người chia sẻ vẫn xem được bản đồ. Vị trí cũ không chứng minh người đó còn ở đây.</p>
+    <p className="px-4 py-3 text-xs leading-5 text-[var(--muted)]">{t("Bản đồ và định vị là hai phần riêng. Không có người chia sẻ vẫn xem được bản đồ. Vị trí cũ không chứng minh người đó còn ở đây.")}</p>
   </section>;
 }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GroupInvite, GroupMember, GroupRepository, GroupSummary } from "../domain/Group";
+import { t } from "../../../kernel/i18n";
 
 export class SupabaseGroupRepository implements GroupRepository {
   constructor(private readonly db: SupabaseClient, private readonly userId: string) {}
@@ -24,7 +25,7 @@ export class SupabaseGroupRepository implements GroupRepository {
     if (error) throw error;
     return (data ?? []).map((row: any) => ({
       userId: row.user_id,
-      displayName: row.display_name || row.username || "Người dùng",
+      displayName: row.display_name || row.username || t("Người dùng"),
       username: row.username,
       avatarUrl: row.avatar_url,
       role: row.role,
@@ -45,7 +46,7 @@ export class SupabaseGroupRepository implements GroupRepository {
     const { data, error } = await this.db.rpc("create_group_invite", { p_group_id: groupId, p_expires_minutes: 10080, p_max_uses: maxUses });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row) throw new Error("Không tạo được liên kết mời.");
+    if (!row) throw new Error(t("Không tạo được liên kết mời."));
     return { token: row.token as string, expiresAt: row.expires_at as string };
   }
 

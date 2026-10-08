@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { clock, dayBlocks, dayTitle, fillsDay, hourRange, minutesOn, weekdayLetters, type CalendarEntry } from "../domain/calendarView";
 import { toneOf } from "./tone";
+import { t } from "../../../kernel/i18n";
 
 /** The height of one hour, in pixels. */
 const hourHeight = 48;
@@ -43,7 +44,7 @@ export function WeekGrid({ week, day, today, now, byDay, onDay, onOpen, onAdd }:
       </button>)}
 
       {columns.some(column => column.whole.length) && <>
-        <span className={`${gutter} pr-1.5 pt-1 text-right text-[10px] leading-3 text-[var(--muted)]`}>Cả ngày</span>
+        <span className={`${gutter} pr-1.5 pt-1 text-right text-[10px] leading-3 text-[var(--muted)]`}>{t("Cả ngày")}</span>
         {columns.map(column => <div key={column.date} className="space-y-0.5 border-l border-[var(--border)] px-0.5 pb-1.5">
           {column.whole.map(entry => <Block key={entry.id} {...(onOpen ? { type: "button", onClick: () => onOpen(entry) } : {})} style={toneOf(entry)}
             className="block w-full truncate rounded-md border-l-[3px] border-[var(--tone)] bg-[color-mix(in_srgb,var(--tone)_18%,var(--surface))] px-1.5 py-0.5 text-left text-[11px] font-semibold leading-4">{entry.title}</Block>)}
@@ -58,7 +59,7 @@ export function WeekGrid({ week, day, today, now, byDay, onDay, onOpen, onAdd }:
         // A click on an empty hour starts an event there.
         onClick={onAdd && (event => { if (event.target === event.currentTarget) onAdd(column.date, clock((first + Math.floor(event.nativeEvent.offsetY / hourHeight)) * 60)); })}>
         {column.blocks.map(({ entry, from, to, lane, lanes }) => <Block key={entry.id} {...(onOpen ? { type: "button", onClick: () => onOpen(entry) } : {})}
-          aria-label={onOpen ? `${entry.title}, ${clock(minutesOn(entry, column.date)[0])} đến ${clock(minutesOn(entry, column.date)[1])}` : undefined}
+          aria-label={onOpen ? t("{0}, {1} đến {2}", entry.title, clock(minutesOn(entry, column.date)[0]), clock(minutesOn(entry, column.date)[1])) : undefined}
           style={{ ...toneOf(entry), top: top(from), height: (to - from) / 60 * hourHeight - 2, left: `calc(${lane / lanes * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)` }}
           className={`absolute flex flex-col items-start overflow-hidden rounded-lg border-l-[3px] border-[var(--tone)] bg-[color-mix(in_srgb,var(--tone)_20%,var(--surface))] px-1.5 py-1 text-left text-[11px] leading-[1.15] ${onOpen ? "transition-shadow duration-200 hover:z-[1] hover:shadow-lg" : ""}`}>
           <b className="block break-words">{entry.title}</b>

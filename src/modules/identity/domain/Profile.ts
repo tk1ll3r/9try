@@ -1,4 +1,5 @@
 import { DomainError } from "../../../kernel/errors";
+import { t } from "../../../kernel/i18n";
 
 /** How the signed-in user appears to others. `birthday` is "YYYY-MM-DD" or "". */
 export class Profile {
@@ -19,9 +20,9 @@ export class Profile {
   static check(input: { displayName: string; username: string; bio: string; timezone: string; birthday: string }): Profile {
     const displayName = input.displayName.trim();
     const username = input.username.trim().toLowerCase();
-    if (!displayName) throw new DomainError("NAME_REQUIRED", "Hãy nhập tên hiển thị.");
+    if (!displayName) throw new DomainError("NAME_REQUIRED", t("Hãy nhập tên hiển thị."));
     if (username && !/^[a-z0-9_]{3,20}$/.test(username)) {
-      throw new DomainError("USERNAME_FORMAT", "Username gồm 3–20 ký tự: chữ thường không dấu, số hoặc dấu gạch dưới.");
+      throw new DomainError("USERNAME_FORMAT", t("Username gồm 3–20 ký tự: chữ thường không dấu, số hoặc dấu gạch dưới."));
     }
     return new Profile(displayName, username, input.bio.trim(), input.timezone, input.birthday);
   }

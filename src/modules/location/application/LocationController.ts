@@ -1,4 +1,5 @@
 import type { OwnedLocationSession } from "../domain/Location";
+import { locale, t } from "../../../kernel/i18n";
 
 export interface LocationState {
   sessions: OwnedLocationSession[];
@@ -17,7 +18,7 @@ interface Dependencies {
 }
 
 export class LocationController {
-  private state: LocationState = { sessions: [], pending: false, loading: true, status: "Chưa chia sẻ.", error: "" };
+  private state: LocationState = { sessions: [], pending: false, loading: true, status: t("Chưa chia sẻ."), error: "" };
   private disposed = false;
   private watch: number | null = null;
   private watchedId: string | null = null;
@@ -49,7 +50,7 @@ export class LocationController {
       if (this.watchedId && !sessions.some(s => s.id === this.watchedId)) this.clearWatcher();
       this.update({ sessions, loading: false, error: "" });
     } catch (e) {
-      if (!this.disposed && version === this.refreshVersion) this.update({ loading: false, error: message(e, "Không tải được phiên chia sẻ. Hãy thử lại.") });
+      if (!this.disposed && version === this.refreshVersion) this.update({ loading: false, error: message(e, t("Không tải được phiên chia sẻ. Hãy thử lại.")) });
     }
   }
   private clearWatcher() {
@@ -59,7 +60,7 @@ export class LocationController {
   }
   async start(duration: number, recipients: string[], approximate: boolean) {
     if (this.disposed || this.state.pending || this.state.loading || this.state.sessions.length) return;
-    if (!this.deps.gps) { this.update({ error: "Trình duyệt không hỗ trợ định vị." }); return; }
+    if (!this.deps.gps) { this.update({ error: t("Trình duyệt không hỗ trợ định vị.") }); return; }
     this.update({ pending: true, error: "" });
     ++this.refreshVersion;
     let createdId: string | null = null;
@@ -67,7 +68,7 @@ export class LocationController {
       const id = await this.deps.start(duration, recipients, approximate);
       createdId = id;
       if (this.disposed) { await this.deps.stop(id); return; }
-      this.update({ sessions: [...this.state.sessions, { id, approximate, expires_at: new Date(Date.now() + duration * 60_000).toISOString() }], status: "Đang yêu cầu quyền vị trí…" });
+      this.update({ sessions: [...this.state.sessions, { id, approximate, expires_at: new Date(Date.now() + duration * 60_000).toISOString() }], status: t("Đang yêu cầu quyền vị trí…") });
       this.watchedId = id;
       const generation = ++this.generation;
       this.watch = this.deps.gps.watchPosition(position => {
@@ -75,21 +76,21 @@ export class LocationController {
         const session = this.state.sessions.find(s => s.id === id);
         if (!session || Date.parse(session.expires_at) <= Date.now()) { this.clearWatcher(); void this.refresh(); return; }
         const now = Date.now();
-        this.update({ status: `GPS nhận lúc ${new Date(position.timestamp).toLocaleTimeString("vi-VN")} · ±${Math.round(position.coords.accuracy)} m` });
+        this.update({ status: t("GPS nhận lúc {0} · ±{1} m", new Date(position.timestamp).toLocaleTimeString(locale), Math.round(position.coords.accuracy)) });
         const previous = this.lastSent;
         // At most one position every 5 s while moving, and one every 30 s while standing still.
         if (previous && (now - previous.at < 5_000 || (distanceMeters(previous.lat, previous.lon, position.coords.latitude, position.coords.longitude) < 10 && now - previous.at < 30_000))) return;
         this.lastSent = { at: now, lat: position.coords.latitude, lon: position.coords.longitude };
         void this.deps.publish(id, position, approximate).catch(e => {
-          if (!this.disposed && generation === this.generation) this.update({ error: message(e, "Không cập nhật được vị trí.") });
+          if (!this.disposed && generation === this.generation) this.update({ error: message(e, t("Không cập nhật được vị trí.")) });
         });
       }, error => {
         if (this.disposed || generation !== this.generation) return;
         if (error.code === 1) {
           this.clearWatcher();
-          this.update({ error: "Bạn đã từ chối định vị. Đang thu hồi phiên…" });
+          this.update({ error: t("Bạn đã từ chối định vị. Đang thu hồi phiên…") });
           queueMicrotask(() => { void this.stop(id); });
-        } else this.update({ error: `Không lấy được vị trí: ${error.message}` });
+        } else this.update({ error: t("Không lấy được vị trí: {0}", error.message) });
       }, { enableHighAccuracy: !approximate, maximumAge: 5_000, timeout: 20_000 });
     } catch (e) {
       this.clearWatcher();
@@ -97,7 +98,7 @@ export class LocationController {
         try { await this.deps.stop(createdId); this.update({ sessions: this.state.sessions.filter(s => s.id !== createdId) }); }
         catch { /* Retain session with a stop button if cleanup fails. */ }
       }
-      this.update({ error: message(e, "Không bắt đầu được chia sẻ.") });
+      this.update({ error: message(e, t("Không bắt đầu được chia sẻ.")) });
     } finally { this.update({ pending: false }); }
   }
   async stop(id: string) {
@@ -108,8 +109,8 @@ export class LocationController {
     try {
       await this.deps.stop(id);
       if (this.disposed) return;
-      this.update({ sessions: this.state.sessions.filter(s => s.id !== id), status: "Đã dừng phiên và xóa vị trí gần nhất." });
-    } catch (e) { this.update({ error: message(e, "Chưa thu hồi được phiên trên máy chủ. Bấm Dừng để thử lại.") }); }
+      this.update({ sessions: this.state.sessions.filter(s => s.id !== id), status: t("Đã dừng phiên và xóa vị trí gần nhất.") });
+    } catch (e) { this.update({ error: message(e, t("Chưa thu hồi được phiên trên máy chủ. Bấm Dừng để thử lại.")) }); }
     finally { this.update({ pending: false }); }
   }
   dispose() { this.disposed = true; ++this.refreshVersion; this.clearWatcher(); }

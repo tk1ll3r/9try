@@ -11,6 +11,7 @@ import { useConfirm } from "../../../kernel/ui/Confirm";
 import { MoreMenu } from "../../../kernel/ui/MoreMenu";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
+import { locale, t } from "../../../kernel/i18n";
 
 export function FriendsPage() {
   const friends = useModule(friendsModule);
@@ -29,7 +30,7 @@ export function FriendsPage() {
   const outgoing = items.filter(item => item.status === "pending" && item.direction === "outgoing");
   const sharedWith = shares.data ?? new Set<string>();
   const loading = connections.isPending;
-  const problem = error || (connections.isError ? errorMessage(connections.error, "Không thể tải bạn bè.") : "");
+  const problem = error || (connections.isError ? errorMessage(connections.error, t("Không thể tải bạn bè.")) : "");
 
   function act(job: () => Promise<unknown>, success = "", after?: () => void) {
     setMessage("");
@@ -38,35 +39,35 @@ export function FriendsPage() {
 
   function send(event: FormEvent) {
     event.preventDefault();
-    if (username.trim()) act(() => friends.sendRequest(username), "Đã gửi lời mời.", () => setUsername(""));
+    if (username.trim()) act(() => friends.sendRequest(username), t("Đã gửi lời mời."), () => setUsername(""));
   }
 
   async function copyInvite() {
     if (!invite) return;
-    try { await navigator.clipboard.writeText(invite.url); setMessage("Đã sao chép liên kết."); }
-    catch { setMessage("Không sao chép tự động được. Hãy chọn và sao chép liên kết."); }
+    try { await navigator.clipboard.writeText(invite.url); setMessage(t("Đã sao chép liên kết.")); }
+    catch { setMessage(t("Không sao chép tự động được. Hãy chọn và sao chép liên kết.")); }
   }
 
   return (
     <div className="space-y-5">
       <header>
-        <p className="text-sm font-semibold text-[var(--muted)]">Những người bạn đã kết nối</p>
-        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Bạn bè</h1>
+        <p className="text-sm font-semibold text-[var(--muted)]">{t("Những người bạn đã kết nối")}</p>
+        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">{t("Bạn bè")}</h1>
       </header>
 
-      {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={connections.isFetching} onClick={() => void connections.refetch()}>Thử tải lại</Button></div>}
+      {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={connections.isFetching} onClick={() => void connections.refetch()}>{t("Thử tải lại")}</Button></div>}
       {message && <div role="status" className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
 
-      {loading && <p role="status">Đang tải bạn bè…</p>}
+      {loading && <p role="status">{t("Đang tải bạn bè…")}</p>}
 
       {incoming.length > 0 && (
-        <Card title={`Đang chờ bạn · ${incoming.length}`}>
+        <Card title={t("Đang chờ bạn · {0}", incoming.length)}>
           <div className="space-y-2">
             {incoming.map((item) => (
               <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
                 <>
-                  <Button disabled={pending} className="px-3" onClick={() => act(() => friends.respond(item.userId, true))}><Check size={16} /> Chấp nhận</Button>
-                  <Button disabled={pending} variant="ghost" className="px-3" onClick={() => act(() => friends.respond(item.userId, false))}><X size={16} /> Từ chối</Button>
+                  <Button disabled={pending} className="px-3" onClick={() => act(() => friends.respond(item.userId, true))}><Check size={16} /> {t("Chấp nhận")}</Button>
+                  <Button disabled={pending} variant="ghost" className="px-3" onClick={() => act(() => friends.respond(item.userId, false))}><X size={16} /> {t("Từ chối")}</Button>
                 </>
               } />
             ))}
@@ -74,9 +75,9 @@ export function FriendsPage() {
         </Card>
       )}
 
-      <Card title={`Bạn bè · ${accepted.length}`}>
+      <Card title={t("Bạn bè · {0}", accepted.length)}>
         {!loading && !problem && accepted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted)]">Chưa có kết nối nào.</p>
+          <p className="py-8 text-center text-sm text-[var(--muted)]">{t("Chưa có kết nối nào.")}</p>
         ) : (
           <div className="space-y-2">
             {accepted.map((item) => {
@@ -84,16 +85,16 @@ export function FriendsPage() {
               return (
                 <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
                   <>
-                    <Link to={`/chat/with/${item.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--surface)] px-3 py-2.5 text-sm font-semibold"><MessageCircle size={16} /> Nhắn tin</Link>
-                    <MoreMenu label={`Thao tác khác với ${item.displayName}`}>
-                      <Link to={`/calendar/shared/${item.userId}`}><CalendarDays size={16} /> Xem lịch và bận/rảnh</Link>
-                      <button type="button" disabled={pending} aria-pressed={sharing} onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}><Share2 size={16} /> {sharing ? "Ngừng chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh của tôi"}</button>
+                    <Link to={`/chat/with/${item.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--surface)] px-3 py-2.5 text-sm font-semibold"><MessageCircle size={16} /> {t("Nhắn tin")}</Link>
+                    <MoreMenu label={t("Thao tác khác với {0}", item.displayName)}>
+                      <Link to={`/calendar/shared/${item.userId}`}><CalendarDays size={16} /> {t("Xem lịch và bận/rảnh")}</Link>
+                      <button type="button" disabled={pending} aria-pressed={sharing} onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}><Share2 size={16} /> {sharing ? t("Ngừng chia sẻ bận/rảnh") : t("Chia sẻ bận/rảnh của tôi")}</button>
                       <button type="button" disabled={pending} onClick={async () => {
-                        if (await confirm({ title: "Xóa bạn?", body: `${item.displayName} sẽ rời danh sách bạn bè của bạn. Những gì hai bạn đang chia sẻ với nhau cũng dừng lại.`, action: "Xóa bạn" })) act(() => friends.remove(item.userId));
-                      }}><UserMinus size={16} /> Xóa bạn</button>
+                        if (await confirm({ title: t("Xóa bạn?"), body: t("{0} sẽ rời danh sách bạn bè của bạn. Những gì hai bạn đang chia sẻ với nhau cũng dừng lại.", item.displayName), action: t("Xóa bạn") })) act(() => friends.remove(item.userId));
+                      }}><UserMinus size={16} /> {t("Xóa bạn")}</button>
                       <button type="button" disabled={pending} className="text-[var(--danger)]" onClick={async () => {
-                        if (await confirm({ title: `Chặn ${item.displayName}?`, body: "Hai bạn sẽ không còn là bạn bè và không gửi được lời mời cho nhau. Bạn bỏ chặn được trong danh sách đã chặn.", action: "Chặn" })) act(() => friends.block(item.userId));
-                      }}><Ban size={16} /> Chặn</button>
+                        if (await confirm({ title: t("Chặn {0}?", item.displayName), body: t("Hai bạn sẽ không còn là bạn bè và không gửi được lời mời cho nhau. Bạn bỏ chặn được trong danh sách đã chặn."), action: t("Chặn") })) act(() => friends.block(item.userId));
+                      }}><Ban size={16} /> {t("Chặn")}</button>
                     </MoreMenu>
                   </>
                 } />
@@ -104,53 +105,53 @@ export function FriendsPage() {
       </Card>
 
       {outgoing.length > 0 && (
-        <Card title={`Đã gửi · ${outgoing.length}`}>
+        <Card title={t("Đã gửi · {0}", outgoing.length)}>
           <div className="space-y-2">
             {outgoing.map((item) => (
               <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
-                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.cancelRequest(item.userId))}><X size={16} /> Hủy lời mời</Button>
+                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.cancelRequest(item.userId))}><X size={16} /> {t("Hủy lời mời")}</Button>
               } />
             ))}
           </div>
         </Card>
       )}
 
-      <Card title="Thêm bạn bằng username">
+      <Card title={t("Thêm bạn bằng username")}>
         <form onSubmit={send} className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3.5 text-[var(--muted)]" size={17} />
-            <label className="sr-only" htmlFor="friend-username">Username người bạn muốn mời</label>
-            <input id="friend-username" className="field w-full pl-10" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username chính xác" required />
+            <label className="sr-only" htmlFor="friend-username">{t("Username người bạn muốn mời")}</label>
+            <input id="friend-username" className="field w-full pl-10" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("username chính xác")} required />
           </div>
-          <Button type="submit" variant="secondary" disabled={pending}><UserPlus size={17} /> Gửi lời mời</Button>
+          <Button type="submit" variant="secondary" disabled={pending}><UserPlus size={17} /> {t("Gửi lời mời")}</Button>
         </form>
       </Card>
 
-      <Card title="Mời bằng liên kết" action={<Link2 size={18} className="text-[var(--muted)]" />}>
-        <p className="text-sm leading-6 text-[var(--muted)]">Ai mở liên kết này khi đã đăng nhập sẽ thành bạn của bạn, không cần bạn duyệt. Chỉ gửi cho người bạn tin. Liên kết có hạn 7 ngày, và tạo liên kết mới sẽ hủy liên kết cũ.</p>
+      <Card title={t("Mời bằng liên kết")} action={<Link2 size={18} className="text-[var(--muted)]" />}>
+        <p className="text-sm leading-6 text-[var(--muted)]">{t("Ai mở liên kết này khi đã đăng nhập sẽ thành bạn của bạn, không cần bạn duyệt. Chỉ gửi cho người bạn tin. Liên kết có hạn 7 ngày, và tạo liên kết mới sẽ hủy liên kết cũ.")}</p>
         {invite ? (
           <div className="mt-3 space-y-2">
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input className="field min-w-0 flex-1" aria-label="Liên kết kết bạn" readOnly value={invite.url} onFocus={e => e.target.select()} />
-              <Button variant="secondary" onClick={() => void copyInvite()}><Copy size={17} /> Sao chép</Button>
-              {"share" in navigator && <Button variant="ghost" onClick={() => void navigator.share({ title: "Kết bạn trên Gnouht Together", url: invite.url }).catch(() => undefined)}><Share2 size={17} /> Chia sẻ</Button>}
+              <input className="field min-w-0 flex-1" aria-label={t("Liên kết kết bạn")} readOnly value={invite.url} onFocus={e => e.target.select()} />
+              <Button variant="secondary" onClick={() => void copyInvite()}><Copy size={17} /> {t("Sao chép")}</Button>
+              {"share" in navigator && <Button variant="ghost" onClick={() => void navigator.share({ title: t("Kết bạn trên Gnouht Together"), url: invite.url }).catch(() => undefined)}><Share2 size={17} /> {t("Chia sẻ")}</Button>}
             </div>
-            <p className="text-xs text-[var(--muted)]">Hết hạn {new Date(invite.expiresAt).toLocaleString("vi-VN")}.</p>
+            <p className="text-xs text-[var(--muted)]">{t("Hết hạn {0}.", new Date(invite.expiresAt).toLocaleString(locale))}</p>
           </div>
         ) : (
           <Button className="mt-3" variant="secondary" disabled={pending}
             onClick={() => run(() => friends.createInvite(), result => setInvite({ url: `${window.location.origin}/invite/friend/${result.token}`, expiresAt: result.expiresAt }))}>
-            <Link2 size={17} /> Tạo liên kết kết bạn
+            <Link2 size={17} /> {t("Tạo liên kết kết bạn")}
           </Button>
         )}
       </Card>
 
       {(blocked.data?.length ?? 0) > 0 && (
-        <Card title={`Đã chặn · ${blocked.data!.length}`}>
+        <Card title={t("Đã chặn · {0}", blocked.data!.length)}>
           <div className="space-y-2">
             {blocked.data!.map(person => (
               <PersonRow key={person.userId} name={person.displayName} username={person.username} actions={
-                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.unblock(person.userId), "Đã bỏ chặn. Hai bạn chưa là bạn bè trở lại.")}>Bỏ chặn</Button>
+                <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.unblock(person.userId), t("Đã bỏ chặn. Hai bạn chưa là bạn bè trở lại."))}>{t("Bỏ chặn")}</Button>
               } />
             ))}
           </div>
@@ -168,7 +169,7 @@ function PersonRow({ name, username, actions }: { name: string; username: string
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-bold">{name}</p>
-        <p className="text-xs text-[var(--muted)]">{username ? `@${username}` : "Chưa có username"}</p>
+        <p className="text-xs text-[var(--muted)]">{username ? `@${username}` : t("Chưa có username")}</p>
       </div>
       <div className="flex flex-wrap items-center gap-1">{actions}</div>
     </div>

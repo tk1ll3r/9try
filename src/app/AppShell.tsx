@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import type { NavContribution, NavTab } from "../kernel/module";
 import { useRegistry } from "../kernel/session";
 import { AccountMenu } from "../modules/identity";
+import { t } from "../kernel/i18n";
 
 // Opened rarely, so its dialog code stays out of the first download.
 const SearchDialog = lazy(() => import("./SearchDialog").then(m => ({ default: m.SearchDialog })));
@@ -12,11 +13,11 @@ const SearchDialog = lazy(() => import("./SearchDialog").then(m => ({ default: m
 // Mode comes first: seeing what everyone is doing is what the app is opened for.
 const tabs: { id: NavTab; label: string; icon: NavContribution["icon"] }[] = [
   { id: "mode", label: "Mode", icon: Radio },
-  { id: "today", label: "Hôm nay", icon: Home },
-  { id: "plan", label: "Kế hoạch", icon: CalendarDays },
-  { id: "chat", label: "Trò chuyện", icon: MessageCircle },
-  { id: "together", label: "Cùng nhau", icon: UsersRound },
-  { id: "stats", label: "Thống kê", icon: ChartColumn },
+  { id: "today", label: t("Hôm nay"), icon: Home },
+  { id: "plan", label: t("Kế hoạch"), icon: CalendarDays },
+  { id: "chat", label: t("Trò chuyện"), icon: MessageCircle },
+  { id: "together", label: t("Cùng nhau"), icon: UsersRound },
+  { id: "stats", label: t("Thống kê"), icon: ChartColumn },
 ];
 // The two other tabs are not in this list. "inbox" is the bell and "me" the account menu, both in the
 // top right corner of every screen; a phone's bottom bar then has room for the six above.
@@ -29,7 +30,7 @@ function Brand() {
       <div className="grid size-10 place-items-center rounded-2xl bg-[#171a12] font-black text-[#d9ff79] shadow-[0_8px_24px_-8px_var(--lime-strong)]">G</div>
       <div>
         <b>Gnouht Together</b>
-        <p className="text-xs text-[var(--muted)]">Mình gặp nhau nhé.</p>
+        <p className="text-xs text-[var(--muted)]">{t("Mình gặp nhau nhé.")}</p>
       </div>
     </div>
   );
@@ -41,7 +42,7 @@ function Badges({ items }: { items: readonly NavContribution[] }) {
 
 /** What a screen shows while its code is on the way. */
 function PageSkeleton() {
-  return <div role="status" aria-label="Đang tải trang" className="space-y-5">
+  return <div role="status" aria-label={t("Đang tải trang")} className="space-y-5">
     <div className="skeleton h-5 w-40" /><div className="skeleton h-12 w-3/4" /><div className="skeleton h-44" /><div className="skeleton h-32" />
   </div>;
 }
@@ -102,16 +103,16 @@ export function AppShell() {
       {fetching > 0 && <div className="loading-bar" aria-hidden />}
       {!online && (
         <div className="animate-slide-up fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-2 bg-amber-300 px-4 py-2 text-sm font-semibold text-amber-950">
-          <WifiOff size={16} /> Đang ngoại tuyến. Dữ liệu riêng tư mới sẽ không được đồng bộ cho tới khi có mạng.
+          <WifiOff size={16} /> {t("Đang ngoại tuyến. Dữ liệu riêng tư mới sẽ không được đồng bộ cho tới khi có mạng.")}
         </div>
       )}
 
       <aside className="glass fixed inset-y-0 left-0 z-10 hidden w-64 overflow-y-auto border-r border-black/8 p-5 lg:block dark:border-white/8">
         <Brand />
         <button type="button" onClick={() => setSearching(true)} className="pressable mt-6 flex min-h-11 w-full items-center gap-3 rounded-2xl bg-[var(--soft)] px-3 text-sm text-[var(--muted)]">
-          <Search size={17} /> Tìm kiếm <kbd className="ml-auto text-xs">Ctrl K</kbd>
+          <Search size={17} /> {t("Tìm kiếm")} <kbd className="ml-auto text-xs">Ctrl K</kbd>
         </button>
-        <nav aria-label="Điều hướng chính" className="mt-5 space-y-5">
+        <nav aria-label={t("Điều hướng chính")} className="mt-5 space-y-5">
           {groups.map(group => (
             <div key={group.id} className="space-y-1">
               {group.items.length > 1 && <p className="px-3 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{group.label}</p>}
@@ -132,7 +133,7 @@ export function AppShell() {
         {/* One bar for every screen size. A phone has search, the bell and the account on its first row and
             the rows of sub-screens under it. A desktop has the tabs of the current screen on the left. */}
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-4">
-          <button type="button" onClick={() => setSearching(true)} className="glass pressable order-1 flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] lg:hidden dark:border-white/8"><Search size={17} /> Tìm kiếm</button>
+          <button type="button" onClick={() => setSearching(true)} className="glass pressable order-1 flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] lg:hidden dark:border-white/8"><Search size={17} /> {t("Tìm kiếm")}</button>
           <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3 lg:ml-auto">
             {bell && (
               <Link to={bell.to} aria-label={bell.label} aria-current={section?.tab === "inbox" ? "page" : undefined}
@@ -144,7 +145,7 @@ export function AppShell() {
           </div>
           <div className="order-3 w-full empty:hidden">{modules.map(({ id, indicator: Indicator }) => Indicator && <Indicator key={id} />)}</div>
           {siblings.length > 1 && (
-            <nav ref={pills} aria-label="Trong mục này" className="relative order-4 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:w-[calc(100%+3rem)] sm:px-6 lg:hidden">
+            <nav ref={pills} aria-label={t("Trong mục này")} className="relative order-4 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:w-[calc(100%+3rem)] sm:px-6 lg:hidden">
               {siblings.map(item => (
                 <Link key={item.to} to={item.to} aria-current={item === current ? "page" : item === section ? "true" : undefined}
                   className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors duration-200 ${item === section ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
@@ -155,7 +156,7 @@ export function AppShell() {
           )}
           {/* The screens that share one menu entry, as tabs: "Việc · Thói quen · Ghi chú". */}
           {family.length > 1 && (
-            <nav aria-label="Trong màn này" className="order-5 flex w-full max-w-full gap-1 overflow-x-auto rounded-2xl bg-[var(--soft)] p-1 sm:w-auto lg:order-1">
+            <nav aria-label={t("Trong màn này")} className="order-5 flex w-full max-w-full gap-1 overflow-x-auto rounded-2xl bg-[var(--soft)] p-1 sm:w-auto lg:order-1">
               {family.map(item => (
                 <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
                   className={`inline-flex min-h-9 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:flex-none ${item === current ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
@@ -171,7 +172,7 @@ export function AppShell() {
 
       {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
-      <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}
+      <nav aria-label={t("Điều hướng chính")} style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}
         className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 p-1.5 shadow-2xl max-[359px]:inset-x-1 lg:hidden dark:border-white/10">
         {/* One dark pill slides under the current tab. */}
         <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)]"

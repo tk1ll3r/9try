@@ -16,6 +16,7 @@ import { FeaturedFriend, FriendRow } from "./FriendCard";
 import { MemberAvatar } from "./MemberAvatar";
 import { choiceOf, choices, presenceKey, quickDefaults } from "./modes";
 import { MyModeHero } from "./MyModeHero";
+import { t } from "../../../kernel/i18n";
 
 // Opened now and then, so the dialog code stays out of the home screen's download.
 const ModePicker = lazy(() => import("./ModePicker").then(m => ({ default: m.ModePicker })));
@@ -70,8 +71,8 @@ export function ModePage() {
   const hasMeetup = (item: RankedFriend) => item.reasons.some(reason => reason.kind === "meetup" || reason.kind === "invite");
   const active = ranked.filter(item => item.mode);
   const filters = [
-    { id: "all", label: "Tất cả", count: ranked.length, Icon: undefined, color: undefined },
-    { id: "meetup", label: "Có hẹn", count: ranked.filter(hasMeetup).length, Icon: CalendarCheck2, color: "var(--ink)" },
+    { id: "all", label: t("Tất cả"), count: ranked.length, Icon: undefined, color: undefined },
+    { id: "meetup", label: t("Có hẹn"), count: ranked.filter(hasMeetup).length, Icon: CalendarCheck2, color: "var(--ink)" },
     ...choices.map(choice => ({ id: choice.id, label: choice.label, count: active.filter(item => item.mode!.mode === choice.id).length, Icon: choice.Icon, color: choice.color })),
   ].filter(item => item.id === "all" || item.count > 0);
   // The activities offered for one tap: the ones used last on this device, then the usual ones.
@@ -84,7 +85,7 @@ export function ModePage() {
   const idle = rest.filter(item => !item.mode);
   const rows = showIdle ? rest : [...rest.filter(item => item.mode), ...idle.slice(0, idleShown)];
   const board = useFlip<HTMLDivElement>(visible.map(item => item.friend.userId).join());
-  const problem = error || pins.error || (list.isError ? errorMessage(list.error, "Không tải được mode.") : "");
+  const problem = error || pins.error || (list.isError ? errorMessage(list.error, t("Không tải được mode.")) : "");
 
   function setMode(mode: ActivityMode | null) {
     run(() => presence.set(mode, minutes), () => {
@@ -102,18 +103,18 @@ export function ModePage() {
 
   return <div className="space-y-4">
     <header>
-      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--muted)]"><Radio size={16} className="text-[var(--lime-strong)]" /> {friends.length ? `${active.length}/${friends.length} bạn đang bật mode` : "Tự chọn, tự tắt, chỉ bạn bè thấy"}</p>
-      <h1 className="mt-1 text-3xl font-black tracking-[-.04em] sm:text-4xl">Mọi người đang làm gì?</h1>
+      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--muted)]"><Radio size={16} className="text-[var(--lime-strong)]" /> {friends.length ? t("{0}/{1} bạn đang bật mode", active.length, friends.length) : t("Tự chọn, tự tắt, chỉ bạn bè thấy")}</p>
+      <h1 className="mt-1 text-3xl font-black tracking-[-.04em] sm:text-4xl">{t("Mọi người đang làm gì?")}</h1>
     </header>
 
     <MyModeHero mine={mine} now={now} minutes={minutes} quick={quick} pending={pending} onSet={setMode} onPick={() => setPicking(true)} />
     {picking && <Suspense fallback={null}><ModePicker open onOpenChange={setPicking} mine={mine} minutes={minutes} onMinutes={chooseMinutes} pending={pending} onSet={setMode} /></Suspense>}
 
-    {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={list.isFetching} onClick={() => void list.refetch()}>Thử tải lại</Button></div>}
+    {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={list.isFetching} onClick={() => void list.refetch()}>{t("Thử tải lại")}</Button></div>}
 
     {/* Everyone who has a mode on, at a glance: a face, a ring in the activity's color and its icon. */}
-    {active.length > 0 && <section aria-label="Đang hoạt động">
-      <h2 className="mb-1 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Đang hoạt động · {active.length}</h2>
+    {active.length > 0 && <section aria-label={t("Đang hoạt động")}>
+      <h2 className="mb-1 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Đang hoạt động · {0}", active.length)}</h2>
       <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-2 sm:mx-0 sm:px-1">
         {active.map(item => {
           const choice = choiceOf(item.mode!.mode)!;
@@ -128,7 +129,7 @@ export function ModePage() {
       </ul>
     </section>}
 
-    {friends.length > 0 && filters.length > 1 && <div role="group" aria-label="Lọc bạn bè" className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+    {friends.length > 0 && filters.length > 1 && <div role="group" aria-label={t("Lọc bạn bè")} className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
       {filters.map(item => <button key={item.id} type="button" aria-pressed={shown === item.id} onClick={() => setFilter(item.id)}
         className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${shown === item.id ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
         {item.Icon && <item.Icon size={15} style={shown === item.id ? undefined : { color: item.color }} />}
@@ -137,28 +138,28 @@ export function ModePage() {
     </div>}
 
     <div ref={board} className="space-y-4">
-      {top.length > 0 && <section aria-label="Nổi bật">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Nổi bật</h2>
+      {top.length > 0 && <section aria-label={t("Nổi bật")}>
+        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Nổi bật")}</h2>
         <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{top.map(item => <FeaturedFriend key={item.friend.userId} item={item} now={now} pins={pins} />)}</ul>
       </section>}
 
-      {rows.length > 0 && <section aria-label="Mọi người">
-        {top.length > 0 && <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Mọi người</h2>}
+      {rows.length > 0 && <section aria-label={t("Mọi người")}>
+        {top.length > 0 && <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Mọi người")}</h2>}
         <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{rows.map(item => <FriendRow key={item.friend.userId} item={item} now={now} pins={pins} />)}</ul>
-        {!showIdle && idle.length > idleShown && <Button variant="ghost" className="mt-2 w-full" onClick={() => setShowIdle(true)}>Xem thêm {idle.length - idleShown} người</Button>}
+        {!showIdle && idle.length > idleShown && <Button variant="ghost" className="mt-2 w-full" onClick={() => setShowIdle(true)}>{t("Xem thêm {0} người", idle.length - idleShown)}</Button>}
       </section>}
     </div>
 
-    {list.isPending && friends.length > 0 && <div role="status" aria-label="Đang tải mode" className="space-y-2"><div className="skeleton h-16" /><div className="skeleton h-16" /></div>}
-    {friends.length > 0 && visible.length === 0 && !list.isPending && <p className="py-6 text-center text-sm text-[var(--muted)]">Không có ai trong mục này.</p>}
+    {list.isPending && friends.length > 0 && <div role="status" aria-label={t("Đang tải mode")} className="space-y-2"><div className="skeleton h-16" /><div className="skeleton h-16" /></div>}
+    {friends.length > 0 && visible.length === 0 && !list.isPending && <p className="py-6 text-center text-sm text-[var(--muted)]">{t("Không có ai trong mục này.")}</p>}
 
     {friends.length === 0 && <Card>
       <div className="py-6 text-center">
-        <p className="text-[var(--muted)]">Kết bạn để thấy mode của nhau. Chỉ bạn bè đã kết nối mới thấy mode của bạn.</p>
-        <Link to="/me/friends" className="pressable mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 font-semibold text-[#1d230e]"><UserPlus size={17} /> Thêm bạn bè</Link>
+        <p className="text-[var(--muted)]">{t("Kết bạn để thấy mode của nhau. Chỉ bạn bè đã kết nối mới thấy mode của bạn.")}</p>
+        <Link to="/me/friends" className="pressable mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 font-semibold text-[#1d230e]"><UserPlus size={17} /> {t("Thêm bạn bè")}</Link>
       </div>
     </Card>}
 
-    {friends.length > 0 && <p className="text-xs leading-5 text-[var(--muted)]">Xếp theo: người bạn ghim, cuộc hẹn sắp tới, tin chưa đọc, vị trí đang chia sẻ, mức trò chuyện, rồi mode. Mode do mỗi người tự chọn; ứng dụng không đoán từ GPS.</p>}
+    {friends.length > 0 && <p className="text-xs leading-5 text-[var(--muted)]">{t("Xếp theo: người bạn ghim, cuộc hẹn sắp tới, tin chưa đọc, vị trí đang chia sẻ, mức trò chuyện, rồi mode. Mode do mỗi người tự chọn; ứng dụng không đoán từ GPS.")}</p>}
   </div>;
 }

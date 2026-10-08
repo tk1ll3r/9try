@@ -16,6 +16,7 @@ import { CalendarFeedCard } from "./CalendarFeedCard";
 import { EventDialog } from "./EventDialog";
 import { calendarKey } from "./keys";
 import { NewEventDialog } from "./NewEventDialog";
+import { t } from "../../../kernel/i18n";
 
 // Reading an .ics file needs a parser that most visits never use.
 const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default: m.IcsImportCard })));
@@ -79,30 +80,30 @@ export function CalendarPage() {
       anchor.download = "gnouht-lich.ics";
       anchor.click();
       URL.revokeObjectURL(url);
-    } catch (cause) { setProblem(errorMessage(cause, "Chưa xuất được lịch. Hãy thử lại.")); }
+    } catch (cause) { setProblem(errorMessage(cause, t("Chưa xuất được lịch. Hãy thử lại."))); }
   }
 
-  const failed = problem || (shown.isError ? errorMessage(shown.error, "Chưa tải được lịch.") : "");
+  const failed = problem || (shown.isError ? errorMessage(shown.error, t("Chưa tải được lịch.")) : "");
   return <div className="space-y-5">
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p className="text-sm font-semibold text-[var(--muted)]">{dayTitle(today)}</p>
-        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Lịch</h1>
+        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">{t("Lịch")}</h1>
       </div>
       <div className="flex items-center gap-1">
-        <Button id="create-event-trigger" onClick={() => add(day)}><CalendarPlus size={17} /> Thêm sự kiện</Button>
-        <MoreMenu label="Nhập, xuất và liên kết lịch">
-          <button type="button" onClick={() => setExtra(extra === "import" ? "" : "import")}><FileUp size={17} /> {extra === "import" ? "Ẩn nhập lịch .ics" : "Nhập lịch .ics"}</button>
-          <button type="button" onClick={() => void exportIcs()}><Download size={17} /> Xuất lịch .ics</button>
-          <button type="button" onClick={() => setExtra(extra === "feed" ? "" : "feed")}><Link2 size={17} /> {extra === "feed" ? "Ẩn liên kết lịch" : "Liên kết lịch"}</button>
+        <Button id="create-event-trigger" onClick={() => add(day)}><CalendarPlus size={17} /> {t("Thêm sự kiện")}</Button>
+        <MoreMenu label={t("Nhập, xuất và liên kết lịch")}>
+          <button type="button" onClick={() => setExtra(extra === "import" ? "" : "import")}><FileUp size={17} /> {extra === "import" ? t("Ẩn nhập lịch .ics") : t("Nhập lịch .ics")}</button>
+          <button type="button" onClick={() => void exportIcs()}><Download size={17} /> {t("Xuất lịch .ics")}</button>
+          <button type="button" onClick={() => setExtra(extra === "feed" ? "" : "feed")}><Link2 size={17} /> {extra === "feed" ? t("Ẩn liên kết lịch") : t("Liên kết lịch")}</button>
         </MoreMenu>
       </div>
     </header>
 
-    {failed && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{failed}{shown.isError && <> <Button variant="ghost" disabled={shown.isFetching} onClick={() => void shown.refetch()}>Thử tải lại</Button></>}</div>}
+    {failed && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{failed}{shown.isError && <> <Button variant="ghost" disabled={shown.isFetching} onClick={() => void shown.refetch()}>{t("Thử tải lại")}</Button></>}</div>}
     {notice && <div role="status" className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{notice}</div>}
 
-    {extra === "import" && <Suspense fallback={<p role="status">Đang tải công cụ nhập lịch…</p>}><IcsImportCard onImported={() => queries.invalidateQueries({ queryKey: calendarKey })} /></Suspense>}
+    {extra === "import" && <Suspense fallback={<p role="status">{t("Đang tải công cụ nhập lịch…")}</p>}><IcsImportCard onImported={() => queries.invalidateQueries({ queryKey: calendarKey })} /></Suspense>}
     {extra === "feed" && <CalendarFeedCard />}
 
     <CalendarBoard entries={shown.data?.entries ?? []} day={day} onDay={setDay} onRange={(from, until) => setRange([from, until])} onOpen={open} onAdd={add} />

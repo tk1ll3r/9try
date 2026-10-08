@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Button } from "./Button";
 import { DialogPanel } from "./DialogPanel";
+import { t } from "../i18n";
 
 export interface Question {
   title: string;
@@ -36,7 +37,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     {children}
     <DialogPanel alert open={open} onOpenChange={next => { if (!next) close(false); }} title={question?.title ?? ""} description={question?.body ?? ""}>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" data-dialog-initial-focus onClick={() => close(false)}>Thôi</Button>
+        <Button variant="ghost" data-dialog-initial-focus onClick={() => close(false)}>{t("Thôi")}</Button>
         <Button variant={question?.danger === false ? "primary" : "danger"} onClick={() => close(true)}>{question?.action}</Button>
       </div>
     </DialogPanel>

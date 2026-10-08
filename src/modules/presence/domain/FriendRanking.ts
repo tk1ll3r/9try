@@ -1,4 +1,5 @@
 import type { ActiveMode } from "./ActivityMode";
+import { t } from "../../../kernel/i18n";
 
 /** The part of a friend the ranking needs. */
 export interface Person {
@@ -47,9 +48,9 @@ export class FriendRanking {
       const own = signals.filter(signal => signal.userId === friend.userId);
       if (mode) {
         const fresh = at - Date.parse(mode.startedAt) < freshMs;
-        own.push({ userId: friend.userId, kind: "mode", strength: fresh ? 1 : 0.6, label: fresh ? "Vừa bật" : undefined });
+        own.push({ userId: friend.userId, kind: "mode", strength: fresh ? 1 : 0.6, label: fresh ? t("Vừa bật") : undefined });
         // Someone who says they are free is someone to ask out, so it counts as a reason of its own.
-        if (mode.mode === "free") own.push({ userId: friend.userId, kind: "free", strength: 1, label: "Đang rảnh" });
+        if (mode.mode === "free") own.push({ userId: friend.userId, kind: "free", strength: 1, label: t("Đang rảnh") });
       }
       // Several reasons of one kind count once, at their strongest.
       const strongest = new Map<string, Reason>();

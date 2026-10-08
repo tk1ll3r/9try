@@ -3,6 +3,7 @@ import { Temporal } from "temporal-polyfill";
 import type { CalendarEventRow, CalendarExceptionRow, CalendarOccurrence, CalendarVisibility, CreateCalendarEventInput, EventAudience, SharedCalendarOccurrence } from "../domain/Occurrence";
 import { expand } from "../domain/recurrence";
 import { classTimes, firstClassDate, type ClassDraft, type ClassEntry } from "../domain/timetable";
+import { t } from "../../../kernel/i18n";
 
 /** The signed-in user's calendar in Supabase. Repeating events are expanded on this side. */
 export class SupabaseCalendarRepository {
@@ -110,7 +111,7 @@ export class SupabaseCalendarRepository {
     const { data, error } = await this.db.rpc("list_shared_busy", { p_owner_id: ownerId, p_from: rangeStart.toISOString(), p_to: rangeEnd.toISOString() });
     if (error) throw error;
     return (data ?? []).flatMap((raw: any) => expand({
-      ...raw, title: "Bận", visibility: "only_me",
+      ...raw, title: t("Bận"), visibility: "only_me",
       calendar_event_exceptions: Array.isArray(raw.exceptions) ? raw.exceptions : [],
     }, rangeStart, rangeEnd)).sort((a: CalendarOccurrence, b: CalendarOccurrence) => a.start.localeCompare(b.start));
   }
@@ -130,7 +131,7 @@ export class SupabaseCalendarRepository {
   /** Adds a class that repeats every week from the first matching day of the term to its end. */
   async createClass(draft: ClassDraft, termStart: string, termEnd: string): Promise<void> {
     const date = firstClassDate(termStart, draft.weekday);
-    if (date > termEnd) throw new Error(`“${draft.title}” không có buổi nào trong học kỳ này.`);
+    if (date > termEnd) throw new Error(t("“{0}” không có buổi nào trong học kỳ này.", draft.title));
     await this.create({
       title: draft.title, kind: "timed", start: `${date}T${draft.start}`, end: `${date}T${draft.end}`,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, visibility: "only_me",
@@ -180,7 +181,7 @@ export class SupabaseCalendarRepository {
       result.push(...expand(row, rangeStart, rangeEnd).map((occurrence) => ({
         ...occurrence,
         ownerId: raw.owner_id,
-        ownerDisplayName: raw.owner_display_name || raw.owner_username || "Người dùng",
+        ownerDisplayName: raw.owner_display_name || raw.owner_username || t("Người dùng"),
         ownerUsername: raw.owner_username,
         description: raw.description ?? "",
       })));
@@ -236,7 +237,7 @@ export class SupabaseCalendarRepository {
       const editedStart = Temporal.PlainDate.from(input.start);
       const editedEndExclusive = Temporal.PlainDate.from(input.end).add({ days: 1 });
       const durationDays = editedStart.until(editedEndExclusive).days;
-      if (durationDays < 1) throw new Error("Khoảng ngày không hợp lệ.");
+      if (durationDays < 1) throw new Error(t("Khoảng ngày không hợp lệ."));
 
       const masterStart = Temporal.PlainDate.from(occurrence.masterStart);
       const { error } = await this.db
@@ -255,7 +256,7 @@ export class SupabaseCalendarRepository {
     const editedEnd = Temporal.Instant.from(new Date(input.end).toISOString())
       .toZonedDateTimeISO(occurrence.timezone);
     if (Temporal.ZonedDateTime.compare(editedEnd, editedStart) <= 0) {
-      throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu.");
+      throw new Error(t("Thời gian kết thúc phải sau thời gian bắt đầu."));
     }
 
     const duration = editedStart.until(editedEnd);

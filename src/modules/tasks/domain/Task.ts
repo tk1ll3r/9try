@@ -1,5 +1,6 @@
 import { localDateKey } from "../../../kernel/dates";
 import { DomainError } from "../../../kernel/errors";
+import { locale, t } from "../../../kernel/i18n";
 
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -59,7 +60,7 @@ export class Task {
 
   /** The due day and time as shown in a list: "7/10/2026" or "7/10/2026 14:00". */
   get dueLabel(): string {
-    return this.dueAt ? [new Date(this.dueAt).toLocaleDateString("vi-VN"), this.dueTime].filter(Boolean).join(" ") : "Không hạn";
+    return this.dueAt ? [new Date(this.dueAt).toLocaleDateString(locale), this.dueTime].filter(Boolean).join(" ") : t("Không hạn");
   }
 
   isOverdue(now = new Date()): boolean {
@@ -83,7 +84,7 @@ export class Task {
   static details(draft: TaskDraft, current?: Task): TaskDetails {
     const tags = [...new Set([...draft.title.matchAll(hashtag)].map(match => match[2].toLocaleLowerCase("vi-VN")))].slice(0, maxTags);
     const title = draft.title.replace(hashtag, "$1").replace(/\s+/g, " ").trim();
-    if (!title) throw new DomainError("TITLE_REQUIRED", "Hãy nhập tên công việc.");
+    if (!title) throw new DomainError("TITLE_REQUIRED", t("Hãy nhập tên công việc."));
     const dueAt = !draft.dueDate ? null
       : current?.dueDate === draft.dueDate && current.dueTime === (draft.dueTime ?? "") ? current.dueAt
       : new Date(`${draft.dueDate}T${draft.dueTime || "23:59"}:00`).toISOString();

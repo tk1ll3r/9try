@@ -6,6 +6,7 @@ import { useModule } from "../../../kernel/session";
 import { Card } from "../../../kernel/ui/Card";
 import { friendsModule } from "../friends.module";
 import { friendsKey } from "./useFriends";
+import { t } from "../../../kernel/i18n";
 
 /** Opened from a personal link: makes the signed-in user a friend of the link's owner. */
 export function FriendInvitePage() {
@@ -19,9 +20,9 @@ export function FriendInvitePage() {
       <Card>
         <div className="py-8 text-center">
           {claim.isSuccess ? <CheckCircle2 className="mx-auto text-emerald-600" size={42} /> : claim.isError ? <Link2Off className="mx-auto text-red-500" size={42} /> : <div className="mx-auto size-10 animate-pulse rounded-full bg-[var(--soft)]" />}
-          <h1 className="mt-5 text-2xl font-black">{claim.isSuccess ? "Hai bạn đã là bạn bè" : claim.isError ? "Liên kết không dùng được" : "Đang kết bạn…"}</h1>
-          {claim.isError && <p role="alert" className="mt-2 text-[var(--muted)]">{errorMessage(claim.error, "Không dùng được liên kết này.")}</p>}
-          {!claim.isPending && <Link to="/me/friends" className="mt-6 inline-flex min-h-11 items-center rounded-2xl bg-[var(--ink)] px-4 text-sm font-semibold text-[var(--paper)]">Mở danh sách bạn bè</Link>}
+          <h1 className="mt-5 text-2xl font-black">{claim.isSuccess ? t("Hai bạn đã là bạn bè") : claim.isError ? t("Liên kết không dùng được") : t("Đang kết bạn…")}</h1>
+          {claim.isError && <p role="alert" className="mt-2 text-[var(--muted)]">{errorMessage(claim.error, t("Không dùng được liên kết này."))}</p>}
+          {!claim.isPending && <Link to="/me/friends" className="mt-6 inline-flex min-h-11 items-center rounded-2xl bg-[var(--ink)] px-4 text-sm font-semibold text-[var(--paper)]">{t("Mở danh sách bạn bè")}</Link>}
         </div>
       </Card>
     </div>

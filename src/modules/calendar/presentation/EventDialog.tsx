@@ -13,6 +13,7 @@ import type { CalendarOccurrence } from "../domain/Occurrence";
 import { AudienceFields, audienceProblem, type AudienceChoice } from "./AudienceFields";
 import { calendarKey } from "./keys";
 import { timeProblem } from "./NewEventDialog";
+import { t } from "../../../kernel/i18n";
 
 /**
  * One event, to change or remove. For an event that repeats, the name and the time can be saved for
@@ -60,44 +61,45 @@ export function EventDialog({ occurrence, open, onOpenChange, onDone }: {
       else if (everyTime) await calendar.updateWholeSeriesFromOccurrence({ occurrence, title, start, end });
       else await calendar.editOccurrence({ eventId, occurrenceDate: occurrence.occurrenceDate, title, allDay, start, end });
       await saveShared();
-    }, () => { onOpenChange(false); onDone(!recurring ? "Đã lưu sự kiện." : everyTime ? "Đã lưu cho mọi buổi." : "Đã lưu riêng buổi này."); });
+    }, () => { onOpenChange(false); onDone(!recurring ? t("Đã lưu sự kiện.") : everyTime ? t("Đã lưu cho mọi buổi.") : t("Đã lưu riêng buổi này.")); });
   }
   async function skip() {
-    if (!await confirm({ title: "Bỏ buổi này?", body: `Buổi ${dayTitle(firstDay)} sẽ không còn trong lịch. Các buổi khác giữ nguyên.`, action: "Bỏ buổi này" })) return;
-    run(() => calendar.skipOccurrence(eventId, occurrence.occurrenceDate), () => { onOpenChange(false); onDone("Đã bỏ buổi này khỏi lịch."); });
+    if (!await confirm({ title: t("Bỏ buổi này?"), body: t("Buổi {0} sẽ không còn trong lịch. Các buổi khác giữ nguyên.", dayTitle(firstDay)), action: t("Bỏ buổi này") })) return;
+    run(() => calendar.skipOccurrence(eventId, occurrence.occurrenceDate), () => { onOpenChange(false); onDone(t("Đã bỏ buổi này khỏi lịch.")); });
   }
   async function remove() {
     if (!await confirm(recurring
-      ? { title: "Xóa mọi buổi?", body: `“${occurrence.title}” sẽ bị xóa ở tất cả các ngày, kể cả những buổi đã qua. Không thể hoàn tác.`, action: "Xóa mọi buổi" }
-      : { title: "Xóa sự kiện?", body: `“${occurrence.title}” sẽ bị xóa khỏi lịch. Không thể hoàn tác.`, action: "Xóa sự kiện" })) return;
-    run(() => calendar.deleteWholeEvent(eventId), () => { onOpenChange(false); onDone(recurring ? "Đã xóa mọi buổi." : "Đã xóa sự kiện."); });
+      ? { title: t("Xóa mọi buổi?"), body: t("“{0}” sẽ bị xóa ở tất cả các ngày, kể cả những buổi đã qua. Không thể hoàn tác.", occurrence.title), action: t("Xóa mọi buổi") }
+      : { title: t("Xóa sự kiện?"), body: t("“{0}” sẽ bị xóa khỏi lịch. Không thể hoàn tác.", occurrence.title), action: t("Xóa sự kiện") })) return;
+    run(() => calendar.deleteWholeEvent(eventId), () => { onOpenChange(false); onDone(recurring ? t("Đã xóa mọi buổi.") : t("Đã xóa sự kiện.")); });
   }
 
   const field = allDay ? "date" : "datetime-local";
-  const what = occurrence.category === "class" ? "lớp học" : "sự kiện";
-  return <DialogPanel open={open} onOpenChange={onOpenChange} busy={pending} title={`Sửa ${what}`}
-    description={`${dayTitle(firstDay)}${recurring ? ` · ${what} này lặp lại` : ""}`}>
+  // Whole phrases for a class and for an event: a language may put the words in another order.
+  const isClass = occurrence.category === "class";
+  return <DialogPanel open={open} onOpenChange={onOpenChange} busy={pending} title={isClass ? t("Sửa lớp học") : t("Sửa sự kiện")}
+    description={`${dayTitle(firstDay)}${!recurring ? "" : isClass ? t(" · lớp học này lặp lại") : t(" · sự kiện này lặp lại")}`}>
     <form onSubmit={(event: FormEvent) => { event.preventDefault(); save(false); }} className="grid gap-3 md:grid-cols-2" aria-busy={pending}>
-      <label className="grid gap-1 text-sm font-semibold md:col-span-2">Tên {what}
+      <label className="grid gap-1 text-sm font-semibold md:col-span-2">{isClass ? t("Tên lớp học") : t("Tên sự kiện")}
         <input className="field" required maxLength={240} value={title} onChange={event => setTitle(event.target.value)} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">{allDay ? "Ngày bắt đầu" : "Bắt đầu"}
+      <label className="grid gap-1 text-sm font-semibold">{allDay ? t("Ngày bắt đầu") : t("Bắt đầu")}
         <input className="field" type={field} required value={start} onChange={event => setStart(event.target.value)} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">{allDay ? "Ngày cuối" : "Kết thúc"}
+      <label className="grid gap-1 text-sm font-semibold">{allDay ? t("Ngày cuối") : t("Kết thúc")}
         <input className="field" type={field} required value={end} onChange={event => setEnd(event.target.value)} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">Địa điểm (tùy chọn)
-        <input className="field" maxLength={80} value={place} onChange={event => setPlace(event.target.value)} placeholder="Phòng, quán, địa chỉ…" />
+      <label className="grid gap-1 text-sm font-semibold">{t("Địa điểm (tùy chọn)")}
+        <input className="field" maxLength={80} value={place} onChange={event => setPlace(event.target.value)} placeholder={t("Phòng, quán, địa chỉ…")} />
       </label>
       <AudienceFields value={audience} onChange={next => { setAudience(next); setAudienceChanged(true); }} />
-      {recurring && <p className="text-xs leading-5 text-[var(--muted)] md:col-span-2">Tên và giờ lưu được cho riêng buổi này hoặc cho mọi buổi. Địa điểm và người được xem luôn áp dụng cho mọi buổi.</p>}
+      {recurring && <p className="text-xs leading-5 text-[var(--muted)] md:col-span-2">{t("Tên và giờ lưu được cho riêng buổi này hoặc cho mọi buổi. Địa điểm và người được xem luôn áp dụng cho mọi buổi.")}</p>}
       {(problem || error) && <p role="alert" className="text-sm leading-6 text-[var(--danger)] md:col-span-2">{problem || error}</p>}
       <div className="flex flex-wrap gap-2 md:col-span-2">
-        <Button type="submit" disabled={pending}>{pending ? "Đang lưu…" : recurring ? "Lưu riêng buổi này" : "Lưu"}</Button>
-        {recurring && <Button variant="secondary" disabled={pending} onClick={() => save(true)}><Repeat2 size={17} /> Lưu cho mọi buổi</Button>}
-        {recurring && <Button variant="ghost" disabled={pending} onClick={() => void skip()}><XCircle size={17} /> Bỏ buổi này</Button>}
-        <Button variant="ghost" className="text-[var(--danger)]" disabled={pending} onClick={() => void remove()}><Trash2 size={17} /> {recurring ? "Xóa mọi buổi" : "Xóa sự kiện"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? t("Đang lưu…") : recurring ? t("Lưu riêng buổi này") : t("Lưu")}</Button>
+        {recurring && <Button variant="secondary" disabled={pending} onClick={() => save(true)}><Repeat2 size={17} /> {t("Lưu cho mọi buổi")}</Button>}
+        {recurring && <Button variant="ghost" disabled={pending} onClick={() => void skip()}><XCircle size={17} /> {t("Bỏ buổi này")}</Button>}
+        <Button variant="ghost" className="text-[var(--danger)]" disabled={pending} onClick={() => void remove()}><Trash2 size={17} /> {recurring ? t("Xóa mọi buổi") : t("Xóa sự kiện")}</Button>
       </div>
     </form>
   </DialogPanel>;

@@ -4,6 +4,7 @@ import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { chatModule } from "../chat.module";
 import { chatKey } from "./useChat";
+import { t } from "../../../kernel/i18n";
 
 /** `/chat/with/:userId` and `/chat/group/:groupId`: find or create the conversation, then go to it. */
 export function OpenChatPage() {
@@ -16,8 +17,8 @@ export function OpenChatPage() {
   });
   if (opened.data) return <Navigate to={`/chat/${opened.data}`} replace />;
   if (opened.isError) return <div role="alert" className="space-y-3 rounded-2xl bg-[var(--soft)] p-4 text-sm">
-    <p className="text-[var(--danger)]">{errorMessage(opened.error, "Không mở được cuộc trò chuyện.")}</p>
-    <Link to="/chat" className="font-semibold underline">Về danh sách trò chuyện</Link>
+    <p className="text-[var(--danger)]">{errorMessage(opened.error, t("Không mở được cuộc trò chuyện."))}</p>
+    <Link to="/chat" className="font-semibold underline">{t("Về danh sách trò chuyện")}</Link>
   </div>;
-  return <p role="status">Đang mở cuộc trò chuyện…</p>;
+  return <p role="status">{t("Đang mở cuộc trò chuyện…")}</p>;
 }

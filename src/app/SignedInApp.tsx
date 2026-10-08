@@ -6,6 +6,7 @@ import { ConfirmProvider } from "../kernel/ui/Confirm";
 import { returnPathKey } from "../modules/identity/domain/login";
 import { AppShell } from "./AppShell";
 import { registry } from "./modules";
+import { t } from "../kernel/i18n";
 
 /** Everything behind sign-in: the modules, their routes and the shell. Loaded only once someone is signed in. */
 export default function SignedInApp({ userId }: { userId: string }) {
@@ -23,7 +24,7 @@ export default function SignedInApp({ userId }: { userId: string }) {
   return <SessionProvider key={userId} userId={userId} registry={registry}>
     <RealtimeBridge userId={userId} />
     <ConfirmProvider>
-      <Suspense fallback={<div role="status" className="p-6">Đang tải trang…</div>}>
+      <Suspense fallback={<div role="status" className="p-6">{t("Đang tải trang…")}</div>}>
         <Routes><Route element={<AppShell />}>
           {registry.routes.map(({ path, component: Page }) => path
             ? <Route key={path} path={path} element={<Page />} />

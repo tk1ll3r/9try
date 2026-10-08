@@ -6,14 +6,15 @@ import type { ProfileRepository } from "./domain/Profile";
 import { SupabaseProfileRepository } from "./infrastructure/SupabaseProfileRepository";
 import { AccountSettings } from "./presentation/AccountSettings";
 import { InstallCard } from "./presentation/InstallCard";
+import { t } from "../../kernel/i18n";
 
 export const identityModule: FeatureModule<ProfileRepository> = {
   id: "identity",
   create: ({ userId }) => new SupabaseProfileRepository(requireSupabase(), userId),
   navigation: [
-    { tab: "me", to: "/me", label: "Hồ sơ", icon: CircleUserRound, order: 10 },
-    { tab: "me", to: "/me/privacy", label: "Quyền riêng tư", icon: ShieldCheck, order: 20, parent: "/me" },
-    { tab: "me", to: "/me/settings", label: "Cài đặt", icon: Settings, order: 30, parent: "/me" },
+    { tab: "me", to: "/me", label: t("Hồ sơ"), icon: CircleUserRound, order: 10 },
+    { tab: "me", to: "/me/privacy", label: t("Quyền riêng tư"), icon: ShieldCheck, order: 20, parent: "/me" },
+    { tab: "me", to: "/me/settings", label: t("Cài đặt"), icon: Settings, order: 30, parent: "/me" },
   ],
   today: { order: 2, card: InstallCard },
   settings: AccountSettings,

@@ -7,6 +7,7 @@ import { locationSignals, type LocationRepository } from "./domain/Location";
 import { SupabaseLocationRepository } from "./infrastructure/SupabaseLocationRepository";
 import { LocationPrivacy } from "./presentation/LocationPrivacy";
 import { SharingIndicator } from "./presentation/SharingIndicator";
+import { t } from "../../kernel/i18n";
 
 export interface LocationServices {
   locations: LocationRepository;
@@ -31,6 +32,6 @@ export const locationModule: FeatureModule<LocationServices> = {
   indicator: SharingIndicator,
   friendSignals: async ({ locations }, { now }) => locationSignals(await locations.listVisible(), now),
   privacy: LocationPrivacy,
-  navigation: [{ tab: "together", to: "/me/location", label: "Vị trí", icon: MapPin, order: 40 }],
+  navigation: [{ tab: "together", to: "/me/location", label: t("Vị trí"), icon: MapPin, order: 40 }],
   routes: [{ path: "me/location", component: lazy(() => import("./presentation/LocationPage").then(m => ({ default: m.LocationPage }))) }],
 };

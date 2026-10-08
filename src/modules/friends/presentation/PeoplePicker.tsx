@@ -1,4 +1,5 @@
 import { useAcceptedFriends } from "./useFriends";
+import { t } from "../../../kernel/i18n";
 
 /** Tick friends from a list. `value` holds their user ids. */
 export function PeoplePicker({ legend, value, onChange }: { legend: string; value: string[]; onChange(ids: string[]): void }) {
@@ -7,7 +8,7 @@ export function PeoplePicker({ legend, value, onChange }: { legend: string; valu
     <fieldset className="rounded-2xl bg-[var(--soft)] p-3">
       <legend className="px-1 text-xs font-bold text-[var(--muted)]">{legend}</legend>
       <div className="mt-2 flex flex-wrap gap-2">
-        {friends.length === 0 && <span className="text-sm text-[var(--muted)]">Chưa có bạn bè để chọn.</span>}
+        {friends.length === 0 && <span className="text-sm text-[var(--muted)]">{t("Chưa có bạn bè để chọn.")}</span>}
         {friends.map(friend => {
           const checked = value.includes(friend.userId);
           return (

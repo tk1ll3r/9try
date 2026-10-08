@@ -1,7 +1,8 @@
 import { Temporal } from "temporal-polyfill";
-import { dayTitle, localDateKey, weekdayLetters } from "../../../kernel/dates";
+import { dayTitle, localDateKey, monthName, weekdayLetters } from "../../../kernel/dates";
 import type { AgendaItem } from "../../../kernel/module";
 import type { CalendarOccurrence, CalendarVisibility } from "./Occurrence";
+import { t } from "../../../kernel/i18n";
 
 /** What gives an entry its color: the user's own event, a class, a plan from another module, a friend's busy time. */
 export type EntryTone = "event" | "class" | "activity" | "busy";
@@ -26,13 +27,13 @@ export interface CalendarEntry {
   to?: string;
 }
 
-export const audienceNames: Record<CalendarVisibility, string> = { only_me: "Chỉ mình tôi", selected_friends: "Bạn bè được chọn", group: "Một nhóm", public: "Công khai" };
+export const audienceNames: Record<CalendarVisibility, string> = { only_me: t("Chỉ mình tôi"), selected_friends: t("Bạn bè được chọn"), group: t("Một nhóm"), public: t("Công khai") };
 
 export function entryOf(event: CalendarOccurrence): CalendarEntry {
   const isClass = event.category === "class";
   return {
     id: event.id, title: event.title, allDay: event.allDay, start: event.start, end: event.end, place: event.place, recurring: event.recurring,
-    tone: isClass ? "class" : "event", kind: isClass ? "Lớp học" : undefined,
+    tone: isClass ? "class" : "event", kind: isClass ? t("Lớp học") : undefined,
     audience: event.visibility === "only_me" ? undefined : audienceNames[event.visibility],
   };
 }
@@ -72,10 +73,11 @@ export function monthWeeks(day: string): string[][] {
 
 export { dayTitle, weekdayLetters };
 /** "Tháng 10, 2026" */
-export const monthTitle = (day: string) => `Tháng ${plain(day).month}, ${plain(day).year}`;
+// The month's name is a third value: a language that writes "October 2026" uses it in place of the number.
+export const monthTitle = (day: string) => t("Tháng {0}, {1}", plain(day).month, plain(day).year, monthName(plain(day).month));
 /** "Hôm nay", "Ngày mai", "Hôm qua", or nothing for any other day. */
 export function nearDay(day: string, today: string): string {
-  return day === today ? "Hôm nay" : day === shiftDays(today, 1) ? "Ngày mai" : day === shiftDays(today, -1) ? "Hôm qua" : "";
+  return day === today ? t("Hôm nay") : day === shiftDays(today, 1) ? t("Ngày mai") : day === shiftDays(today, -1) ? t("Hôm qua") : "";
 }
 
 /** The first and the last day an entry touches. */

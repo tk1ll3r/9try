@@ -5,11 +5,12 @@ import { Card } from "../../../kernel/ui/Card";
 import { clock, dayTitle, entriesByDay, fillsDay, minutesOn, monthTitle, monthWeeks, nearDay, shiftDays, shiftMonths, weekOf, weekdayLetters, type CalendarEntry, type EntryTone } from "../domain/calendarView";
 import { toneOf } from "./tone";
 import { WeekGrid } from "./WeekGrid";
+import { t } from "../../../kernel/i18n";
 
 type View = "agenda" | "week" | "month";
-const views: [View, string][] = [["agenda", "Lịch biểu"], ["week", "Tuần"], ["month", "Tháng"]];
+const views: [View, string][] = [["agenda", t("Lịch biểu")], ["week", t("Tuần")], ["month", t("Tháng")]];
 const viewKey = "gnouht-calendar-view";
-const toneNames: [EntryTone, string][] = [["event", "Sự kiện"], ["class", "Lớp học"], ["activity", "Hoạt động"], ["busy", "Bận"]];
+const toneNames: [EntryTone, string][] = [["event", t("Sự kiện")], ["class", t("Lớp học")], ["activity", t("Hoạt động")], ["busy", t("Bận")]];
 
 /** A phone opens on the week's list, a wider screen on the month. A view chosen before is kept on this device. */
 function firstView(): View {
@@ -49,7 +50,7 @@ export function CalendarBoard({ entries, day, onDay, onRange, onOpen, onAdd }: {
   useEffect(() => { onRange(from, until); }, [from, until]);
   const byDay = useMemo(() => entriesByDay(entries), [entries]);
   const tones = toneNames.filter(([name]) => entries.some(entry => entry.tone === name));
-  const step = view === "month" ? "Tháng" : "Tuần";
+  const [before, after] = view === "month" ? [t("Tháng trước"), t("Tháng sau")] : [t("Tuần trước"), t("Tuần sau")];
   const move = (direction: 1 | -1) => onDay(view === "month" ? shiftMonths(day, direction) : shiftDays(day, 7 * direction));
 
   function choose(next: View) {
@@ -62,15 +63,15 @@ export function CalendarBoard({ entries, day, onDay, onRange, onOpen, onAdd }: {
     <div className="flex flex-wrap items-center gap-2">
       <h2 aria-live="polite" className="mr-auto text-2xl font-black tracking-[-.03em]">{monthTitle(day)}</h2>
       <div className="flex items-center sm:order-last">
-        <button type="button" aria-label={`${step} trước`} onClick={() => move(-1)} className={round}><ChevronLeft size={20} /></button>
-        <button type="button" aria-label={`${step} sau`} onClick={() => move(1)} className={round}><ChevronRight size={20} /></button>
+        <button type="button" aria-label={before} onClick={() => move(-1)} className={round}><ChevronLeft size={20} /></button>
+        <button type="button" aria-label={after} onClick={() => move(1)} className={round}><ChevronRight size={20} /></button>
       </div>
       <div className="flex w-full items-center gap-2 sm:w-auto">
-        <div role="group" aria-label="Cách xem lịch" className="flex flex-1 gap-1 rounded-2xl bg-[var(--soft)] p-1">
+        <div role="group" aria-label={t("Cách xem lịch")} className="flex flex-1 gap-1 rounded-2xl bg-[var(--soft)] p-1">
           {views.map(([name, label]) => <button key={name} type="button" aria-pressed={view === name} onClick={() => choose(name)}
             className={`min-h-9 flex-1 whitespace-nowrap rounded-xl px-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:px-3.5 ${view === name ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>{label}</button>)}
         </div>
-        <button type="button" onClick={() => onDay(today)} className="pressable min-h-10 whitespace-nowrap rounded-full border border-[var(--border)] px-3.5 text-sm font-semibold">Hôm nay</button>
+        <button type="button" onClick={() => onDay(today)} className="pressable min-h-10 whitespace-nowrap rounded-full border border-[var(--border)] px-3.5 text-sm font-semibold">{t("Hôm nay")}</button>
       </div>
     </div>
 
@@ -102,7 +103,7 @@ function DayGrid({ weeks, day, today, byDay, onDay, detail }: {
         // In a month, the days of the months around it are there to fill the weeks.
         const outside = detail && date.slice(0, 7) !== day.slice(0, 7);
         return <button key={date} type="button" aria-pressed={chosen} aria-current={date === today ? "date" : undefined}
-          aria-label={`${dayTitle(date)}${list.length ? `, ${list.length} mục` : ""}`} onClick={() => onDay(date)}
+          aria-label={`${dayTitle(date)}${list.length ? t(", {0} mục", list.length) : ""}`} onClick={() => onDay(date)}
           className={`flex min-h-[3.25rem] min-w-0 flex-col items-center gap-1 rounded-2xl p-1 transition-colors duration-200 ${detail ? "md:min-h-28 md:items-stretch md:text-left" : ""} ${chosen ? "bg-[var(--soft)]" : "hover:bg-[color-mix(in_srgb,var(--soft)_55%,transparent)]"}`}>
           <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold ${chosen ? "bg-[var(--ink)] text-[var(--paper)]" : date === today ? "bg-[var(--lime)] text-[#1d230e]" : outside ? "text-[var(--muted)] opacity-50" : ""}`}>{Number(date.slice(8))}</span>
           <span className={`flex h-1.5 gap-0.5 ${detail ? "md:hidden" : ""}`}>
@@ -110,7 +111,7 @@ function DayGrid({ weeks, day, today, byDay, onDay, detail }: {
           </span>
           {detail && <span className={`hidden min-w-0 flex-col gap-0.5 md:flex ${outside ? "opacity-50" : ""}`}>
             {list.slice(0, 3).map(entry => <span key={entry.id} style={toneOf(entry)} className="truncate rounded-md border-l-[3px] border-[var(--tone)] bg-[color-mix(in_srgb,var(--tone)_14%,transparent)] px-1 py-0.5 text-[11px] font-semibold leading-4">{entry.title}</span>)}
-            {list.length > 3 && <span className="px-1 text-[11px] font-semibold text-[var(--muted)]">+{list.length - 3} nữa</span>}
+            {list.length > 3 && <span className="px-1 text-[11px] font-semibold text-[var(--muted)]">{t("+{0} nữa", list.length - 3)}</span>}
           </span>}
         </button>;
       })}
@@ -124,10 +125,10 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
 }) {
   const near = nearDay(day, today);
   const minute = now.getHours() * 60 + now.getMinutes();
-  return <section aria-label={`Lịch ${dayTitle(day)}`} className={className}>
+  return <section aria-label={t("Lịch {0}", dayTitle(day))} className={className}>
     <div className="mb-3 flex min-h-10 items-center justify-between gap-3">
       <h3 className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-bold">{near && <span className="rounded-full bg-[var(--lime)] px-2.5 py-1 text-xs text-[#1d230e]">{near}</span>}<span>{dayTitle(day)}</span></h3>
-      {onAdd && <button type="button" aria-label={`Thêm sự kiện vào ${dayTitle(day)}`} onClick={() => onAdd(day)}
+      {onAdd && <button type="button" aria-label={t("Thêm sự kiện vào {0}", dayTitle(day))} onClick={() => onAdd(day)}
         className="pressable grid size-10 shrink-0 place-items-center rounded-full bg-[var(--lime)] text-[#1d230e]"><Plus size={19} /></button>}
     </div>
     {entries.length ? <ul className="space-y-2">
@@ -140,11 +141,11 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
         const Row = onOpen ? "button" : "div";
         return <li key={entry.id}>
           <Row {...(onOpen ? { type: "button", onClick: () => onOpen(entry) } : {})} style={toneOf(entry)}
-            aria-label={onOpen ? `${entry.title}, ${whole ? "cả ngày" : `${clock(from)} đến ${clock(to)}`}` : undefined}
+            aria-label={onOpen ? `${entry.title}, ${whole ? t("cả ngày") : t("{0} đến {1}", clock(from), clock(to))}` : undefined}
             className={`flex w-full items-stretch gap-3 rounded-2xl bg-[color-mix(in_srgb,var(--tone)_11%,var(--surface))] p-3 text-left ${onOpen ? "pressable" : ""} ${over ? "opacity-70" : ""}`}>
             <span aria-hidden className="w-1 shrink-0 rounded-full bg-[var(--tone)]" />
             <span className="w-12 shrink-0 tabular-nums leading-5">
-              {whole ? <b className="text-xs">Cả ngày</b> : <><b className="block text-sm">{clock(from)}</b><span className="text-xs text-[var(--muted)]">{clock(to)}</span></>}
+              {whole ? <b className="text-xs">{t("Cả ngày")}</b> : <><b className="block text-sm">{clock(from)}</b><span className="text-xs text-[var(--muted)]">{clock(to)}</span></>}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block break-words font-semibold leading-5">{entry.title}</span>
@@ -152,13 +153,13 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
                 {entry.kind && <span>{entry.kind}</span>}
                 {entry.place && <span className="inline-flex items-center gap-1"><MapPin size={12} />{entry.place}</span>}
                 {entry.audience && <span className="inline-flex items-center gap-1"><UsersRound size={12} />{entry.audience}</span>}
-                {entry.recurring && <span className="inline-flex items-center gap-1"><Repeat2 size={12} />Lặp lại</span>}
+                {entry.recurring && <span className="inline-flex items-center gap-1"><Repeat2 size={12} />{t("Lặp lại")}</span>}
               </span>
             </span>
-            {running && <span className="self-center rounded-full bg-[var(--lime)] px-2 py-0.5 text-[11px] font-bold text-[#1d230e]">Đang diễn ra</span>}
+            {running && <span className="self-center rounded-full bg-[var(--lime)] px-2 py-0.5 text-[11px] font-bold text-[#1d230e]">{t("Đang diễn ra")}</span>}
           </Row>
         </li>;
       })}
-    </ul> : <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted)]">Ngày này chưa có gì.</p>}
+    </ul> : <p className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted)]">{t("Ngày này chưa có gì.")}</p>}
   </section>;
 }

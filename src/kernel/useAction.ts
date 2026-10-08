@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { errorMessage } from "./errors";
+import { t } from "./i18n";
 
 /**
  * Runs one change at a time, then reloads every query under `root`. `pending` stays true
@@ -12,7 +13,7 @@ export function useAction(root: readonly unknown[]) {
   const [error, setError] = useState("");
   const mutation = useMutation({
     mutationFn: (job: () => Promise<unknown>) => job(),
-    onError: cause => setError(errorMessage(cause, "Thao tác chưa thành công. Hãy thử lại.")),
+    onError: cause => setError(errorMessage(cause, t("Thao tác chưa thành công. Hãy thử lại."))),
     onSettled: async () => {
       await queries.invalidateQueries({ queryKey: root });
       busy.current = false;

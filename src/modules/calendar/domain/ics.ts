@@ -1,5 +1,6 @@
 import ICAL from "ical.js";
 import { Temporal } from "temporal-polyfill";
+import { t } from "../../../kernel/i18n";
 
 export interface IcsEvent {
   uid: string;
@@ -10,10 +11,10 @@ export interface IcsEvent {
 }
 
 export function parseIcs(text: string): { events: IcsEvent[]; skipped: number } {
-  if (!/BEGIN:VCALENDAR/i.test(text) || text.length > 2_000_000) throw new Error("File .ics không hợp lệ hoặc lớn hơn 2 MB.");
+  if (!/BEGIN:VCALENDAR/i.test(text) || text.length > 2_000_000) throw new Error(t("File .ics không hợp lệ hoặc lớn hơn 2 MB."));
   const calendar = new ICAL.Component(ICAL.parse(text));
   const components = calendar.getAllSubcomponents("vevent");
-  if (components.length > 100) throw new Error("Chỉ hỗ trợ tối đa 100 sự kiện mỗi file. Hãy chia file nhỏ hơn.");
+  if (components.length > 100) throw new Error(t("Chỉ hỗ trợ tối đa 100 sự kiện mỗi file. Hãy chia file nhỏ hơn."));
   const events: IcsEvent[] = [];
   const seen = new Set<string>();
   let skipped = 0;

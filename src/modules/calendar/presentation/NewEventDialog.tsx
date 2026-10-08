@@ -10,6 +10,7 @@ import { daysBetween, shiftDays, shiftMonths } from "../domain/calendarView";
 import type { RecurrenceRule } from "../domain/Occurrence";
 import { AudienceFields, audienceProblem, onlyMe } from "./AudienceFields";
 import { calendarKey } from "./keys";
+import { t } from "../../../kernel/i18n";
 
 /** How long a repeating event runs when nothing else is said, in months. */
 const usualRun: Record<RecurrenceRule, number> = { daily: 1, weekly: 4, monthly: 12 };
@@ -17,8 +18,8 @@ const later = (value: string, minutes: number) => localDateTimeKey(new Date(new 
 
 /** What is wrong with a start and an end as typed, or "". All-day values are days, the others "YYYY-MM-DDTHH:MM". */
 export function timeProblem(allDay: boolean, start: string, end: string): string {
-  if (allDay) return end < start ? "Ngày cuối phải bằng hoặc sau ngày bắt đầu." : "";
-  return new Date(end) <= new Date(start) ? "Giờ kết thúc phải sau giờ bắt đầu." : "";
+  if (allDay) return end < start ? t("Ngày cuối phải bằng hoặc sau ngày bắt đầu.") : "";
+  return new Date(end) <= new Date(start) ? t("Giờ kết thúc phải sau giờ bắt đầu.") : "";
 }
 
 /**
@@ -68,7 +69,7 @@ export function NewEventDialog({ open, onOpenChange, at, onCreated }: {
 
   function create(event: FormEvent) {
     event.preventDefault();
-    const wrong = timeProblem(allDay, start, end) || (recurrence && !until ? "Hãy chọn ngày kết thúc cho sự kiện lặp lại." : "") || audienceProblem(audience);
+    const wrong = timeProblem(allDay, start, end) || (recurrence && !until ? t("Hãy chọn ngày kết thúc cho sự kiện lặp lại.") : "") || audienceProblem(audience);
     setProblem(wrong);
     if (wrong) return;
     run(() => calendar.create({
@@ -84,37 +85,37 @@ export function NewEventDialog({ open, onOpenChange, at, onCreated }: {
   }
 
   const field = allDay ? "date" : "datetime-local";
-  return <DialogPanel open={open} onOpenChange={onOpenChange} returnFocusId="create-event-trigger" title="Thêm sự kiện" description="Chỉ mình bạn thấy sự kiện, trừ khi bạn chọn chia sẻ ở dưới." busy={pending}>
+  return <DialogPanel open={open} onOpenChange={onOpenChange} returnFocusId="create-event-trigger" title={t("Thêm sự kiện")} description={t("Chỉ mình bạn thấy sự kiện, trừ khi bạn chọn chia sẻ ở dưới.")} busy={pending}>
     <form onSubmit={create} className="grid gap-3 md:grid-cols-2" aria-busy={pending}>
-      <label className="grid gap-1 text-sm font-semibold md:col-span-2">Tên sự kiện
-        <input className="field" data-dialog-initial-focus required maxLength={240} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ví dụ: Họp nhóm đồ án" />
+      <label className="grid gap-1 text-sm font-semibold md:col-span-2">{t("Tên sự kiện")}
+        <input className="field" data-dialog-initial-focus required maxLength={240} value={title} onChange={event => setTitle(event.target.value)} placeholder={t("Ví dụ: Họp nhóm đồ án")} />
       </label>
       <label className="flex min-h-11 items-center gap-3 rounded-2xl bg-[var(--soft)] px-3 text-sm font-semibold md:col-span-2">
-        <input type="checkbox" className="size-4" checked={allDay} onChange={event => switchAllDay(event.target.checked)} /> Cả ngày
+        <input type="checkbox" className="size-4" checked={allDay} onChange={event => switchAllDay(event.target.checked)} /> {t("Cả ngày")}
       </label>
-      <label className="grid gap-1 text-sm font-semibold">{allDay ? "Ngày bắt đầu" : "Bắt đầu"}
+      <label className="grid gap-1 text-sm font-semibold">{allDay ? t("Ngày bắt đầu") : t("Bắt đầu")}
         <input className="field" type={field} required value={start} onChange={event => moveStart(event.target.value)} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">{allDay ? "Ngày cuối" : "Kết thúc"}
+      <label className="grid gap-1 text-sm font-semibold">{allDay ? t("Ngày cuối") : t("Kết thúc")}
         <input className="field" type={field} required value={end} onChange={event => setEnd(event.target.value)} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">Địa điểm (tùy chọn)
-        <input className="field" maxLength={80} value={place} onChange={event => setPlace(event.target.value)} placeholder="Phòng, quán, địa chỉ…" />
+      <label className="grid gap-1 text-sm font-semibold">{t("Địa điểm (tùy chọn)")}
+        <input className="field" maxLength={80} value={place} onChange={event => setPlace(event.target.value)} placeholder={t("Phòng, quán, địa chỉ…")} />
       </label>
-      <label className="grid gap-1 text-sm font-semibold">Lặp lại
+      <label className="grid gap-1 text-sm font-semibold">{t("Lặp lại")}
         <select className="field" value={recurrence} onChange={event => repeat(event.target.value as "" | RecurrenceRule)}>
-          <option value="">Không lặp</option>
-          <option value="daily">Mỗi ngày</option>
-          <option value="weekly">Mỗi tuần</option>
-          <option value="monthly">Mỗi tháng</option>
+          <option value="">{t("Không lặp")}</option>
+          <option value="daily">{t("Mỗi ngày")}</option>
+          <option value="weekly">{t("Mỗi tuần")}</option>
+          <option value="monthly">{t("Mỗi tháng")}</option>
         </select>
       </label>
-      {recurrence && <label className="grid gap-1 text-sm font-semibold">Lặp đến hết ngày
+      {recurrence && <label className="grid gap-1 text-sm font-semibold">{t("Lặp đến hết ngày")}
         <input className="field" type="date" required min={start.slice(0, 10)} value={until} onChange={event => setUntil(event.target.value)} />
       </label>}
       <AudienceFields value={audience} onChange={setAudience} />
       {(problem || error) && <p role="alert" className="text-sm leading-6 text-[var(--danger)] md:col-span-2">{problem || error}</p>}
-      <div className="md:col-span-2"><Button type="submit" className="w-full sm:w-auto" disabled={pending}><CalendarPlus size={17} /> {pending ? "Đang lưu…" : "Thêm vào lịch"}</Button></div>
+      <div className="md:col-span-2"><Button type="submit" className="w-full sm:w-auto" disabled={pending}><CalendarPlus size={17} /> {pending ? t("Đang lưu…") : t("Thêm vào lịch")}</Button></div>
     </form>
   </DialogPanel>;
 }

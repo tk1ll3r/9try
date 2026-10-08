@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DomainError } from "../../../kernel/errors";
 import { Task, type TaskDetails, type TaskPriority } from "../domain/Task";
 import type { TaskRepository } from "../domain/TaskRepository";
+import { t } from "../../../kernel/i18n";
 
 const columns = "id,title,priority,due_at,completed_at,tags";
 
@@ -55,7 +56,7 @@ export class SupabaseTaskRepository implements TaskRepository {
 
   async undoCompletion(id: string, completedAt: string) {
     const { error } = await this.change(id, { completed_at: null }).eq("completed_at", completedAt).select("id").single();
-    if (error) throw new DomainError("TASK_CHANGED", "Việc đã thay đổi hoặc không thể hoàn tác. Hãy tải lại danh sách.");
+    if (error) throw new DomainError("TASK_CHANGED", t("Việc đã thay đổi hoặc không thể hoàn tác. Hãy tải lại danh sách."));
   }
 
   async remove(id: string) {

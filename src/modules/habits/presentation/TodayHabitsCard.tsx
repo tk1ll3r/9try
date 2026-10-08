@@ -6,12 +6,13 @@ import { useAction } from "../../../kernel/useAction";
 import { Card } from "../../../kernel/ui/Card";
 import { streakCap, type Habit } from "../domain/Habit";
 import { habitsModule } from "../habits.module";
+import { t } from "../../../kernel/i18n";
 
 export const habitsKey = ["habits"] as const;
 
 function streakText(habit: Habit) {
   const cap = streakCap[habit.repeat];
-  return `${Math.min(habit.streak, cap)}${habit.streak >= cap ? "+" : ""} ${habit.repeat === "weekly" ? "tuần" : "ngày"} liên tiếp`;
+  return t("{0}{1} {2} liên tiếp", Math.min(habit.streak, cap), habit.streak >= cap ? "+" : "", habit.repeat === "weekly" ? t("tuần") : t("ngày"));
 }
 
 /** The check row of one habit. Tapping a habit that is done takes the completion back. */
@@ -21,7 +22,7 @@ export function HabitToggle({ habit, disabled, onToggle }: { habit: Habit; disab
     <span className="min-w-0">
       <span className="block break-words font-semibold">{habit.title}</span>
       <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
-        {habit.done ? habit.repeat === "weekly" ? "Đã xong tuần này" : "Đã xong hôm nay" : habit.repeat === "weekly" ? "Mỗi tuần" : "Mỗi ngày"}
+        {habit.done ? habit.repeat === "weekly" ? t("Đã xong tuần này") : t("Đã xong hôm nay") : habit.repeat === "weekly" ? t("Mỗi tuần") : t("Mỗi ngày")}
         {habit.streak > 0 && <span className="inline-flex items-center gap-1 font-semibold text-[var(--ink)]"><Flame size={13} className="animate-flicker text-orange-500" />{streakText(habit)}</span>}
       </span>
     </span>
@@ -36,7 +37,7 @@ export function TodayHabitsCard() {
   if (!list.data?.length) return null;
   const left = list.data.filter(habit => !habit.done);
 
-  return <Card title={left.length ? `Thói quen · còn ${left.length}` : "Thói quen · xong hết"} action={<Link to="/habits" className="text-sm font-semibold underline">Tất cả</Link>}>
+  return <Card title={left.length ? t("Thói quen · còn {0}", left.length) : t("Thói quen · xong hết")} action={<Link to="/habits" className="text-sm font-semibold underline">{t("Tất cả")}</Link>}>
     <ul className="space-y-2">
       {[...left, ...list.data.filter(habit => habit.done)].map(habit => <li key={habit.id} className="rounded-2xl bg-[var(--soft)] p-2">
         <HabitToggle habit={habit} disabled={pending} onToggle={() => run(() => habit.done ? habits.undoDone(habit.id) : habits.markDone(habit.id))} />

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LocationRepository, OwnedLocationSession, VisibleLocation } from "../domain/Location";
+import { t } from "../../../kernel/i18n";
 
 export class SupabaseLocationRepository implements LocationRepository {
   constructor(private readonly db: SupabaseClient, private readonly userId: string) {}
@@ -45,7 +46,7 @@ export class SupabaseLocationRepository implements LocationRepository {
     return (data ?? []).map((row: any) => ({
       sessionId: row.session_id,
       ownerId: row.owner_id,
-      ownerDisplayName: row.owner_display_name || row.owner_username || "Người dùng",
+      ownerDisplayName: row.owner_display_name || row.owner_username || t("Người dùng"),
       ownerUsername: row.owner_username,
       expiresAt: row.expires_at,
       approximate: row.approximate,

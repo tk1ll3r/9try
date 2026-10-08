@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MeetupComment, MeetupParticipant, MeetupRepository, MeetupSummary, PollOption, Rsvp } from "../domain/Meetup";
+import { t } from "../../../kernel/i18n";
 
 /** Reads go through row level security; every change goes through a SQL function that checks who is asking. */
 export class SupabaseMeetupRepository implements MeetupRepository {
@@ -38,7 +39,7 @@ export class SupabaseMeetupRepository implements MeetupRepository {
 
   async participants(meetupId: string): Promise<MeetupParticipant[]> {
     const rows = await this.call("list_meetup_participants", { p_meetup_id: meetupId });
-    return (rows ?? []).map((row: any) => ({ userId: row.user_id, displayName: row.display_name || row.username || "Người dùng", rsvp: row.rsvp_status }));
+    return (rows ?? []).map((row: any) => ({ userId: row.user_id, displayName: row.display_name || row.username || t("Người dùng"), rsvp: row.rsvp_status }));
   }
 
   async respond(meetupId: string, response: Exclude<Rsvp, "pending">): Promise<void> {
@@ -72,7 +73,7 @@ export class SupabaseMeetupRepository implements MeetupRepository {
   async comments(meetupId: string): Promise<MeetupComment[]> {
     const rows = await this.call("list_meetup_comments", { p_meetup_id: meetupId });
     return (rows ?? []).map((row: any) => ({
-      id: row.id, body: row.body, createdAt: row.created_at, authorDisplayName: row.author_display_name || row.author_username || "Người dùng",
+      id: row.id, body: row.body, createdAt: row.created_at, authorDisplayName: row.author_display_name || row.author_username || t("Người dùng"),
     }));
   }
 

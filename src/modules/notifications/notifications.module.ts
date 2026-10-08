@@ -7,6 +7,7 @@ import { PushData } from "./infrastructure/PushData";
 import { SupabaseNotificationRepository } from "./infrastructure/SupabaseNotificationRepository";
 import { NotificationSettings } from "./presentation/NotificationSettings";
 import { UnreadBadge } from "./presentation/UnreadBadge";
+import { t } from "../../kernel/i18n";
 
 export interface NotificationServices {
   inbox: NotificationRepository;
@@ -19,7 +20,7 @@ export const notificationsModule: FeatureModule<NotificationServices> = {
     inbox: new SupabaseNotificationRepository(requireSupabase(), userId),
     push: new PushData(requireSupabase(), userId),
   }),
-  navigation: [{ tab: "inbox", to: "/notifications", label: "Thông báo", icon: Bell, order: 10, badge: UnreadBadge }],
+  navigation: [{ tab: "inbox", to: "/notifications", label: t("Thông báo"), icon: Bell, order: 10, badge: UnreadBadge }],
   settings: NotificationSettings,
   routes: [
     { path: "notifications", component: lazy(() => import("./presentation/NotificationsPage").then(m => ({ default: m.NotificationsPage }))) },
