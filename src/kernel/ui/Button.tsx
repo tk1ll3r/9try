@@ -5,6 +5,8 @@ const looks = {
   secondary: "bg-[var(--lime)] text-[#1d230e] hover:shadow-[0_10px_30px_-12px_var(--lime-strong)]",
   ghost: "bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]",
   danger: "bg-red-600 text-white hover:shadow-lg",
+  // White in both themes: the look Google asks for on its sign-in button.
+  white: "border border-[#747775] bg-white text-[#1f1f1f] hover:shadow-lg",
 };
 
 /** The app's button. It lifts a little under the pointer and gives way under a press. */

@@ -13,7 +13,7 @@ npm run deploy            # typecheck, build with .env.local, upload, bind 9try.
 
 Three things outside the upload decide whether the deployed app works:
 
-1. Supabase dashboard, Authentication → URL Configuration: add `https://9try.gnouht.space/**` to the redirect URLs (and make it the Site URL if this is the main address). Without it the sign-in link sends people to the old Site URL.
+1. Supabase dashboard, Authentication → URL Configuration: add `https://9try.gnouht.space/**` to the redirect URLs, and set the Site URL to `https://9try.gnouht.space` (no `/**`: the pattern belongs in the redirect list only). Without the redirect entry the sign-in link sends people to the Site URL. Checked from outside on 2026-10-08: the redirect entry is there, and the Site URL was `https://9try.gnouht.space/**`, which is wrong.
 2. The database must have every migration in `supabase/migrations/`. The cloud project is at 0012; chat, friend links, the live map, the timetable, pins and habit undo need 0013–0029. Apply them with `npx supabase@2.119.0 login` and `npx supabase@2.119.0 db push` after reading the note on 0015 below.
 3. Sign-in by code inside an installed app needs the email template of section 1.
 
@@ -23,7 +23,7 @@ First deploy: 2026-10-08, from commit `ccfe3b8` on the local branch `refactor/fo
 
 Known on the live site:
 
-- Since 2026-10-08 the database has all 29 migrations and the site is the version of commit `1a78cbb`; the owner ran `db push` and `npm run deploy`.
+- Since 2026-10-08 the database has all 29 migrations; the owner ran `db push` and `npm run deploy`. On the evening of 2026-10-08 the site was the version of commit `90cec1e` (it exchanges the token of the sign-in email's button). Sign-in with Google is in the code after that commit and needs one more deploy.
 - No Edge Function is deployed. Until they are: deleting an account fails, reminders never fire, and a calendar feed address answers "not found". `npx supabase@2.119.0 functions deploy calendar-feed delete-account --use-api` covers the first and the last; `process-reminders` also needs `CRON_SECRET` and a scheduler (section 3).
 - Cloudflare adds its Web Analytics script (`static.cloudflareinsights.com`) to the pages. It is a zone setting, not part of the app; turn it off in the Cloudflare dashboard under Web Analytics if it is not wanted.
 - A request for a file that does not exist under `/assets/` is answered with the app's HTML and status 200, as every unknown path is.
@@ -49,6 +49,25 @@ Steps, the same for both:
 4. Authentication → Rate Limits: raise "emails per hour" from the default to what a class needs, for example 100.
 5. Add a DMARC record so mailboxes trust the domain: TXT `_dmarc.gnouht.space` = `v=DMARC1; p=none; rua=mailto:<an address you read>`.
 6. Sign in once from `https://9try.gnouht.space` with an address outside your own accounts, and check that the mail arrives, is not in Spam, shows the 6-digit code, and that the link returns to `9try.gnouht.space`.
+
+## Sign-in with Google
+
+The sign-in screen shows "Tiếp tục với Google" only while the Supabase project has the Google provider turned on. It reads the project's public settings (`/auth/v1/settings`) each time the screen opens, so the button appears by itself once the steps below are done, with no new build, and goes away if the provider is turned off. With the provider off, the server answers a request for Google with a bare JSON error ("provider is not enabled"); that is why the button is not shown then.
+
+Supabase links sign-ins that share a verified email address to one account, so someone who signed in by email before and now uses Google with the same address should get the same account (documented behaviour, not tested on this project). Google gives the name, the email address and the picture address. The name is offered in the profile form and saved only when the form is.
+
+Steps, all in dashboards:
+
+1. Supabase dashboard → Authentication → Sign In / Providers → Google: copy the "Callback URL (for OAuth)". It ends in `/auth/v1/callback`.
+2. Google Cloud console → new project → Google Auth Platform (the OAuth consent screen): app name `Gnouht Together`, audience "External". Under Branding → Authorized domains add `gnouht.space` and the host of the callback URL (`<project ref>.supabase.co`). Leave the logo empty: a logo starts Google's brand review.
+3. Audience → "Publish app". While the app is in "Testing", only the listed test users can sign in. The scopes in use (`openid`, `email`, `profile`) need no review.
+4. Clients → Create client → "Web application". Authorized JavaScript origins: `https://9try.gnouht.space`. Authorized redirect URIs: the callback URL from step 1. Keep the client ID and the client secret.
+5. Back in Supabase, on the Google provider: turn it on, paste the client ID and the client secret, save. The secret goes into the dashboard only, never into a file of this repository.
+6. Open `https://9try.gnouht.space` signed out: the Google button is there. Sign in with it and check that the app opens on the page that was asked for.
+
+Google's screen names the Supabase address (`<project ref>.supabase.co`) as the place the person continues to. Showing `gnouht.space` there needs Supabase's custom-domain add-on, which is paid.
+
+Not verified: a real round trip through Google (the provider was off on the project on 2026-10-08), and sign-in from an installed app on iOS and Android.
 
 The sections below are the full checklist for a production launch.
 

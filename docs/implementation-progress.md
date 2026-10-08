@@ -1,5 +1,17 @@
 # Development-plan implementation status
 
+## 2026-10-08, night: sign-in with Google, and the email's button on the app's own domain
+
+The owner found the sign-in email in Gmail's Spam, then asked for sign-in with a Google account because waiting for an email is harder.
+
+- The email's button now opens the app itself (`<redirect address>?token_hash=…`) instead of a `supabase.co` address, and the app exchanges the token (`src/kernel/auth.tsx`). The hidden preview text and the raw link are gone from the template. While the token is exchanged the screen keeps waiting, so the sign-in form does not flash by. Commit `90cec1e`; the owner deployed it (the live app contains the exchange).
+- "Tiếp tục với Google" on the sign-in screen, shown only while the project's public settings say the Google provider is on. A sign-in that comes back with an error shows a fixed message and the error is taken out of the address. An account that came from Google is offered Google's name in the profile form.
+- Checks: 107 unit tests, 35 browser tests in dev and preview mode. The Google round trip is tested against a stand-in for the server only.
+
+Read from outside on the cloud project, without signing in: only the `email` provider is on; `https://9try.gnouht.space/<path>` and `http://127.0.0.1:5173/<path>` are accepted as return addresses; the Site URL is `https://9try.gnouht.space/**`, which should be `https://9try.gnouht.space`.
+
+Left to the owner: the Google Cloud client and the provider switch in Supabase (`docs/deployment.md`, "Sign-in with Google"), the Site URL, pasting the new email template into both templates, and one deploy for the Google button.
+
 ## 2026-10-08, evening: the cloud database and the live site are current
 
 The owner ran `supabase db push --linked` and `npm run deploy`. Checked afterwards, read-only:

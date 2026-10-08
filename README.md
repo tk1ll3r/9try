@@ -5,7 +5,7 @@ Vietnamese-first social planning and personal organization web app for trusted f
 ## Current implementation
 
 - React 19 + TypeScript 7 + Vite 8 + Tailwind 4, TanStack Query, Supabase.
-- Sign-in by emailed link or 6-digit code; profiles.
+- Sign-in with Google (once it is turned on in Supabase), by emailed link or by 6-digit code; profiles.
 - Friends: requests, invite links, block and unblock.
 - Groups: roles, invite links with expiry and use limits, ownership transfer, archive.
 - Chat between friends and inside groups, with unread counts.

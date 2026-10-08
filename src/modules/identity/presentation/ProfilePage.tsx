@@ -1,5 +1,6 @@
 import { Download, LogOut, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { useAuth } from "../../../kernel/auth";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
@@ -20,7 +21,10 @@ export function ProfilePage() {
   const [value, setValue] = useState(empty);
   const [message, setMessage] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
-  useEffect(() => { if (profile.data) setValue({ ...profile.data }); }, [profile.data]);
+  // An account made with Google has a name there already. It is offered in the form and kept only when the form is saved.
+  const givenName = useAuth().user?.user_metadata?.full_name;
+  const offeredName = typeof givenName === "string" ? givenName.trim().slice(0, 80) : "";
+  useEffect(() => { if (profile.data) setValue({ ...profile.data, displayName: profile.data.displayName || offeredName }); }, [profile.data, offeredName]);
   const problem = error || (profile.isError ? errorMessage(profile.error, "Không thể tải hồ sơ.") : "");
 
   function save(event: FormEvent) {

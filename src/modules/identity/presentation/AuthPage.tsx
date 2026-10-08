@@ -5,6 +5,14 @@ import { useAuth } from "../../../kernel/auth";
 import { Button } from "../../../kernel/ui/Button";
 import { isLocalBackend, loginError, loginRedirect, returnPathKey } from "../domain/login";
 
+/** Google's "G", in the colors its sign-in button rules ask for. */
+const GoogleMark = () => <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+</svg>;
+
 /** `returnPath` is a plain in-app path to open after sign-in. */
 export function AuthPage({ returnPath }: { returnPath: string }) {
   const auth = useAuth();
@@ -27,6 +35,16 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [cooldownUntil]);
+  /** Where the browser comes back to after sign-in. The same tab also remembers the path. */
+  function comeBackTo(): string {
+    try { sessionStorage.setItem(returnPathKey, returnPath); } catch { /* Storage may be disabled; the address still carries the safe route. */ }
+    return loginRedirect(location.origin, returnPath);
+  }
+  // The browser leaves for Google at once, so there is no waiting state to get stuck in if the visitor comes back.
+  function continueWithGoogle() {
+    setError("");
+    void auth.signInWithGoogle(comeBackTo()).then(failure => { if (failure && mounted.current) setError(loginError(failure)); });
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (lock.current || Date.now() < cooldownUntil) return;
@@ -34,9 +52,7 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
     if (!normalized) return;
     lock.current = true; setPending(true); setError("");
     try {
-      const path = returnPath;
-      try { sessionStorage.setItem(returnPathKey, path); } catch { /* Storage may be disabled; redirect still carries the safe route. */ }
-      const authError = await auth.sendSignIn(normalized, loginRedirect(location.origin, path));
+      const authError = await auth.sendSignIn(normalized, comeBackTo());
       if (!mounted.current) return;
       if (authError) {
         setError(loginError(authError));
@@ -69,13 +85,20 @@ export function AuthPage({ returnPath }: { returnPath: string }) {
       <p className="mb-6 text-sm font-bold lg:hidden">GNOUHT TOGETHER</p>
       <span className="mb-4 grid size-12 place-items-center rounded-2xl bg-[var(--lime)] text-[#1d230e]"><Mail size={24} /></span>
       <h2 className="text-4xl font-black tracking-[-.04em]">Chào bạn.</h2>
-      <p className="mt-3 leading-6 text-[var(--muted)]">Đăng nhập bằng liên kết hoặc mã gửi qua email, không cần nhớ mật khẩu.</p>
+      <p className="mt-3 leading-6 text-[var(--muted)]">{auth.google ? "Đăng nhập bằng Google, hoặc bằng liên kết và mã gửi qua email. Không cần nhớ mật khẩu." : "Đăng nhập bằng liên kết hoặc mã gửi qua email, không cần nhớ mật khẩu."}</p>
+      {auth.failed && !error && !acceptedEmail && <p role="alert" className="mt-6 rounded-2xl bg-[var(--soft)] p-4 text-sm leading-6 text-[var(--danger)]">{auth.failed === "link"
+        ? "Chưa đăng nhập được bằng liên kết này. Có thể nó đã hết hạn hoặc đã được dùng. Nhập email để nhận thư mới."
+        : "Lần đăng nhập vừa rồi chưa xong. Bạn thử lại nhé."}</p>}
+      {auth.configured && auth.google && <>
+        <Button variant="white" className="mt-6 min-h-12 w-full" onClick={continueWithGoogle}><GoogleMark /> Tiếp tục với Google</Button>
+        <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Google chỉ báo cho ứng dụng tên, email và ảnh đại diện của bạn.</p>
+        <p className="mt-5 flex items-center gap-3 text-xs font-semibold text-[var(--muted)] before:h-px before:flex-1 before:bg-[var(--border)] after:h-px after:flex-1 after:bg-[var(--border)]">hoặc dùng email</p>
+      </>}
       {!auth.configured ? <div role="alert" className="mt-8 rounded-3xl bg-amber-100 p-5 text-sm text-amber-950">Supabase chưa cấu hình. Thêm URL và publishable key vào <code>.env.local</code>.</div>
         : <form onSubmit={submit} className="mt-6 space-y-4" aria-busy={pending}>
           <label className="block text-sm font-semibold" htmlFor="login-email">Email của bạn</label>
           <input id="login-email" className="field w-full" type="email" autoComplete="email" inputMode="email" required disabled={pending} value={email} onChange={event => setEmail(event.target.value)} placeholder="ban@gmail.com" aria-describedby="email-help" />
           {error && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">{error}</p>}
-          {auth.linkFailed && !error && !acceptedEmail && <p role="alert" className="text-sm leading-6 text-[var(--danger)]">Chưa đăng nhập được bằng liên kết này. Có thể nó đã hết hạn hoặc đã được dùng. Nhập email để nhận thư mới.</p>}
           {acceptedEmail && <div role="status" className="rounded-2xl bg-[var(--lime)] p-4 text-sm leading-6 text-[#1d230e]"><b>Đã gửi thư tới {acceptedEmail}.</b><p>Mở thư để lấy mã 6 số hoặc bấm liên kết đăng nhập. Chưa thấy thì xem mục Spam.</p></div>}
           <Button className="w-full" type="submit" disabled={pending || remaining > 0}>{pending ? "Đang gửi yêu cầu…" : remaining > 0 ? `Có thể gửi lại sau ${remaining}s` : acceptedEmail ? "Gửi lại liên kết" : "Gửi liên kết"}<ArrowRight size={17} /></Button>
           <p id="email-help" className="text-xs leading-5 text-[var(--muted)]">Bạn sẽ nhận một thư có liên kết và mã đăng nhập.</p>

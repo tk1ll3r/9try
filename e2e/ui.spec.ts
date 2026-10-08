@@ -119,6 +119,56 @@ test("the button in the sign-in email opens the app on its own address and signs
   expect(verified).toMatchObject({ token_hash: "fresh-token", type: "email" });
 });
 
+test("Google sign-in is offered when the project has it on, and comes back signed in", async ({ page, baseURL }) => {
+  const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: { provider: "google" }, user_metadata: { full_name: "Vy Trần" }, created_at: "2026-01-01T00:00:00Z" };
+  let google = false, asked = new URLSearchParams();
+  await page.route("**/auth/v1/**", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/settings")) return route.fulfill({ json: { external: { email: true, google } } });
+    if (url.pathname.endsWith("/authorize")) {
+      // What the server does after Google: back to the app, with the session in the fragment.
+      asked = url.searchParams;
+      const back = `${asked.get("redirect_to")}#access_token=mock-token&refresh_token=mock-refresh&expires_in=3600&token_type=bearer`;
+      return route.fulfill({ contentType: "text/html", body: `<script>location.replace(${JSON.stringify(back)})</script>` });
+    }
+    return route.fulfill({ json: url.pathname.endsWith("/user") ? user : {} });
+  });
+  await page.route("**/rest/v1/**", route => route.fulfill({ json: route.request().url().includes("/profiles") ? { display_name: "", username: null, bio: "", timezone: "UTC", birthday: null } : [] }));
+
+  // Google is off on the server: the button is not offered.
+  const answered = page.waitForResponse(/\/auth\/v1\/settings/);
+  await page.goto("/calendar");
+  await answered;
+  await expect(page.getByLabel("Email của bạn")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tiếp tục với Google" })).toHaveCount(0);
+
+  // Turned on in the dashboard: the button appears without a new build, and leads back signed in.
+  google = true;
+  await page.reload();
+  await page.getByRole("button", { name: "Tiếp tục với Google" }).click();
+  await expect(page.getByRole("heading", { name: "Lịch", level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar#?$/);
+  expect(asked.get("provider")).toBe("google");
+  expect(asked.get("redirect_to")).toBe(`${baseURL}/calendar`);
+
+  // The name Google gave is offered in the profile form.
+  await page.goto("/me");
+  await expect(page.getByLabel("Tên hiển thị")).toHaveValue("Vy Trần");
+});
+
+test("a sign-in that comes back with an error says so and cleans the address", async ({ page }) => {
+  await loggedOut(page);
+  // The way back from Google when the server could not finish.
+  const problem = "error=server_error&error_code=unexpected_failure&error_description=Unable+to+exchange+external+code";
+  await page.goto(`/calendar?${problem}#${problem}`);
+  await expect(page.getByRole("alert")).toHaveText("Lần đăng nhập vừa rồi chưa xong. Bạn thử lại nhé.");
+  await expect(page).toHaveURL(/\/calendar$/);
+  // An emailed link of the older kind that has expired.
+  await page.goto("/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
+  await expect(page.getByRole("alert")).toContainText("Chưa đăng nhập được bằng liên kết này");
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("sign-in works with the 6-digit code from the email", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   let verified: Record<string, unknown> = {};
