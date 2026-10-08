@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskService } from "./application/TaskService";
 import { Task } from "./domain/Task";
+import { taskStats } from "./domain/taskStats";
 import { SupabaseTaskRepository } from "./infrastructure/SupabaseTaskRepository";
 
 const mock = { from: vi.fn(), query: {} as Record<string, any>, result: { data: [] as any[], error: null as unknown } };
@@ -90,5 +91,20 @@ describe("owner-scoped task storage", () => {
     await new TaskService(repository(), { now: () => new Date(2026, 9, 6, 9) }).dueToday();
     expect(mock.query.is).toHaveBeenCalledWith("completed_at", null);
     expect(mock.query.or).toHaveBeenCalledWith(`due_at.is.null,due_at.lt.${new Date(2026, 9, 7).toISOString()}`);
+  });
+});
+
+describe("task statistics", () => {
+  // Thursday 8 October 2026, 10:00 on this machine.
+  const now = new Date(2026, 9, 8, 10);
+  const at = (day: number, hour: number) => new Date(2026, 9, day, hour).toISOString();
+  const task = (id: string, dueAt: string | null, completedAt: string | null) => new Task(id, id, "medium", dueAt, completedAt);
+  it("counts a task on the day it was finished, and only inside the days asked for", () => {
+    const stats = taskStats([task("today", null, at(8, 9)), task("late-evening", null, at(7, 23)), task("monday", null, at(5, 12)), task("last-week", null, at(1, 12)),
+      task("open", null, null), task("overdue", at(7, 12), null), task("due-later", at(9, 12), null)], 7, now);
+    expect([stats.done, stats.open, stats.overdue]).toEqual([3, 3, 1]);
+    expect(stats.perDay).toEqual([{ day: "2026-10-02", done: 0 }, { day: "2026-10-03", done: 0 }, { day: "2026-10-04", done: 0 }, { day: "2026-10-05", done: 1 },
+      { day: "2026-10-06", done: 0 }, { day: "2026-10-07", done: 1 }, { day: "2026-10-08", done: 1 }]);
+    expect(taskStats([task("last-week", null, at(1, 12))], 30, now).done).toBe(1);
   });
 });

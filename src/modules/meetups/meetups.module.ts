@@ -5,6 +5,7 @@ import { requireSupabase } from "../../kernel/supabase";
 import { isSoon, meetupSignals, type MeetupRepository } from "./domain/Meetup";
 import { SupabaseMeetupRepository } from "./infrastructure/SupabaseMeetupRepository";
 import { MeetupInvitesCard } from "./presentation/MeetupInvitesCard";
+import { MeetupStatsCard } from "./presentation/MeetupStatsCard";
 
 export const meetupsModule: FeatureModule<MeetupRepository> = {
   id: "meetups",
@@ -12,6 +13,7 @@ export const meetupsModule: FeatureModule<MeetupRepository> = {
   searchItems: async meetups => (await meetups.list()).map(meetup => ({ title: meetup.title, kind: "Hoạt động", to: `/meetups/${meetup.id}`, keywords: meetup.description })),
   navigation: [{ tab: "together", to: "/meetups", label: "Hoạt động", icon: CalendarCheck2, order: 30 }],
   today: { order: 6, card: MeetupInvitesCard },
+  stats: { order: 60, card: MeetupStatsCard },
   friendSignals: async (meetups, { userId, now }) => {
     const all = await meetups.list();
     const soon = all.filter(meetup => isSoon(meetup, now)).slice(0, 5);

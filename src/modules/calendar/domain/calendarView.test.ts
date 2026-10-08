@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarOccurrence } from "./Occurrence";
-import { clock, dayBlocks, dayTitle, entriesByDay, entryDays, entryOf, entryOfAgenda, fillsDay, hourRange, minutesOn, monthTitle, monthWeeks, nearDay, shiftMonths, weekOf, type CalendarEntry } from "./calendarView";
+import { clock, dayBlocks, dayTitle, entriesByDay, entryDays, entryOf, entryOfAgenda, fillsDay, hourRange, minutesOn, monthTitle, monthWeeks, nearDay, scheduledMinutes, shiftMonths, weekOf, type CalendarEntry } from "./calendarView";
 
 // Local times, so the tests say the same thing in every time zone.
 const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();
@@ -59,6 +59,18 @@ describe("calendar entries on their days", () => {
   it("shows the usual hours, and more when something is earlier or later", () => {
     expect(hourRange([])).toEqual([7, 21]);
     expect(hourRange(dayBlocks([timed("run", at(8, 5, 30), at(8, 6)), timed("night", at(8, 22), at(8, 23, 30))], "2026-10-08"))).toEqual([5, 24]);
+  });
+});
+
+describe("hours on the calendar", () => {
+  it("adds up the minutes of each day by what the entry is, without the entries that fill a day", () => {
+    const lesson: CalendarEntry = { ...timed("class", at(8, 7, 30), at(8, 9, 45)), tone: "class" };
+    const late = timed("late", at(8, 22), at(9, 1));
+    expect(scheduledMinutes([lesson, late, timed("dinner", at(8, 18), at(8, 19, 30)), allDay("deadline", "2026-10-08", "2026-10-09")], ["2026-10-07", "2026-10-08", "2026-10-09"])).toEqual([
+      { day: "2026-10-07", event: 0, class: 0, activity: 0, busy: 0 },
+      { day: "2026-10-08", event: 210, class: 135, activity: 0, busy: 0 },
+      { day: "2026-10-09", event: 60, class: 0, activity: 0, busy: 0 },
+    ]);
   });
 });
 

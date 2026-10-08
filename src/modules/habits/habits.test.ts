@@ -76,3 +76,15 @@ describe("habit repository", () => {
     expect(rpc).toHaveBeenCalledWith("undo_routine_completion", { p_task_id: "habit" });
   });
 });
+
+describe("how well a habit was kept", () => {
+  it("counts the days done out of the days asked for, and weeks for a weekly habit", () => {
+    const thursday = "2026-10-08";
+    const daily = new Habit("d", "Đọc", "daily", ["2026-10-08", "2026-10-07", "2026-10-05", "2026-10-01", "2026-09-20"], thursday);
+    expect(daily.kept(7)).toEqual({ done: 3, of: 7 });
+    expect(daily.kept(30)).toEqual({ done: 5, of: 30 });
+    // Seven days ending on a Thursday touch two Monday–Sunday weeks; one of them has a completion.
+    const weekly = new Habit("w", "Dọn phòng", "weekly", ["2026-10-06", "2026-09-22"], thursday);
+    expect(weekly.kept(7)).toEqual({ done: 1, of: 2 });
+  });
+});

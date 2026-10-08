@@ -86,6 +86,20 @@ export interface MeetupRepository {
 
 const hour = 3_600_000;
 
+/**
+ * What the user's meetups add up to: the ones with a set time in the last `days` days that they did
+ * not decline, the ones still to come, and the invitations that wait for their answer.
+ */
+export function meetupStats(meetups: readonly MeetupSummary[], userId: string, days: number, now = new Date()): { went: number; coming: number; waiting: number } {
+  const since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1)).getTime();
+  const set = meetups.filter(meetup => (meetup.status === "confirmed" || meetup.status === "completed") && meetup.rsvp !== "declined" && meetup.startAt);
+  return {
+    went: set.filter(meetup => Date.parse(meetup.startAt!) >= since && Date.parse(meetup.startAt!) <= now.getTime()).length,
+    coming: set.filter(meetup => Date.parse(meetup.startAt!) > now.getTime()).length,
+    waiting: meetups.filter(meetup => meetup.organizerId !== userId && meetup.rsvp === "pending" && (meetup.status === "proposed" || meetup.status === "confirmed")).length,
+  };
+}
+
 /** Confirmed, not declined, and starting within 48 hours or still going on. */
 export function isSoon(meetup: MeetupSummary, now: Date): boolean {
   if (meetup.status !== "confirmed" || meetup.rsvp === "declined" || !meetup.startAt) return false;

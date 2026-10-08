@@ -4,6 +4,7 @@ import type { FeatureModule } from "../../kernel/module";
 import { functionsUrl, requireSupabase } from "../../kernel/supabase";
 import { SupabaseCalendarRepository } from "./infrastructure/SupabaseCalendarRepository";
 import { CalendarPrivacy } from "./presentation/CalendarPrivacy";
+import { CalendarStatsCard } from "./presentation/CalendarStatsCard";
 import { UpcomingCard } from "./presentation/UpcomingCard";
 
 export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {
@@ -11,6 +12,7 @@ export const calendarModule: FeatureModule<SupabaseCalendarRepository> = {
   create: ({ userId }) => new SupabaseCalendarRepository(requireSupabase(), userId, `${functionsUrl}/calendar-feed`),
   privacy: CalendarPrivacy,
   today: { order: 10, card: UpcomingCard },
+  stats: { order: 40, card: CalendarStatsCard },
   searchItems: async calendar => (await calendar.listEvents()).map(event => event.category === "class"
     ? { title: event.title, kind: "Lớp học", to: "/timetable", keywords: event.place ?? "" }
     : { title: event.title, kind: "Sự kiện", to: "/calendar", keywords: event.place ?? "" }),

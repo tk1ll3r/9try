@@ -42,6 +42,13 @@ export class Habit {
     return this.doneDays.some(day => this.period(day) === now);
   }
 
+  /** In how many periods of the last `days` days it was done, and how many periods those days hold. */
+  kept(days: number): { done: number; of: number } {
+    const done = new Set(this.doneDays.map(day => this.period(day)));
+    const periods = new Set(Array.from({ length: days }, (_, back) => this.period(addDays(this.today, -back))));
+    return { done: [...periods].filter(period => done.has(period)).length, of: periods.size };
+  }
+
   /** Periods done in a row. The running period counts once it is done and does not break the streak before that. */
   get streak(): number {
     const done = new Set(this.doneDays.map(day => this.period(day)));

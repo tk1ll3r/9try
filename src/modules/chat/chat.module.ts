@@ -4,6 +4,7 @@ import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import { chatSignals, type ChatRepository } from "./domain/Chat";
 import { SupabaseChatRepository } from "./infrastructure/SupabaseChatRepository";
+import { ChatStatsCard } from "./presentation/ChatStatsCard";
 import { ChatUnreadBadge } from "./presentation/ChatUnreadBadge";
 
 const ChatPage = lazy(() => import("./presentation/ChatPage").then(m => ({ default: m.ChatPage })));
@@ -15,6 +16,7 @@ export const chatModule: FeatureModule<ChatRepository> = {
   friendSignals: async (chat, { now }) => chatSignals(await chat.conversations(), now),
   searchItems: async chat => (await chat.conversations()).map(conversation => ({ title: conversation.title, kind: "Trò chuyện", to: `/chat/${conversation.id}` })),
   navigation: [{ tab: "chat", to: "/chat", label: "Trò chuyện", icon: MessageCircle, order: 10, badge: ChatUnreadBadge }],
+  stats: { order: 70, card: ChatStatsCard },
   routes: [
     { path: "chat", component: ChatPage },
     { path: "chat/:conversationId", component: ChatPage },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSoon, MeetupPolicy, meetupSignals, type MeetupStatus, type MeetupSummary } from "./domain/Meetup";
+import { isSoon, MeetupPolicy, meetupSignals, meetupStats, type MeetupStatus, type MeetupSummary } from "./domain/Meetup";
 
 const meetup = (status: MeetupStatus): MeetupSummary => ({
   id: "m", groupId: null, organizerId: "organizer", title: "Ăn tối", description: "", status,
@@ -55,5 +55,18 @@ describe("what meetups say about friends", () => {
     expect(meetupSignals([proposal], new Map(), "me", now)).toEqual([{ userId: "organizer", kind: "invite", strength: 1, label: "Đang rủ bạn: Cà phê", to: "/meetups/p1" }]);
     expect(meetupSignals([{ ...proposal, rsvp: "going" }], new Map(), "me", now)).toEqual([]);
     expect(meetupSignals([proposal], new Map(), "organizer", now)).toEqual([]);
+  });
+});
+
+describe("meetup statistics", () => {
+  it("counts what took place in the days asked for, what is coming, and the invitations that wait", () => {
+    const now = new Date(2026, 9, 8, 10);
+    const at = (day: number) => new Date(2026, 9, day, 18).toISOString();
+    const one = (id: string, status: MeetupStatus, start: string | null, rsvp: MeetupSummary["rsvp"], organizerId = "kha"): MeetupSummary =>
+      ({ ...meetup(status), id, startAt: start, endAt: start, rsvp, organizerId });
+    const all = [one("went", "confirmed", at(6), "going"), one("mine", "completed", at(3), "pending", "me"), one("declined", "confirmed", at(5), "declined"), one("old", "confirmed", at(1), "going"),
+      one("soon", "confirmed", at(9), "maybe"), one("asked", "proposed", null, "pending"), one("my-proposal", "proposed", null, "pending", "me"), one("canceled", "canceled", at(7), "pending")];
+    expect(meetupStats(all, "me", 7, now)).toEqual({ went: 2, coming: 1, waiting: 1 });
+    expect(meetupStats(all, "me", 30, now).went).toBe(3);
   });
 });

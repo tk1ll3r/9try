@@ -1,5 +1,5 @@
 import { Temporal } from "temporal-polyfill";
-import { localDateKey } from "../../../kernel/dates";
+import { dayTitle, localDateKey, weekdayLetters } from "../../../kernel/dates";
 import type { AgendaItem } from "../../../kernel/module";
 import type { CalendarOccurrence, CalendarVisibility } from "./Occurrence";
 
@@ -70,10 +70,7 @@ export function monthWeeks(day: string): string[][] {
   return weeks;
 }
 
-export const weekdayLetters = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-const weekdayWords = ["Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy", "Chủ nhật"];
-/** "Thứ năm, 8 tháng 10" */
-export const dayTitle = (day: string) => `${weekdayWords[plain(day).dayOfWeek - 1]}, ${plain(day).day} tháng ${plain(day).month}`;
+export { dayTitle, weekdayLetters };
 /** "Tháng 10, 2026" */
 export const monthTitle = (day: string) => `Tháng ${plain(day).month}, ${plain(day).year}`;
 /** "Hôm nay", "Ngày mai", "Hôm qua", or nothing for any other day. */
@@ -148,6 +145,20 @@ export function dayBlocks(entries: readonly CalendarEntry[], day: string, shorte
   }
   close();
   return blocks;
+}
+
+/** How much of each given day has a time on it, in minutes by tone. An entry that fills a day has no hours and is left out. */
+export function scheduledMinutes(entries: readonly CalendarEntry[], days: readonly string[]): ({ day: string } & Record<EntryTone, number>)[] {
+  const byDay = entriesByDay(entries);
+  return days.map(day => {
+    const minutes = { day, event: 0, class: 0, activity: 0, busy: 0 };
+    for (const entry of byDay.get(day) ?? []) {
+      if (fillsDay(entry, day)) continue;
+      const [from, to] = minutesOn(entry, day);
+      minutes[entry.tone] += to - from;
+    }
+    return minutes;
+  });
 }
 
 /** The hours an hour grid has to show for these blocks, and never fewer than `from` to `to`. */

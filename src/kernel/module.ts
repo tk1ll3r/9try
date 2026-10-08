@@ -12,8 +12,8 @@ export interface RouteContribution {
   readonly component: ComponentType | LazyExoticComponent<ComponentType>;
 }
 
-/** The app's main destinations. A phone shows five of them as bottom tabs. */
-export type NavTab = "today" | "mode" | "plan" | "chat" | "together" | "inbox" | "me";
+/** The app's main destinations. "inbox" and "me" are the bell and the account menu in the top right corner; the others are the bottom tabs of a phone. */
+export type NavTab = "today" | "mode" | "plan" | "chat" | "together" | "stats" | "inbox" | "me";
 
 /** One screen in the navigation. */
 export interface NavContribution {
@@ -37,6 +37,13 @@ export interface TodayContribution {
   /** Lower comes first: things waiting for an answer use 0–9, plans 10–39, people 40 and up. */
   readonly order: number;
   readonly card: ComponentType;
+}
+
+/** A card on the statistics screen: what a module can count about the last `days` days, today included. */
+export interface StatsContribution {
+  /** Lower comes first: the user's own work 10–39, time 40–59, other people 60 and up. */
+  readonly order: number;
+  readonly card: ComponentType<{ days: number }>;
 }
 
 /** Something with a time that another module puts on the calendar and under "Sắp tới", such as a confirmed meetup. */
@@ -93,6 +100,7 @@ export interface FeatureModule<Services = unknown> {
   /** Everything of this module that a person may look for by name. The search filters it as they type. */
   searchItems?(services: Services): Promise<readonly SearchItem[]>;
   readonly today?: TodayContribution;
+  readonly stats?: StatsContribution;
   /** What this module adds to the calendar between two instants. The calendar's own events are not listed here. */
   agenda?(services: Services, from: Date, to: Date): Promise<readonly AgendaItem[]>;
   /** What this module knows about the user's friends at `now`. */
@@ -106,11 +114,13 @@ export class ModuleRegistry {
   readonly routes: readonly RouteContribution[];
   readonly navigation: readonly NavContribution[];
   readonly today: readonly TodayContribution[];
+  readonly stats: readonly StatsContribution[];
 
   constructor(readonly modules: readonly FeatureModule[]) {
     this.routes = modules.flatMap(module => module.routes ?? []);
     this.navigation = modules.flatMap(module => module.navigation ?? []).sort((a, b) => a.order - b.order);
     this.today = modules.flatMap(module => module.today ?? []).sort((a, b) => a.order - b.order);
+    this.stats = modules.flatMap(module => module.stats ?? []).sort((a, b) => a.order - b.order);
   }
 
   /**

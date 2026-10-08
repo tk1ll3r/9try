@@ -1,5 +1,5 @@
 import { useIsFetching } from "@tanstack/react-query";
-import { CalendarDays, Home, MessageCircle, Radio, Search, UsersRound, WifiOff } from "lucide-react";
+import { CalendarDays, ChartColumn, Home, MessageCircle, Radio, Search, UsersRound, WifiOff } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import type { NavContribution, NavTab } from "../kernel/module";
@@ -16,9 +16,10 @@ const tabs: { id: NavTab; label: string; icon: NavContribution["icon"] }[] = [
   { id: "plan", label: "Kế hoạch", icon: CalendarDays },
   { id: "chat", label: "Trò chuyện", icon: MessageCircle },
   { id: "together", label: "Cùng nhau", icon: UsersRound },
+  { id: "stats", label: "Thống kê", icon: ChartColumn },
 ];
 // The two other tabs are not in this list. "inbox" is the bell and "me" the account menu, both in the
-// top right corner of every screen; a phone's bottom bar then has room for the five above.
+// top right corner of every screen; a phone's bottom bar then has room for the six above.
 
 const isAt = (pathname: string, to: string) => to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 
@@ -171,7 +172,7 @@ export function AppShell() {
       {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
       <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}
-        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 p-1.5 shadow-2xl lg:hidden dark:border-white/10">
+        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 p-1.5 shadow-2xl max-[359px]:inset-x-1 lg:hidden dark:border-white/10">
         {/* One dark pill slides under the current tab. */}
         <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)]"
           style={{ width: `calc((100% - 0.75rem) / ${groups.length})`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }} />
@@ -179,7 +180,7 @@ export function AppShell() {
           const active = tab.id === section?.tab;
           return (
             <Link key={tab.id} to={tab.items[0].to} aria-current={active ? "page" : undefined}
-              className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors duration-300 active:scale-95 ${active ? "text-[var(--paper)]" : "text-[var(--muted)]"}`}>
+              className={`relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl text-[10px] font-semibold transition-colors duration-300 active:scale-95 max-[359px]:text-[9px] max-[359px]:tracking-tight ${active ? "text-[var(--paper)]" : "text-[var(--muted)]"}`}>
               <span className={`relative transition-transform duration-500 ease-[var(--ease-spring)] ${active ? "-translate-y-0.5 scale-110" : ""}`}>
                 <tab.icon size={20} /><Badges items={tab.items} />
                 {tab.id === "mode" && !active && <span aria-hidden className="absolute -right-1 -top-0.5 size-2 rounded-full bg-[var(--lime-strong)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--lime-strong)_30%,transparent)]" />}
