@@ -34,7 +34,8 @@ export interface UpcomingEntry {
 
 /** The next `limit` things that have not ended, soonest first. */
 export function upcomingEntries(events: CalendarOccurrence[], agenda: readonly AgendaItem[], now: Date, limit = 6): UpcomingEntry[] {
-  const own = selectUpcoming(events, now).map(event => ({ at: startTime(event), entry: { id: event.id, title: event.title, when: formatOccurrence(event), to: "/calendar" } as UpcomingEntry }));
+  // An event of the calendar opens the calendar on its day.
+  const own = selectUpcoming(events, now).map(event => ({ at: startTime(event), entry: { id: event.id, title: event.title, when: formatOccurrence(event), to: `/calendar?date=${event.allDay ? event.start : localDateKey(new Date(event.start))}` } as UpcomingEntry }));
   const others = agenda.filter(item => Date.parse(item.end) > now.getTime()).map(item => ({
     at: Date.parse(item.start),
     entry: { id: `${item.kind}:${item.id}`, title: item.title, when: formatStart(item.start), kind: item.kind, to: item.to } as UpcomingEntry,

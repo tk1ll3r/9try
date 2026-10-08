@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Temporal } from "temporal-polyfill";
-import type { CalendarEventRow, CalendarExceptionRow, CalendarOccurrence, CreateCalendarEventInput, SharedCalendarOccurrence } from "../domain/Occurrence";
+import type { CalendarEventRow, CalendarExceptionRow, CalendarOccurrence, CalendarVisibility, CreateCalendarEventInput, EventAudience, SharedCalendarOccurrence } from "../domain/Occurrence";
 import { expand } from "../domain/recurrence";
 import { classTimes, firstClassDate, type ClassDraft, type ClassEntry } from "../domain/timetable";
 
@@ -328,6 +328,32 @@ export class SupabaseCalendarRepository {
       p_all_day_end_exclusive: null,
     });
     if (error) throw error;
+  }
+
+  /** Who a shared event is shown to. Empty for an event that is private or open to everyone. */
+  async audience(eventId: string): Promise<EventAudience> {
+    const { data, error } = await this.db.from("event_shares").select("user_id,group_id").eq("event_id", eventId);
+    if (error) throw error;
+    const rows = (data ?? []) as { user_id: string | null; group_id: string | null }[];
+    return { userIds: rows.flatMap(row => row.user_id ? [row.user_id] : []), groupId: rows.find(row => row.group_id)?.group_id ?? null };
+  }
+
+  /** Sets where an event takes place. A repeating event is one stored event, so every time it happens moves with it. */
+  async setPlace(eventId: string, place: string): Promise<void> {
+    const { error } = await this.db.from("calendar_events").update({ place: place.trim() || null }).eq("id", eventId);
+    if (error) throw error;
+  }
+
+  /** Changes who sees an event, for every time it happens. `previous` is put back when the people cannot be saved. */
+  async setAudience(eventId: string, previous: CalendarVisibility, visibility: CalendarVisibility, audience: EventAudience): Promise<void> {
+    const { error } = await this.db.from("calendar_events").update({ visibility }).eq("id", eventId);
+    if (error) throw error;
+    const { error: audienceError } = await this.db.rpc("set_calendar_event_audience", { p_event_id: eventId, p_user_ids: audience.userIds, p_group_id: audience.groupId });
+    if (audienceError) {
+      // The function changed nothing, so the people it was shared with before are still stored.
+      await this.db.from("calendar_events").update({ visibility: previous }).eq("id", eventId);
+      throw audienceError;
+    }
   }
 
   async deleteWholeEvent(eventId: string): Promise<void> {

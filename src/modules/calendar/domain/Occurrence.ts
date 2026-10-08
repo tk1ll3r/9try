@@ -68,6 +68,12 @@ export interface CreateCalendarEventInput {
   externalUid?: string;
 }
 
+/** Who a shared event is shown to: the chosen friends, or one group. */
+export interface EventAudience {
+  userIds: string[];
+  groupId: string | null;
+}
+
 export interface SharedCalendarOccurrence extends CalendarOccurrence {
   ownerId: string;
   ownerDisplayName: string;

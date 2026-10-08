@@ -8,15 +8,17 @@ import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import { calendarModule } from "../calendar.module";
 import { parseTimetable, weekdayNames, type ClassDraft } from "../domain/timetable";
+import { calendarKey } from "./keys";
 
-const calendarKey = ["calendar"] as const;
 const inFourMonths = () => { const date = new Date(); date.setMonth(date.getMonth() + 4); return localDateKey(date); };
 
 /** The weekly classes of a term. Each class is a weekly event, so it also shows in the calendar and counts as busy. */
 export function TimetablePage() {
   const calendar = useModule(calendarModule);
+  const confirm = useConfirm();
   const classes = useQuery({ queryKey: [...calendarKey, "classes"], queryFn: () => calendar.listClasses() });
   const { run, pending, error } = useAction(calendarKey);
   const [termStart, setTermStart] = useState(() => localDateKey(new Date()));
@@ -94,8 +96,8 @@ export function TimetablePage() {
                 <span className="w-24 shrink-0 text-sm font-semibold tabular-nums">{item.start}–{item.end}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{item.title}</span>
                   <span className="text-xs text-[var(--muted)]">{[item.place, item.until && `đến ${new Date(`${item.until}T00:00:00`).toLocaleDateString("vi-VN")}`].filter(Boolean).join(" · ")}</span></span>
-                <Button variant="ghost" className="shrink-0 px-3" disabled={pending} aria-label={`Xóa lớp ${item.title}`} onClick={() => {
-                  if (window.confirm(`Xóa lớp “${item.title}” khỏi thời khóa biểu? Mọi buổi của lớp này sẽ mất.`)) run(() => calendar.deleteWholeEvent(item.id));
+                <Button variant="ghost" className="shrink-0 px-3" disabled={pending} aria-label={`Xóa lớp ${item.title}`} onClick={async () => {
+                  if (await confirm({ title: "Xóa lớp học?", body: `“${item.title}” sẽ rời thời khóa biểu, cùng mọi buổi của lớp này trong lịch.`, action: "Xóa lớp" })) run(() => calendar.deleteWholeEvent(item.id));
                 }}><Trash2 size={16} /></Button>
               </li>)}</ul>
             </section>;

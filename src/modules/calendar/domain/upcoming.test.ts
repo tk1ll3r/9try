@@ -20,6 +20,7 @@ describe("upcoming", () => {
     expect(entries.map(entry => entry.title)).toEqual(["class", "coffee", "dinner"]);
     expect(entries[1]).toMatchObject({ kind: "Hoạt động", to: "/meetups" });
     expect(entries[0].kind).toBeUndefined();
+    expect(entries[0].to).toBe("/calendar?date=2026-10-06");
   });
   it("formats all-day dates locally without UTC day shifts", () => {
     expect(localDateKey(new Date(2026,9,5,23))).toBe("2026-10-05");

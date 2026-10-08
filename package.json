@@ -19,7 +19,6 @@
     "test:e2e:preview": "E2E_PREVIEW=1 playwright test"
   },
   "dependencies": {
-    "@fullcalendar/react": "7.1.0",
     "@radix-ui/react-dialog": "1.1.23",
     "@supabase/supabase-js": "2.117.2",
     "@tanstack/react-query": "5.104.1",
