@@ -17,6 +17,10 @@ const known: [code: string, text: string][] = [
   ["routine not found", "Không tìm thấy thói quen này."],
   ["not friends", "Chỉ ghim được người đã là bạn của bạn."],
   ["invalid activity mode or duration", "Hoạt động hoặc thời hạn này không dùng được."],
+  // What the Supabase client says when a server function cannot be reached, is missing, or refuses.
+  ["function not found", "Tính năng này chưa dùng được vì máy chủ chưa được cập nhật."],
+  ["Failed to send a request to the Edge Function", "Chưa kết nối được với máy chủ. Kiểm tra mạng rồi thử lại."],
+  ["Edge Function returned a non-2xx status code", "Máy chủ chưa làm được việc này. Hãy thử lại sau."],
 ];
 
 // The database answers with these codes when a function, table or column of a newer migration is missing.

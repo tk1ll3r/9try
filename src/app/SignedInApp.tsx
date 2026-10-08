@@ -2,6 +2,7 @@ import { Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { RealtimeBridge } from "../kernel/realtime";
 import { SessionProvider } from "../kernel/session";
+import { ConfirmProvider } from "../kernel/ui/Confirm";
 import { returnPathKey } from "../modules/identity/domain/login";
 import { AppShell } from "./AppShell";
 import { registry } from "./modules";
@@ -21,13 +22,15 @@ export default function SignedInApp({ userId }: { userId: string }) {
   // The key gives each account its own services and query cache.
   return <SessionProvider key={userId} userId={userId} registry={registry}>
     <RealtimeBridge userId={userId} />
-    <Suspense fallback={<div role="status" className="p-6">Đang tải trang…</div>}>
-      <Routes><Route element={<AppShell />}>
-        {registry.routes.map(({ path, component: Page }) => path
-          ? <Route key={path} path={path} element={<Page />} />
-          : <Route key="home" index element={<Page />} />)}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route></Routes>
-    </Suspense>
+    <ConfirmProvider>
+      <Suspense fallback={<div role="status" className="p-6">Đang tải trang…</div>}>
+        <Routes><Route element={<AppShell />}>
+          {registry.routes.map(({ path, component: Page }) => path
+            ? <Route key={path} path={path} element={<Page />} />
+            : <Route key="home" index element={<Page />} />)}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route></Routes>
+      </Suspense>
+    </ConfirmProvider>
   </SessionProvider>;
 }

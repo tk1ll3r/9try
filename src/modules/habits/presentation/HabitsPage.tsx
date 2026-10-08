@@ -6,12 +6,14 @@ import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import type { HabitRepeat } from "../domain/Habit";
 import { habitsModule } from "../habits.module";
 import { habitsKey, HabitToggle } from "./TodayHabitsCard";
 
 export function HabitsPage() {
   const habits = useModule(habitsModule);
+  const confirm = useConfirm();
   const list = useQuery({ queryKey: habitsKey, queryFn: () => habits.list() });
   const { run, pending, error } = useAction(habitsKey);
   const [title, setTitle] = useState("");
@@ -38,7 +40,7 @@ export function HabitsPage() {
         {list.data?.map(habit => <li key={habit.id} className="flex items-center gap-1 rounded-2xl bg-[var(--soft)] p-2">
           <div className="min-w-0 flex-1"><HabitToggle habit={habit} disabled={pending} onToggle={() => run(() => habit.done ? habits.undoDone(habit.id) : habits.markDone(habit.id))} /></div>
           <button type="button" disabled={pending} aria-label={`Xóa thói quen ${habit.title}`} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10"
-            onClick={() => { if (window.confirm(`Xóa thói quen “${habit.title}” cùng lịch sử của nó?`)) run(() => habits.remove(habit.id)); }}><Trash2 size={16} /></button>
+            onClick={async () => { if (await confirm({ title: "Xóa thói quen?", body: `“${habit.title}” và lịch sử đã làm của nó sẽ bị xóa. Không thể hoàn tác.`, action: "Xóa thói quen" })) run(() => habits.remove(habit.id)); }}><Trash2 size={16} /></button>
         </li>)}
       </ul>
       {!!list.data?.length && <p className="mt-3 text-xs text-[var(--muted)]">Chạm vào một thói quen để đánh dấu đã làm. Chạm lần nữa để bỏ đánh dấu.</p>}

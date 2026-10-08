@@ -1,9 +1,10 @@
 import { useIsFetching } from "@tanstack/react-query";
-import { Bell, CalendarDays, CircleUserRound, Home, MessageCircle, Radio, Search, UsersRound, WifiOff } from "lucide-react";
+import { CalendarDays, Home, MessageCircle, Radio, Search, UsersRound, WifiOff } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import type { NavContribution, NavTab } from "../kernel/module";
 import { useRegistry } from "../kernel/session";
+import { AccountMenu } from "../modules/identity";
 
 // Opened rarely, so its dialog code stays out of the first download.
 const SearchDialog = lazy(() => import("./SearchDialog").then(m => ({ default: m.SearchDialog })));
@@ -15,11 +16,9 @@ const tabs: { id: NavTab; label: string; icon: NavContribution["icon"] }[] = [
   { id: "plan", label: "Kế hoạch", icon: CalendarDays },
   { id: "chat", label: "Trò chuyện", icon: MessageCircle },
   { id: "together", label: "Cùng nhau", icon: UsersRound },
-  { id: "inbox", label: "Thông báo", icon: Bell },
-  { id: "me", label: "Tôi", icon: CircleUserRound },
 ];
-/** A phone's bottom bar fits five tabs. The inbox and the profile sit in the top bar instead. */
-const topBarTabs: NavTab[] = ["inbox", "me"];
+// The two other tabs are not in this list. "inbox" is the bell and "me" the account menu, both in the
+// top right corner of every screen; a phone's bottom bar then has room for the five above.
 
 const isAt = (pathname: string, to: string) => to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 
@@ -46,7 +45,10 @@ function PageSkeleton() {
   </div>;
 }
 
-/** Navigation comes from the modules: bottom tabs with a row of sub-screens on a phone, a sidebar on a desktop. */
+/**
+ * Navigation comes from the modules: bottom tabs with a row of sub-screens on a phone, a sidebar on a
+ * desktop, and on both the bell and the account menu in the top right corner.
+ */
 export function AppShell() {
   const [online, setOnline] = useState(navigator.onLine);
   const [searching, setSearching] = useState(false);
@@ -78,10 +80,12 @@ export function AppShell() {
   const section = current && (parentOf(current) ?? current);
   const family = section ? [section, ...navigation.filter(item => item !== section && parentOf(item) === section)] : [];
   const groups = tabs.map(tab => ({ ...tab, items: menu.filter(item => item.tab === tab.id) })).filter(tab => tab.items.length);
-  const phoneTabs = groups.filter(tab => !topBarTabs.includes(tab.id));
-  const topBar = groups.filter(tab => topBarTabs.includes(tab.id));
   const siblings = groups.find(tab => tab.id === section?.tab)?.items ?? [];
-  const activeIndex = phoneTabs.findIndex(tab => tab.id === section?.tab);
+  const activeIndex = groups.findIndex(tab => tab.id === section?.tab);
+  const inbox = menu.filter(item => item.tab === "inbox");
+  const bell = inbox[0];
+  // The account menu lists every screen about the person, also the ones that are tabs of the profile.
+  const mine = navigation.filter(item => item.tab === "me");
 
   // On a phone the row of sub-screens scrolls sideways; keep the current one in the middle of it.
   const pills = useRef<HTMLElement>(null);
@@ -124,49 +128,54 @@ export function AppShell() {
       </aside>
 
       <main className="relative z-[1] mx-auto min-h-dvh max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:ml-64 lg:px-8 lg:pb-10 lg:pt-8">
-        <div className="mb-4 flex items-center gap-2 lg:hidden">
-          <button type="button" onClick={() => setSearching(true)} className="glass pressable flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] dark:border-white/8"><Search size={17} /> Tìm kiếm</button>
-          {topBar.map(tab => (
-            <Link key={tab.id} to={tab.items[0].to} aria-label={tab.label} aria-current={section?.tab === tab.id ? "page" : undefined}
-              className={`pressable grid size-11 shrink-0 place-items-center rounded-full border border-black/5 dark:border-white/8 ${section?.tab === tab.id ? "bg-[var(--ink)] text-[var(--paper)]" : "glass"}`}>
-              <span className="relative"><tab.icon size={20} /><Badges items={tab.items} /></span>
-            </Link>
-          ))}
+        {/* One bar for every screen size. A phone has search, the bell and the account on its first row and
+            the rows of sub-screens under it. A desktop has the tabs of the current screen on the left. */}
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-4">
+          <button type="button" onClick={() => setSearching(true)} className="glass pressable order-1 flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] lg:hidden dark:border-white/8"><Search size={17} /> Tìm kiếm</button>
+          <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3 lg:ml-auto">
+            {bell && (
+              <Link to={bell.to} aria-label={bell.label} aria-current={section?.tab === "inbox" ? "page" : undefined}
+                className={`pressable grid size-11 place-items-center rounded-full border border-black/5 dark:border-white/8 ${section?.tab === "inbox" ? "bg-[var(--ink)] text-[var(--paper)]" : "glass"}`}>
+                <span className="relative"><bell.icon size={20} /><Badges items={inbox} /></span>
+              </Link>
+            )}
+            <AccountMenu items={mine} active={section?.tab === "me"} />
+          </div>
+          <div className="order-3 w-full empty:hidden">{modules.map(({ id, indicator: Indicator }) => Indicator && <Indicator key={id} />)}</div>
+          {siblings.length > 1 && (
+            <nav ref={pills} aria-label="Trong mục này" className="relative order-4 -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:w-[calc(100%+3rem)] sm:px-6 lg:hidden">
+              {siblings.map(item => (
+                <Link key={item.to} to={item.to} aria-current={item === current ? "page" : item === section ? "true" : undefined}
+                  className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors duration-200 ${item === section ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
+                  <item.icon size={16} /> {item.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+          {/* The screens that share one menu entry, as tabs: "Việc · Thói quen · Ghi chú". */}
+          {family.length > 1 && (
+            <nav aria-label="Trong màn này" className="order-5 flex w-full max-w-full gap-1 overflow-x-auto rounded-2xl bg-[var(--soft)] p-1 sm:w-auto lg:order-1">
+              {family.map(item => (
+                <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
+                  className={`inline-flex min-h-9 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:flex-none ${item === current ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
+                  <item.icon size={15} /> {item.label}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
-        {modules.map(({ id, indicator: Indicator }) => Indicator && <Indicator key={id} />)}
-        {siblings.length > 1 && (
-          <nav ref={pills} aria-label="Trong mục này" className="relative -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:hidden">
-            {siblings.map(item => (
-              <Link key={item.to} to={item.to} aria-current={item === current ? "page" : item === section ? "true" : undefined}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors duration-200 ${item === section ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
-                <item.icon size={16} /> {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
-        {/* The screens that share one menu entry, as tabs: "Việc · Thói quen · Ghi chú". */}
-        {family.length > 1 && (
-          <nav aria-label="Trong màn này" className="mb-4 flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-[var(--soft)] p-1 sm:inline-flex">
-            {family.map(item => (
-              <Link key={item.to} to={item.to} aria-current={item === current ? "page" : undefined}
-                className={`inline-flex min-h-9 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:flex-none ${item === current ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
-                <item.icon size={15} /> {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
         {/* The shell stays while a screen's code loads; the screen's parts then arrive one after the other. */}
         <div className="page-slot"><Suspense fallback={<PageSkeleton />}><Outlet /></Suspense></div>
       </main>
 
       {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
-      <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${phoneTabs.length}, minmax(0, 1fr))` }}
+      <nav aria-label="Điều hướng chính" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}
         className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 p-1.5 shadow-2xl lg:hidden dark:border-white/10">
         {/* One dark pill slides under the current tab. */}
         <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-500 ease-[var(--ease-spring)]"
-          style={{ width: `calc((100% - 0.75rem) / ${phoneTabs.length})`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }} />
-        {phoneTabs.map(tab => {
+          style={{ width: `calc((100% - 0.75rem) / ${groups.length})`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`, opacity: activeIndex < 0 ? 0 : 1 }} />
+        {groups.map(tab => {
           const active = tab.id === section?.tab;
           return (
             <Link key={tab.id} to={tab.items[0].to} aria-current={active ? "page" : undefined}

@@ -32,6 +32,8 @@ interface Auth {
   signInWithGoogle(redirectTo: string): Promise<AuthFailure | null>;
   /** Set when the page was opened by a sign-in that did not finish. */
   failed: SignInFailure | null;
+  /** Ends the session on this device. The sign-in screen comes back. */
+  signOut(): Promise<void>;
 }
 
 const AuthContext = createContext<Auth | null>(null);
@@ -144,6 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const { error } = await supabase!.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
       return error;
+    },
+    async signOut() {
+      await supabase!.auth.signOut();
     },
   }), [user, loading, failed, google]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

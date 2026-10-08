@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { matchesSearch } from "../../../kernel/text";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 import type { Task, TaskDraft, TaskPriority, TaskSection } from "../domain/Task";
+import { TaskQuickAdd } from "./TaskQuickAdd";
 import { useAllTasks, useTaskChange } from "./useTasks";
 
 const sections: [TaskSection, string][] = [["overdue", "Quá hạn"], ["today", "Hôm nay"], ["upcoming", "Sắp tới"], ["undated", "Không hạn"]];
@@ -49,8 +49,9 @@ export function TaskListCard() {
     });
   }
 
-  return <Card title="Tất cả công việc" action={<Link to="/today" className="text-sm font-semibold underline">Thêm ở Hôm nay</Link>}>
-    <p className="mb-3 text-sm text-[var(--muted)]">Việc một lần, gồm cả tương lai. Việc lặp lại nằm ở màn hình Thói quen.</p>
+  return <Card title="Tất cả công việc">
+    <TaskQuickAdd placeholder="Thêm một việc…" />
+    <p className="mb-3 mt-4 text-sm text-[var(--muted)]">Việc một lần, gồm cả tương lai. Việc lặp lại nằm ở màn hình Thói quen.</p>
     <div className="flex flex-wrap gap-2">
       <input className="field min-w-0 flex-1" aria-label="Tìm công việc" placeholder="Tìm công việc…" value={search} onChange={e => setSearch(e.target.value)} />
       <select className="field" aria-label="Lọc công việc" value={filter} onChange={e => setFilter(e.target.value)}><option value="open">Chưa xong</option><option value="done">Đã xong</option><option value="all">Tất cả</option></select>

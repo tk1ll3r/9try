@@ -7,12 +7,14 @@ import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import { MoreMenu } from "../../../kernel/ui/MoreMenu";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
 
 export function FriendsPage() {
   const friends = useModule(friendsModule);
+  const confirm = useConfirm();
   const connections = useFriendConnections();
   const shares = useQuery({ queryKey: [...friendsKey, "shares"], queryFn: () => friends.availabilitySharedWith() });
   const blocked = useQuery({ queryKey: [...friendsKey, "blocked"], queryFn: () => friends.listBlocked() });
@@ -86,11 +88,11 @@ export function FriendsPage() {
                     <MoreMenu label={`Thao tác khác với ${item.displayName}`}>
                       <Link to={`/calendar/shared/${item.userId}`}><CalendarDays size={16} /> Xem lịch và bận/rảnh</Link>
                       <button type="button" disabled={pending} aria-pressed={sharing} onClick={() => act(() => friends.setAvailabilityShare(item.userId, !sharing))}><Share2 size={16} /> {sharing ? "Ngừng chia sẻ bận/rảnh" : "Chia sẻ bận/rảnh của tôi"}</button>
-                      <button type="button" disabled={pending} onClick={() => {
-                        if (window.confirm(`Xóa ${item.displayName} khỏi danh sách bạn bè?`)) act(() => friends.remove(item.userId));
+                      <button type="button" disabled={pending} onClick={async () => {
+                        if (await confirm({ title: "Xóa bạn?", body: `${item.displayName} sẽ rời danh sách bạn bè của bạn. Những gì hai bạn đang chia sẻ với nhau cũng dừng lại.`, action: "Xóa bạn" })) act(() => friends.remove(item.userId));
                       }}><UserMinus size={16} /> Xóa bạn</button>
-                      <button type="button" disabled={pending} className="text-[var(--danger)]" onClick={() => {
-                        if (window.confirm(`Chặn ${item.displayName}? Bạn sẽ không còn kết nối với người này.`)) act(() => friends.block(item.userId));
+                      <button type="button" disabled={pending} className="text-[var(--danger)]" onClick={async () => {
+                        if (await confirm({ title: `Chặn ${item.displayName}?`, body: "Hai bạn sẽ không còn là bạn bè và không gửi được lời mời cho nhau. Bạn bỏ chặn được trong danh sách đã chặn.", action: "Chặn" })) act(() => friends.block(item.userId));
                       }}><Ban size={16} /> Chặn</button>
                     </MoreMenu>
                   </>

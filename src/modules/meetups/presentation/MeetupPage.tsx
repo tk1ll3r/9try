@@ -7,6 +7,7 @@ import { useModule, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import { PeoplePicker } from "../../friends";
 import { MeetupPolicy, type MeetupSummary } from "../domain/Meetup";
 import { meetupsModule } from "../meetups.module";
@@ -45,6 +46,7 @@ function MeetupDetail({ item }: { item: MeetupSummary }) {
   });
   // An answer, a confirmed time or a cancellation changes the list; everything else only this card.
   const whole = useAction(meetupsKey);
+  const confirm = useConfirm();
   const inside = useAction(detailKey);
   const busy = whole.pending || inside.pending;
   const [inviteIds, setInviteIds] = useState<string[]>([]);
@@ -95,8 +97,8 @@ function MeetupDetail({ item }: { item: MeetupSummary }) {
           </div>
         )}
         {policy.canCancel && (
-          <Button variant="ghost" disabled={busy} onClick={() => {
-            if (window.confirm("Hủy hoạt động này? Người được mời sẽ không thể tham gia.")) whole.run(() => meetups.cancel(item.id));
+          <Button variant="ghost" disabled={busy} onClick={async () => {
+            if (await confirm({ title: "Hủy hoạt động?", body: `“${item.title}” sẽ bị hủy. Người được mời sẽ không tham gia được nữa.`, action: "Hủy hoạt động" })) whole.run(() => meetups.cancel(item.id));
           }}><XCircle size={16} /> Hủy hoạt động</Button>
         )}
       </div>

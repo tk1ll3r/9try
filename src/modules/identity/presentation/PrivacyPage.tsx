@@ -11,6 +11,6 @@ export function PrivacyPage() {
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Mọi thứ là riêng tư cho tới khi bạn chọn chia sẻ. Ở đây bạn thấy những gì người khác đang xem được và dừng từng thứ một.</p>
     </header>
     {modules.map(({ id, privacy: Section }) => Section && <Section key={id} />)}
-    <p className="text-sm text-[var(--muted)]">Tải dữ liệu của bạn hoặc xóa tài khoản trong <Link to="/me" className="font-semibold underline">Hồ sơ</Link>.</p>
+    <p className="text-sm text-[var(--muted)]">Tải dữ liệu của bạn hoặc xóa tài khoản trong <Link to="/me/settings" className="font-semibold underline">Cài đặt</Link>.</p>
   </div>;
 }

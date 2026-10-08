@@ -17,6 +17,11 @@ export class PushData {
     return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   }
 
+  /** False when the app was built without the key that push needs. */
+  configured(): boolean {
+    return Boolean(import.meta.env.VITE_WEB_PUSH_VAPID_PUBLIC_KEY);
+  }
+
   async isSubscribed(): Promise<boolean> {
     if (!this.supported()) return false;
     // `serviceWorker.ready` never settles where no worker is registered (the dev server).
@@ -25,10 +30,10 @@ export class PushData {
   }
 
   async enable(): Promise<void> {
-    if (!this.supported()) throw new Error("Trình duyệt này không hỗ trợ web push.");
+    if (!this.supported()) throw new Error("Trình duyệt này không hỗ trợ thông báo đẩy.");
     const publicKey = import.meta.env.VITE_WEB_PUSH_VAPID_PUBLIC_KEY as string | undefined;
-    if (!publicKey) throw new Error("Web push chưa được cấu hình trên môi trường này.");
-    if (!await navigator.serviceWorker.getRegistration()) throw new Error("Web push chưa dùng được ở bản chạy thử này vì chưa có service worker.");
+    if (!publicKey) throw new Error("Bản ứng dụng này chưa bật thông báo đẩy.");
+    if (!await navigator.serviceWorker.getRegistration()) throw new Error("Thông báo đẩy chưa dùng được ở bản chạy thử này.");
 
     const permission = await Notification.requestPermission();
     if (permission !== "granted") throw new Error("Bạn chưa cấp quyền gửi thông báo.");
@@ -45,7 +50,7 @@ export class PushData {
     const json = subscription.toJSON();
     const p256dh = json.keys?.p256dh;
     const auth = json.keys?.auth;
-    if (!p256dh || !auth) throw new Error("Không đọc được khóa push subscription.");
+    if (!p256dh || !auth) throw new Error("Trình duyệt chưa đăng ký được thông báo đẩy. Hãy thử lại.");
 
     const { error } = await this.db.from("push_subscriptions").upsert({
       user_id: this.userId,

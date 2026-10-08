@@ -88,6 +88,8 @@ export interface FeatureModule<Services = unknown> {
   readonly indicator?: ComponentType;
   /** A section of the privacy screen: what this module shows to other people right now, and how to stop it. */
   readonly privacy?: ComponentType;
+  /** A section of the settings screen: what this module lets the person set up, such as push notifications. */
+  readonly settings?: ComponentType;
   /** Everything of this module that a person may look for by name. The search filters it as they type. */
   searchItems?(services: Services): Promise<readonly SearchItem[]>;
   readonly today?: TodayContribution;

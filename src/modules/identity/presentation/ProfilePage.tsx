@@ -1,4 +1,3 @@
-import { Download, LogOut, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../kernel/auth";
 import { errorMessage } from "../../../kernel/errors";
@@ -20,7 +19,6 @@ export function ProfilePage() {
   const { run, pending, error } = useAction(profileKey);
   const [value, setValue] = useState(empty);
   const [message, setMessage] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState("");
   // An account made with Google has a name there already. It is offered in the form and kept only when the form is saved.
   const givenName = useAuth().user?.user_metadata?.full_name;
   const offeredName = typeof givenName === "string" ? givenName.trim().slice(0, 80) : "";
@@ -33,30 +31,17 @@ export function ProfilePage() {
     run(async () => profiles.save(Profile.check(value)), () => setMessage("Đã lưu hồ sơ."));
   }
 
-  function exportData() {
-    setMessage("");
-    run(() => profiles.exportData(), data => {
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `gnouht-data-${new Date().toISOString().slice(0, 10)}.json`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      setMessage("Đã tạo bản xuất dữ liệu của bạn.");
-    });
-  }
-
   return (
     <div className="space-y-5">
       <header>
-        <p className="text-sm font-semibold text-[var(--muted)]">Không gian cá nhân</p>
-        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Tôi</h1>
+        <p className="text-sm font-semibold text-[var(--muted)]">Bạn bè thấy bạn như thế này</p>
+        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">Hồ sơ</h1>
       </header>
 
       {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem}</div>}
       {message && <div role="status" className="rounded-2xl bg-[var(--soft)] p-4 text-sm">{message}</div>}
 
-      <Card title="Hồ sơ">
+      <Card>
         <form onSubmit={save} className="grid gap-3 md:grid-cols-2" aria-busy={pending}>
           <label className="grid gap-1 text-sm font-semibold">Tên hiển thị
             <input className="field" required maxLength={80} value={value.displayName} onChange={(e) => setValue({ ...value, displayName: e.target.value })} placeholder="Tên bạn bè sẽ thấy" />
@@ -83,30 +68,6 @@ export function ProfilePage() {
         </form>
       </Card>
 
-      <Card title="Dữ liệu & tài khoản">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-bold">Xuất dữ liệu</p>
-              <p className="mt-1 text-sm text-[var(--muted)]">Tải JSON chứa dữ liệu tài khoản mà Gnouht lưu cho bạn.</p>
-            </div>
-            <Button variant="ghost" disabled={pending} onClick={exportData}><Download size={17} /> Xuất dữ liệu</Button>
-          </div>
-
-          <div className="border-t border-black/8 pt-5 dark:border-white/8">
-            <p className="font-bold text-[var(--danger)]">Xóa tài khoản</p>
-            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Dữ liệu cá nhân của bạn sẽ bị xóa và không khôi phục được. Nếu bạn là chủ của nhóm có thành viên khác, hãy chuyển quyền chủ nhóm trước.</p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <input className="field min-w-0 flex-1" aria-label="Xác nhận xóa tài khoản" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder='Nhập "XÓA" để xác nhận' />
-              <Button variant="danger" disabled={deleteConfirm !== "XÓA" || pending} onClick={() => run(() => profiles.deleteAccount())}>
-                <Trash2 size={17} /> Xóa tài khoản
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Button variant="ghost" onClick={() => void profiles.signOut()}><LogOut size={17} /> Đăng xuất</Button>
     </div>
   );
 }

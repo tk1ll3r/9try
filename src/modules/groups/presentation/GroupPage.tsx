@@ -7,6 +7,7 @@ import { useModule, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import { Membership } from "../domain/Group";
 import { groupsModule } from "../groups.module";
 import { roleLabel } from "./GroupsPage";
@@ -17,6 +18,7 @@ export function GroupPage() {
   const { groupId = "" } = useParams();
   const userId = useUserId();
   const groups = useModule(groupsModule);
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const group = useMyGroups().data?.find(item => item.id === groupId);
   const members = useQuery({ queryKey: [...groupsKey, "members", groupId], queryFn: () => groups.members(groupId) });
@@ -66,12 +68,12 @@ export function GroupPage() {
                   <Button variant="ghost" className="px-3" disabled={pending} onClick={() => act(() => groups.setRole(groupId, member.userId, member.role === "admin" ? "member" : "admin"))}>
                     <ShieldCheck size={16} /> {member.role === "admin" ? "Bỏ quản trị" : "Cho làm quản trị"}
                   </Button>
-                  <Button variant="ghost" className="px-3" disabled={pending} onClick={() => {
-                    if (window.confirm(`Chuyển quyền chủ nhóm cho ${member.displayName}? Bạn sẽ thành quản trị.`)) act(() => groups.transferOwnership(groupId, member.userId), `Đã chuyển quyền chủ nhóm cho ${member.displayName}.`);
+                  <Button variant="ghost" className="px-3" disabled={pending} onClick={async () => {
+                    if (await confirm({ title: "Chuyển quyền chủ nhóm?", body: `${member.displayName} sẽ là chủ nhóm. Bạn ở lại nhóm với vai trò quản trị.`, action: "Chuyển quyền", danger: false })) act(() => groups.transferOwnership(groupId, member.userId), `Đã chuyển quyền chủ nhóm cho ${member.displayName}.`);
                   }}><Crown size={16} /> Chuyển chủ nhóm</Button>
                 </>}
-                {me.canRemove(member) && <Button variant="ghost" className="px-3" disabled={pending} onClick={() => {
-                  if (window.confirm(`Xóa ${member.displayName} khỏi nhóm?`)) act(() => groups.removeMember(groupId, member.userId));
+                {me.canRemove(member) && <Button variant="ghost" className="px-3" disabled={pending} onClick={async () => {
+                  if (await confirm({ title: "Xóa khỏi nhóm?", body: `${member.displayName} sẽ không còn là thành viên của nhóm này.`, action: "Xóa khỏi nhóm" })) act(() => groups.removeMember(groupId, member.userId));
                 }}><UserMinus size={16} /> Xóa</Button>}
               </div>
             </div>
@@ -123,11 +125,11 @@ export function GroupPage() {
 
       <Card title="Rời hoặc lưu trữ">
         <div className="flex flex-wrap gap-3">
-          {me.canLeave && <Button variant="ghost" disabled={pending} onClick={() => {
-            if (window.confirm("Rời nhóm này?")) act(() => groups.leave(groupId), "", () => navigate("/groups"));
+          {me.canLeave && <Button variant="ghost" disabled={pending} onClick={async () => {
+            if (await confirm({ title: "Rời nhóm?", body: "Bạn sẽ không còn thấy nhóm này và cuộc trò chuyện của nhóm. Muốn quay lại, bạn cần một lời mời mới.", action: "Rời nhóm" })) act(() => groups.leave(groupId), "", () => navigate("/groups"));
           }}><LogOut size={17} /> Rời nhóm</Button>}
-          {me.isOwner && <Button variant="danger" disabled={pending} onClick={() => {
-            if (window.confirm("Lưu trữ nhóm? Nhóm sẽ biến mất khỏi danh sách của mọi thành viên.")) act(() => groups.archive(groupId), "", () => navigate("/groups"));
+          {me.isOwner && <Button variant="danger" disabled={pending} onClick={async () => {
+            if (await confirm({ title: "Lưu trữ nhóm?", body: "Nhóm sẽ biến mất khỏi danh sách của mọi thành viên.", action: "Lưu trữ nhóm" })) act(() => groups.archive(groupId), "", () => navigate("/groups"));
           }}><Archive size={17} /> Lưu trữ nhóm</Button>}
         </div>
         {me.isOwner && (members.data?.length ?? 0) > 1 && <p className="mt-3 text-xs text-[var(--muted)]">Muốn rời nhóm hoặc xóa tài khoản, hãy chuyển quyền chủ nhóm cho thành viên khác trước.</p>}

@@ -767,7 +767,7 @@ test("screens animate in, and stay still for people who ask for reduced motion",
   expect((await motion()).seconds).toBeLessThan(0.001);
 });
 
-test("the menu has eleven entries; the other screens are tabs on their parent", async ({ page }) => {
+test("the menu has nine entries, with the bell and the account in the corner; the other screens are tabs on their parent", async ({ page }) => {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "vy@example.test", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
   await page.addInitScript(account => {
     localStorage.setItem("sb-127-auth-token", JSON.stringify({ access_token: "mock-token", refresh_token: "mock-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: account }));
@@ -776,7 +776,10 @@ test("the menu has eleven entries; the other screens are tabs on their parent", 
   await page.route("**/rest/v1/**", route => route.fulfill({ json: [] }));
   await page.goto("/habits");
   const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Điều hướng chính" });
-  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Hôm nay", "Lịch", "Việc", "Trò chuyện", "Bạn bè", "Nhóm", "Hoạt động", "Vị trí", "Thông báo", "Tôi"]);
+  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Hôm nay", "Lịch", "Việc", "Trò chuyện", "Bạn bè", "Nhóm", "Hoạt động", "Vị trí"]);
+  // The inbox and the person's own screens are in the top right corner instead.
+  await expect(page.getByRole("link", { name: "Thông báo", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Tài khoản và cài đặt")).toBeVisible();
   // "Thói quen" is open: its parent is marked in the menu, and the family is a strip of tabs.
   await expect(sidebar.getByRole("link", { name: "Việc" })).toHaveAttribute("aria-current", "true");
   const strip = page.getByRole("navigation", { name: "Trong màn này" });
@@ -786,7 +789,7 @@ test("the menu has eleven entries; the other screens are tabs on their parent", 
   await expect(page).toHaveURL(/\/notes$/);
   await expect(page.getByRole("heading", { name: "Ghi chú", level: 1 })).toBeVisible();
 
-  const families: [string, string[]][] = [["/timetable", ["Lịch", "Thời khóa biểu"]], ["/free-time", ["Hoạt động", "Rảnh lúc nào?"]], ["/me/privacy", ["Hồ sơ", "Quyền riêng tư"]]];
+  const families: [string, string[]][] = [["/timetable", ["Lịch", "Thời khóa biểu"]], ["/free-time", ["Hoạt động", "Rảnh lúc nào?"]], ["/me/privacy", ["Hồ sơ", "Quyền riêng tư", "Cài đặt"]]];
   for (const [path, tabs] of families) {
     await page.goto(path);
     await expect(strip.getByRole("link")).toHaveText(tabs);
@@ -800,6 +803,8 @@ test("the menu has eleven entries; the other screens are tabs on their parent", 
   await page.goto("/notes");
   await expect(page.getByRole("navigation", { name: "Trong mục này" }).getByRole("link")).toHaveText(["Lịch", "Việc"]);
   await expect(strip.getByRole("link")).toHaveText(["Việc", "Thói quen", "Ghi chú"]);
+  await expect(page.getByRole("link", { name: "Thông báo", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Tài khoản và cài đặt")).toBeVisible();
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -818,15 +823,21 @@ test("friend removal requires confirmation", async ({ page }) => {
   });
   await page.goto("/me/friends");
   await expect(page.getByText("Kha", { exact: true })).toBeVisible();
-  // Removing a friend is under the "…" menu of their row.
-  page.once("dialog", dialog => dialog.dismiss());
+  // Removing a friend is under the "…" menu of their row, and the app asks first in its own dialog.
+  const question = page.getByRole("alertdialog", { name: "Xóa bạn?" });
   await page.getByLabel("Thao tác khác với Kha").click();
   await page.getByRole("button", { name: "Xóa bạn" }).click();
+  await expect(question).toContainText("Kha sẽ rời danh sách bạn bè của bạn");
+  // The safe answer has the focus, so Enter does not remove anyone.
+  await expect(question.getByRole("button", { name: "Thôi" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(question).toHaveCount(0);
   expect(removed).toBe(0);
-  page.once("dialog", dialog => dialog.accept());
   await page.getByLabel("Thao tác khác với Kha").click();
   await page.getByRole("button", { name: "Xóa bạn" }).click();
+  await question.getByRole("button", { name: "Xóa bạn" }).click();
   await expect.poll(() => removed).toBe(1);
+  await expect(question).toHaveCount(0);
 });
 
 test("a friend link is created, then makes its visitor a friend", async ({ page }) => {

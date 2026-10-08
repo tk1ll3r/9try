@@ -7,6 +7,7 @@ import { matchesSearch } from "../../../kernel/text";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { useConfirm } from "../../../kernel/ui/Confirm";
 import type { Note } from "../domain/Note";
 import { notesModule } from "../notes.module";
 
@@ -14,6 +15,7 @@ const notesKey = ["notes"] as const;
 
 export function NotesPage() {
   const notes = useModule(notesModule);
+  const confirm = useConfirm();
   const list = useQuery({ queryKey: notesKey, queryFn: () => notes.list() });
   const { run, pending, error } = useAction(notesKey);
   const [title, setTitle] = useState("");
@@ -73,7 +75,7 @@ export function NotesPage() {
                 <button type="button" disabled={pending} className="min-h-11 rounded-xl px-3 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Sửa ghi chú ${name(note)}`}
                   onClick={() => { setEditing(note.id); setTitle(note.title); setBody(note.body); document.getElementById("note-title")?.focus(); }}>Sửa</button>
                 <button type="button" disabled={pending} className="grid size-11 place-items-center rounded-xl text-[var(--muted)] hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Xóa ghi chú ${name(note)}`}
-                  onClick={() => { if (window.confirm("Xóa ghi chú này? Không thể hoàn tác.")) run(() => notes.remove(note.id), () => { if (editing === note.id) clear(); }); }}><Trash2 size={16} /></button>
+                  onClick={async () => { if (await confirm({ title: "Xóa ghi chú?", body: `“${name(note)}” sẽ bị xóa. Không thể hoàn tác.`, action: "Xóa ghi chú" })) run(() => notes.remove(note.id), () => { if (editing === note.id) clear(); }); }}><Trash2 size={16} /></button>
               </div>
             </div>
           </article>)}
