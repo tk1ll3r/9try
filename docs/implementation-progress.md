@@ -1,5 +1,50 @@
 # Development-plan implementation status
 
+## 2026-10-08, late night: a calendar that is easy to read, an account menu, and the half-finished parts
+
+The owner said the calendar was not easy on the eyes, asked for a menu in the top right corner for their own account and settings, and asked for the unfinished features to be finished. Local branch `refactor/foundation`, not pushed, not deployed; the cloud database is untouched.
+
+The calendar:
+
+- It was a third-party calendar in a purple theme of its own. In the dark look it stayed white, every entry had the same color, titles were cut short, and the form to change an event opened above the calendar, out of sight on a phone.
+- The app now draws it. "Lịch biểu" is the week as a strip with the chosen day's entries listed in full, and is what a phone opens on. "Tháng" is the month, with titles in the cells on a wide screen and the chosen day's list beside it. "Tuần" is the week as an hour grid. A class, an event, a plan with others and a friend's busy time each have a color, in both looks.
+- An event opens in a dialog. It can now change the place and who sees the event; the privacy screen sent people to the calendar to make an event private again, and there was no way to do that. Dropping one time of a repeating event and deleting ask first.
+- A friend's shared calendar uses the same views. `@fullcalendar/react` is removed: opening the calendar downloads about 7 kB of script instead of about 84 kB (gzip).
+
+The account corner:
+
+- The bell and an account menu are in the top right corner on a phone and on a desktop. The menu shows who is signed in, links to the profile, the privacy screen and the new settings screen, switches the look (light, dark, or the device's setting) and signs out. The sidebar has nine entries.
+- Settings gathers the look, push notifications (moved from the inbox), installing the app, the data export, sign-out and account deletion. A module adds a section through `settings`.
+
+Finished on the way:
+
+- Steps that cannot be undone are asked about in the app's own dialog; the 13 browser confirm boxes are gone.
+- "Rảnh lúc nào?" ended in a list of times that could not be pressed. A free time now opens a short form and becomes a proposal with that time and those friends in one step.
+- "Nhắc việc" never arrived on the live project: only an Edge Function that is not deployed there turned a reminder into a notification. Migration 0030 lets the database do it every minute.
+- A task can be added from the task list, not only from Today.
+- A refused account deletion says why in Vietnamese. Before, it showed "Edge Function returned a non-2xx status code". Where the function is not deployed, as on the live project, the app says it could not call the server and that the feature may not be turned on; a browser cannot tell that case from a lost connection, because the preflight request of a missing function is answered 404 (asked from outside with a made-up function name).
+- The push switch says when a build has no push key, instead of failing when pressed.
+- In a "…" menu, only the row under the pointer is highlighted. Before, all rows were.
+
+Checks run with Node 22.23.3:
+
+| Check | Result |
+|---|---|
+| `tsc -b` | Pass |
+| Unit tests, also under `TZ=America/Los_Angeles` | 120 of 120 in 23 files |
+| `npm run test:db` (embedded Postgres) | 30 migrations applied; 189 of 189 assertions in 17 files |
+| `npm run test:db:local` (local Supabase Postgres 17, real pgTAP and pg_cron) | 189 of 189 assertions in 17 files |
+| Browser tests, mocked backend, dev server | 42 of 42 |
+| Browser tests against the production build | 42 of 42 |
+
+Negative control: with the one-day limit in `deliver_due_reminders` loosened, three assertions of the reminder test fail.
+
+Looked at in screenshots: every calendar view at 390 px and 1280 px in both looks, the two event dialogs, the account menu, the settings screen.
+
+Not verified: any of this on a real phone or on the live site; the calendar with a real account's data; pg_cron on the cloud project (migration 0015 tries to enable it; without it 0030 only warns and reminders stay as they were); push, which still needs the worker and its keys.
+
+Left to the owner: `npx supabase@2.119.0 db push --linked` for migration 0030, then `npm run deploy`. Still missing on production and not changed by this work: the Edge Functions `delete-account` and `calendar-feed`, and the worker with its keys for push.
+
 ## 2026-10-08, night: sign-in with Google, and the email's button on the app's own domain
 
 The owner found the sign-in email in Gmail's Spam, then asked for sign-in with a Google account because waiting for an email is harder.

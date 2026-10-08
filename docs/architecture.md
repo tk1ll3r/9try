@@ -26,18 +26,25 @@ There are 13 modules: `today`, `calendar`, `tasks`, `habits`, `notes`, `notifica
 |---|---|
 | `module.ts` | The `FeatureModule` contract and the `ModuleRegistry` |
 | `session.tsx` | Per-user services and query cache: `SessionProvider`, `useModule`, `useRegistry`, `useUserId`, `useSearchItems` |
-| `auth.tsx` | The signed-in user, and sign-in with Google (when the project offers it), by emailed link or 6-digit code |
+| `auth.tsx` | The signed-in user; sign-in with Google (when the project offers it), by emailed link or 6-digit code; sign-out |
 | `google.ts` | Sign-in with Google that returns straight to the app: the trip to Google, and the token it leaves in the address |
 | `supabase.ts` | The Supabase client. Only `*.module.ts` files and the kernel import it |
 | `realtime.tsx` | One private channel per user; an event reloads the queries named after it |
 | `useAction.ts` | Runs one change at a time, then reloads a group of queries |
 | `errors.ts` | `DomainError`, and the Vietnamese text for error codes raised by SQL functions |
-| `dates.ts`, `text.ts` | Date keys, a clock, and search that ignores Vietnamese marks |
+| `dates.ts`, `text.ts` | Date and date-time keys, a clock, and search that ignores Vietnamese marks |
+| `theme.ts` | The look of the app: light, dark, or the device's own setting, kept on the device |
 | `install.ts` | The browser's offer to install the app, kept from page load |
 | `useFlip.ts` | Lets the parts of a list glide to their new places when the list is reordered |
-| `ui/` | `Button`, `Card`, `DialogPanel`, `MoreMenu` (a "…" button for the actions a row needs less often) |
+| `ui/` | `Button`, `Card`, `DialogPanel`; `Popover` and `MoreMenu` (a "…" button for the actions a row needs less often); `ConfirmProvider` and `useConfirm` (the question before a step that cannot be undone); `ThemeSwitch` |
 
 Motion lives in `src/styles.css`: two easing curves, a handful of keyframes and the classes built on them (`page-slot`, `pressable`, `glass`, `aurora`, `skeleton`, `mode-ring`, `animate-pop`). There is no animation library. One rule at the end of the file turns all of it off under `prefers-reduced-motion`, and the browser tests run with that setting.
+
+The look is the `data-theme` attribute on `<html>`, `light` or `dark`. A line of script in `index.html` sets it before the first paint, from the choice kept on the device or else from the device's own setting; `kernel/theme.ts` keeps it current, also when the device changes while the app is open. The colors are CSS variables that the attribute switches, and Tailwind's `dark:` utilities follow the same attribute.
+
+## The shell
+
+`app/AppShell.tsx` builds the navigation from what the modules contribute. Five tabs hold the screens of the app: a bottom bar on a phone, a sidebar on a desktop. The other two tabs are in the top right corner on every screen size: `inbox` is the bell, and `me` is the account menu (`AccountMenu` of the identity module), which shows who is signed in, lists the screens of that tab, switches the look and signs out.
 
 ## Inside a module
 
@@ -62,15 +69,22 @@ A module is one object of type `FeatureModule`, listed in `src/app/modules.ts`. 
 |---|---|
 | `create(session)` | Builds the module's services for one signed-in user. Screens get them with `useModule(module)` |
 | `routes` | Signed-in pages. The same list decides which outside paths are accepted (`registry.safePath`) |
-| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge. Mode is the first tab and the screen at `/`; the inbox and the profile sit in the phone's top bar. An entry with `parent` leaves the menu and becomes a tab on its parent's screen |
+| `navigation` | Entries in the bottom tabs, the row of sub-screens on a phone and the desktop sidebar, with an optional badge. Mode is the first tab and the screen at `/`. An entry of the `inbox` tab is the bell and the entries of the `me` tab fill the account menu, both in the top right corner. An entry with `parent` leaves the menu and becomes a tab on its parent's screen |
 | `indicator` | A banner on every screen, such as "Đang chia sẻ vị trí" |
 | `privacy` | A section of the privacy screen: what the module shows to other people now, with a way to stop |
+| `settings` | A section of the settings screen: what the module lets the person set up. Push notifications come from `notifications`; the user's data, sign-out and account deletion from `identity` |
 | `searchItems(services)` | What the global search can find in this module |
 | `today` | A card on the Today screen, with its position. A card with nothing to say renders nothing |
 | `agenda(services, from, to)` | Timed things the module puts on the calendar and under "Sắp tới", such as a confirmed meetup |
 | `friendSignals(services, { userId, now })` | What the module knows about the user's friends right now: a meetup soon, unread messages, a live location. The Mode screen ranks friends by these |
 
-Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen and the search need no edit.
+Adding a feature is a new folder plus one line in `src/app/modules.ts`. The shell, the router, Today, the calendar, the privacy screen, the settings screen and the search need no edit.
+
+## The calendar
+
+The calendar is drawn by the app; there is no calendar library. `calendar/domain/calendarView.ts` holds the arithmetic, without React: the weeks of a month, the days an entry touches, the part of a day it takes, and the side-by-side placement of entries that overlap. `CalendarBoard` draws three views from it: the week as a strip with the chosen day's list, the month with that list beside it, and the week as an hour grid (`WeekGrid`). Days are local `YYYY-MM-DD` keys throughout.
+
+Everything on a calendar is a `CalendarEntry` with a tone that picks its color: the user's own event, a class, a plan from another module (`agenda`), or a friend's busy time. The four colors are the `--tone-*` variables in `styles.css`, one set for each look. The user's calendar and a friend's shared calendar use the same board; the second passes no handlers, so nothing in it can be pressed.
 
 ## Activities
 
@@ -95,6 +109,8 @@ Each user listens to one private channel, `user:<id>`. Only database triggers wr
 Event names are the first element of query keys: `notifications`, `friends`, `groups`, `chat`, `location`, `presence`. `RealtimeBridge` reloads the matching queries and reloads everything after a reconnect. Polling stays as a fallback: 60 s for the unread badge, 5 s for an open chat thread, 20 s for the chat list, 15 s for the map. The Mode screen also reloads every 20 s.
 
 Every row added to `notifications` also queues a row in `reminders`, which the `process-reminders` function turns into a Web Push. Quiet hours and per-category choices are applied there.
+
+A personal reminder ("Nhắc việc") is a queue row with a time in the future. Since migration 0030 the database puts it into the inbox when it is due, once a minute through pg_cron, so it arrives where the worker is not deployed; the worker then only adds the push. Queue rows that nobody pushed are dropped after a week.
 
 ## Backend
 
@@ -124,4 +140,4 @@ Edge Functions:
 | `npm run test:e2e` | Browser tests against a mocked backend |
 | `npm run test:db:local` | The same pgTAP files on the local Supabase stack's Postgres, with the real pgTAP. No Docker access needed |
 
-`npm run test:db` uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron, Realtime and pgTAP. `npm run test:db:local` has none of them: it is the authority when the two disagree. It needs the migrations applied to the local stack first (`npx supabase migration up --local`) and refuses any host but localhost. Both pass as of migration 0028.
+`npm run test:db` uses stand-ins for the Supabase roles, `auth.uid()`, pg_cron, Realtime and pgTAP. `npm run test:db:local` has none of them: it is the authority when the two disagree. It needs the migrations applied to the local stack first (`npx supabase migration up --local`) and refuses any host but localhost. Both pass as of migration 0030.

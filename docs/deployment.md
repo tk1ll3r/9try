@@ -24,7 +24,9 @@ First deploy: 2026-10-08, from commit `ccfe3b8` on the local branch `refactor/fo
 Known on the live site:
 
 - Since 2026-10-08 the database has all 29 migrations; the owner ran `db push` and `npm run deploy`. On the evening of 2026-10-08 the site was the version of commit `90cec1e` (it exchanges the token of the sign-in email's button). Sign-in with Google is in the code after that commit and needs one more deploy.
-- No Edge Function is deployed. Until they are: deleting an account fails, reminders never fire, and a calendar feed address answers "not found". `npx supabase@2.119.0 functions deploy calendar-feed delete-account --use-api` covers the first and the last; `process-reminders` also needs `CRON_SECRET` and a scheduler (section 3).
+- No Edge Function is deployed. Until they are: deleting an account fails and a calendar feed address answers "not found". To a browser a missing function looks like a lost connection (its preflight request is answered 404, checked on the live project on 2026-10-08), so the app says it could not call the server and that the feature may not be turned on there. `npx supabase@2.119.0 functions deploy calendar-feed delete-account --use-api` covers both; they need no secret of their own. `process-reminders` is only needed for push, and also needs `CRON_SECRET`, the VAPID keys and a scheduler (section 3).
+- Migration 0030 is not applied yet (`npx supabase@2.119.0 db push --linked`). Until it is, "Nhắc việc" stores a reminder that never arrives. With it, the database puts a due reminder into the inbox every minute, without the worker. It relies on pg_cron, which migration 0015 tries to enable; if the push prints "pg_cron is unavailable", turn the extension on under Database → Extensions and run `select cron.schedule('deliver-due-reminders', '* * * * *', 'select private.deliver_due_reminders()');` in the SQL editor.
+- The code after commit `2873a45` is not deployed: Google returning straight to the app's domain, the new calendar, the account menu and the settings screen. `npm run deploy` publishes it.
 - Cloudflare adds its Web Analytics script (`static.cloudflareinsights.com`) to the pages. It is a zone setting, not part of the app; turn it off in the Cloudflare dashboard under Web Analytics if it is not wanted.
 - A request for a file that does not exist under `/assets/` is answered with the app's HTML and status 200, as every unknown path is.
 - Push notifications are off: `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` is empty.
@@ -142,6 +144,8 @@ WEB_PUSH_CONTACT=mailto:<valid operational contact>
 Use the Supabase-provided URL/anon configuration expected by Edge Functions for authenticated user calls.
 
 ## 3. Reminder scheduler
+
+Since migration 0030 a personal reminder reaches the inbox without this worker: the database delivers it through pg_cron. The worker is what sends Web Push, for reminders and for every other notification.
 
 Invoke `process-reminders` from a server-side scheduler such as Supabase cron/pg_cron or an authenticated Cloudflare Cron trigger.
 

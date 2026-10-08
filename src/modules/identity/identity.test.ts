@@ -21,17 +21,17 @@ describe("profile rules", () => {
 });
 
 describe("account deletion", () => {
-  // The Supabase client reports a refusal as an error that carries the function's answer.
-  const refusing = (answer: Response) => new SupabaseProfileRepository({
-    functions: { invoke: async () => ({ data: null, error: Object.assign(new Error("Edge Function returned a non-2xx status code"), { context: answer }) }) },
-  } as unknown as SupabaseClient, "me");
-  const failure = (answer: Response) => refusing(answer).deleteAccount().then(() => "deleted", cause => errorMessage(cause, "x"));
+  // The Supabase client reports a failure as an error that carries what it got back: the function's answer, or the network error.
+  const failing = (message: string, context: unknown) => new SupabaseProfileRepository({
+    functions: { invoke: async () => ({ data: null, error: Object.assign(new Error(message), { context }) }) },
+  } as unknown as SupabaseClient, "me").deleteAccount().then(() => "deleted", cause => errorMessage(cause, "x"));
+  const refused = "Edge Function returned a non-2xx status code";
 
   it("says why the server refused, in the app's words", async () => {
-    expect(await failure(Response.json({ error: "transfer ownership of groups with other members first" }, { status: 409 }))).toMatch(/chuyển quyền chủ nhóm/);
+    expect(await failing(refused, Response.json({ error: "transfer ownership of groups with other members first" }, { status: 409 }))).toMatch(/chuyển quyền chủ nhóm/);
   });
-  it("says the server is behind when the function is not there, and stays readable when the answer says nothing", async () => {
-    expect(await failure(Response.json({ code: "NOT_FOUND" }, { status: 404 }))).toBe("Tính năng này chưa dùng được vì máy chủ chưa được cập nhật.");
-    expect(await failure(new Response("unauthorized", { status: 401 }))).toBe("Máy chủ chưa làm được việc này. Hãy thử lại sau.");
+  it("stays readable when the answer gives no reason, and when the function cannot be called at all", async () => {
+    expect(await failing(refused, new Response("unauthorized", { status: 401 }))).toBe("Máy chủ chưa làm được việc này. Hãy thử lại sau.");
+    expect(await failing("Failed to send a request to the Edge Function", new TypeError("Failed to fetch"))).toMatch(/^Chưa gọi được máy chủ cho việc này\./);
   });
 });

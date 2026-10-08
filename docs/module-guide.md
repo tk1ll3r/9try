@@ -24,12 +24,15 @@
 | Move a friend up on the Mode screen, with a reason | `friendSignals`: return `{ userId, kind, strength, label, to }`. Give a new `kind` a weight in `FriendRanking` if 20 is not right |
 | Put a screen under another menu entry instead of in the menu | `parent: "/path-of-the-parent"` on the navigation entry |
 | List what the feature shares on the privacy screen, with a stop button | `privacy` |
+| Give the feature a section on the settings screen | `settings` |
+| Put a screen in the account menu in the top right corner | A navigation entry with `tab: "me"` |
+| Ask before a step that cannot be undone | `const confirm = useConfirm()`, then `if (await confirm({ title, body, action })) …`. Do not use `window.confirm` |
 | Make the feature's items findable in the global search | `searchItems` |
 | Reload a screen when the server changes something | Emit an event named after the query key from a database trigger with `private.emit` |
 
 ## Tests
 
-One test file per module covers the entity's rules and the repository's scoping. `src/modules/notes/notes.test.ts` shows the mock for the Supabase client. Add a browser test in `e2e/ui.spec.ts` for the main journey, including a phone-width check when the screen is new.
+One test file per module covers the entity's rules and the repository's scoping. `src/modules/notes/notes.test.ts` shows the mock for the Supabase client. Add a browser test in `e2e/` for the main journey, including a phone-width check when the screen is new. `e2e/signedIn.ts` opens pages as a signed-in person; `e2e/calendar.spec.ts` shows a test that fixes the clock.
 
 `src/architecture.test.ts` fails when a file breaks the layering rules in [architecture.md](architecture.md).
 

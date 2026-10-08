@@ -31,9 +31,8 @@ export class SupabaseProfileRepository implements ProfileRepository {
   async deleteAccount(): Promise<void> {
     const { data, error } = await this.db.functions.invoke("delete-account", { body: { confirm: true } });
     if (error) {
-      // The error only says that the function refused. Why is in the function's answer; 404 means it is not on this server.
-      const answer = (error as { context?: Response }).context;
-      const reason = answer?.status === 404 ? "function not found" : await answer?.json?.().then(body => body?.error, () => undefined);
+      // The error only says that the function refused; the reason is in the function's answer.
+      const reason = await (error as { context?: Response }).context?.json?.().then(body => body?.error, () => undefined);
       throw new Error(typeof reason === "string" ? reason : error.message);
     }
     if (data?.error) throw new Error(data.error);

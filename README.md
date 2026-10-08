@@ -10,19 +10,19 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - Groups: roles, invite links with expiry and use limits, ownership transfer, archive.
 - Chat between friends and inside groups, with unread counts.
 - Meetups: proposal, time poll, RSVP with capacity enforced on the server, discussion, one page per meetup. A meetup in a group invites every member, and a confirmed one shows on the calendar.
-- Calendar: timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group, `.ics` import and export, and a private feed address for Google or Apple Calendar.
-- Timetable of weekly classes, and "Rảnh lúc nào?" to find times when chosen friends are all free.
+- Calendar, drawn by the app itself: a week list, a month and an hour grid, with a color for classes, events, plans with others and a friend's busy times. Timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group (changeable later), `.ics` import and export, and a private feed address for Google or Apple Calendar.
+- Timetable of weekly classes, and "Rảnh lúc nào?" to find times when chosen friends are all free; a free time becomes a proposal with those friends in one step.
 - A Today screen that every feature adds a card to: requests waiting for an answer, what comes next, tasks, habits, what friends are doing.
-- Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders sent by the server.
+- Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders that the database puts into the inbox when they are due.
 - Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
 - Mode, the home screen: what each friend says they are doing right now, with the friends who matter most at the moment on top (a meetup soon, unread messages, a live location, a pin) and the reason on each card. Your own mode is one tap.
 - Notification center, with optional Web Push, quiet hours and per-category choices.
 - A privacy screen that lists what other people can see right now, with a stop button for each.
 - Search across the app (Ctrl/Cmd+K).
-- Data export and guarded account deletion.
+- An account menu in the top right corner and a settings screen: light or dark look, push, data export, sign-out and guarded account deletion.
 - Installable PWA. The service worker caches the app shell only; Supabase and location responses are never cached.
 
-`docs/implementation-progress.md` says what is verified and what is not. Migrations 0013–0029 are not applied to the cloud project yet.
+`docs/implementation-progress.md` says what is verified and what is not. The cloud project has migrations up to 0029; 0030 (reminders without the worker) is not applied there yet.
 
 ## Architecture
 

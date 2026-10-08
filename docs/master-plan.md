@@ -332,13 +332,14 @@ The work followed one rule: build a piece when something uses it. The layers and
 |---|---|---|
 | One class per use case | A service class per module only where a rule sits between the screen and the repository (`TaskService`); elsewhere screens call the repository interface | The single-use classes were pass-through code |
 | `Container` and `Token` classes | A module's `create(session)` builds its services; `useModule(module)` returns them | Same injection with no container to maintain |
-| `ExtensionPoint` class and ten extension points | Nine optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `searchItems`, `today`, `agenda`, `friendSignals` | Each field was added when a second module needed it |
+| `ExtensionPoint` class and ten extension points | Ten optional fields on `FeatureModule`: `create`, `routes`, `navigation`, `indicator`, `privacy`, `settings`, `searchItems`, `today`, `agenda`, `friendSignals` | Each field was added when a second module needed it |
 | `Entity`, `ValueObject`, `Audience`, `EventBus`, `UserTime`, message catalog | Not built. Entities are plain classes: `Task`, `Habit`, `Membership`, `Profile`, `MeetupPolicy` | Nothing needed the base classes |
 | `Controller<State>` base class | `LocationController` alone, with `subscribe` and `getState` | There is one long-lived process |
 | `RealtimeGateway` with typed handlers per module | `RealtimeBridge`: an event reloads the queries whose key starts with its name | Reloading is enough at this size, and no handler can drift from the query it serves |
 | Plain snapshots for the UI | Screens use the entity objects | Snapshots are needed once the cache is stored on the device, which was not built |
 | 16 modules | 13. Timetable and availability live in `calendar`; search is a dialog in `app/` fed by the modules | They share the calendar's repository and repeat engine |
-| `kernel/ui` design system with a gallery | `Button`, `Card`, `DialogPanel` | The existing three cover the screens |
+| `kernel/ui` design system with a gallery | `Button`, `Card`, `DialogPanel`, `Popover`, the confirm dialog, `ThemeSwitch` | Each was added when a second screen needed it; there is no gallery |
+| FullCalendar for the calendar grid | The app draws its own week list, month and hour grid (`calendar/domain/calendarView.ts`, `CalendarBoard`) | The library's theme could not follow the app's look or its dark mode, every entry had one color, and it cost about 68 kB (gzip) on the calendar screen |
 | dependency-cruiser, ESLint, Prettier, path aliases, Testing Library | `src/architecture.test.ts` checks the import rules; the rest is not added | One test file covers the rules without new tooling |
 | In-memory backend mode | Browser tests mock the HTTP API | No second implementation of every repository to keep in step |
 | Route names `/plan/*`, `/together/*`, `/inbox` | The old addresses stay | Notifications already stored in the database link to them |

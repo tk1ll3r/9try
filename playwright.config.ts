@@ -24,6 +24,8 @@ export default defineConfig({
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ui_test_only",
       VITE_ENABLE_DEMO: "true",
       VITE_GOOGLE_CLIENT_ID: "ui-test.apps.googleusercontent.com",
+      // The tests are of a build without push, whatever .env.local says.
+      VITE_WEB_PUSH_VAPID_PUBLIC_KEY: "",
     },
   },
 });
