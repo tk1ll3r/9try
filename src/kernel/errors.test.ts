@@ -11,6 +11,12 @@ describe("error text", () => {
       expect(errorMessage({ code, message: "Could not find the function public.send_message in the schema cache" }, "x")).toBe("Tính năng này chưa dùng được vì máy chủ chưa được cập nhật.");
     }
   });
+  it("reads a server function's refusal only when it is the whole message", () => {
+    expect(errorMessage(new Error("unauthorized"), "x")).toBe("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.");
+    expect(errorMessage(new Error("push not configured"), "x")).toBe("Máy chủ chưa có khóa để gửi thông báo đẩy.");
+    // The same words inside another message are that message's own.
+    expect(errorMessage(new Error("Poll temporarily unavailable"), "x")).toBe("Poll temporarily unavailable");
+  });
   it("falls back to the given text when the failure says nothing", () => {
     expect(errorMessage(undefined, "Thử lại.")).toBe("Thử lại.");
     expect(errorMessage({ code: "23505", message: "" }, "Thử lại.")).toBe("Thử lại.");

@@ -1,5 +1,6 @@
 import { CalendarSearch } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
 import { Button } from "../../../kernel/ui/Button";
@@ -38,7 +39,7 @@ export function FreeTimePage() {
       const to = new Date(from.getTime() + days * 86_400_000);
       const mine = await calendar.listOccurrences(from, to);
       // A friend who does not share busy times is unknown, never assumed to be free.
-      const theirs = await Promise.all(people.map(id => calendar.busyFor(id, from, to).catch(() => null)));
+      const theirs = await Promise.all(people.map(id => calendar.knownBusy(id, from, to).catch(() => null)));
       const unknown = people.filter((_, index) => theirs[index] === null).map(id => friends.find(friend => friend.userId === id)?.displayName ?? t("Một người bạn"));
       const busy = [...mine, ...theirs.flatMap(list => list ?? [])].map(toInterval);
       setResult({ slots: findFreeSlots(busy, from, days, fromHour, toHour, minutes), unknown, people, minutes });
@@ -84,7 +85,7 @@ export function FreeTimePage() {
 
       {result && (
         <Card title={t("Giờ cùng rảnh · {0}", result.slots.length)}>
-          {result.unknown.length > 0 && <p className="mb-3 rounded-2xl bg-amber-100 p-3 text-sm text-amber-950">{t("Chưa rõ lịch của {0} vì họ chưa chia sẻ bận/rảnh với bạn. Kết quả dưới đây không tính đến họ.", result.unknown.join(", "))}</p>}
+          {result.unknown.length > 0 && <p className="mb-3 rounded-2xl bg-amber-100 p-3 text-sm text-amber-950">{t("Chưa rõ lịch của {0} vì họ chưa chia sẻ bận/rảnh với bạn. Kết quả dưới đây không tính đến họ.", result.unknown.join(", "))} <Link to="/calendar/requests" className="font-semibold underline">{t("Hỏi xem lịch")}</Link></p>}
           {result.slots.length === 0 ? <p className="py-4 text-sm text-[var(--muted)]">{t("Không có khoảng nào đủ dài. Thử giảm thời lượng hoặc mở rộng khung giờ.")}</p> : (
             <div className="space-y-4">
               <p className="text-sm text-[var(--muted)]">{t("Chạm một khung giờ để rủ mọi người vào giờ đó.")}</p>
@@ -93,7 +94,7 @@ export function FreeTimePage() {
                 <ul className="flex flex-wrap gap-2">{slots.map(slot => <li key={slot.start}>
                   <button type="button" aria-label={t("Rủ mọi người, {0}, {1}–{2}", label, time.format(slot.start), time.format(slot.end))}
                     onClick={() => { setPicked({ start: slot.start, end: Math.min(slot.end, slot.start + result.minutes * 60_000) }); setProposing(true); }}
-                    className="pressable min-h-11 rounded-2xl bg-[var(--soft)] px-3 py-2 text-sm font-semibold tabular-nums hover:bg-[var(--lime)] hover:text-[#1d230e]">{time.format(slot.start)}–{time.format(slot.end)}</button>
+                    className="pressable min-h-11 rounded-2xl bg-[var(--soft)] px-3 py-2 text-sm font-semibold tabular-nums hover:bg-[var(--lime)] hover:text-[var(--ink)]">{time.format(slot.start)}–{time.format(slot.end)}</button>
                 </li>)}</ul>
               </section>)}
             </div>

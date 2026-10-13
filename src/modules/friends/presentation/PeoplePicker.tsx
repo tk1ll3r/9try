@@ -1,9 +1,11 @@
 import { useAcceptedFriends } from "./useFriends";
 import { t } from "../../../kernel/i18n";
 
-/** Tick friends from a list. `value` holds their user ids. */
-export function PeoplePicker({ legend, value, onChange }: { legend: string; value: string[]; onChange(ids: string[]): void }) {
-  const friends = useAcceptedFriends();
+/** Tick friends from a list. `value` holds their user ids. The friends in `first` are listed before the others. */
+export function PeoplePicker({ legend, value, onChange, first = [] }: { legend: string; value: string[]; onChange(ids: string[]): void; first?: readonly string[] }) {
+  const all = useAcceptedFriends();
+  const rank = (id: string) => first.includes(id) ? first.indexOf(id) : first.length;
+  const friends = first.length ? [...all].sort((a, b) => rank(a.userId) - rank(b.userId)) : all;
   return (
     <fieldset className="rounded-2xl bg-[var(--soft)] p-3">
       <legend className="px-1 text-xs font-bold text-[var(--muted)]">{legend}</legend>

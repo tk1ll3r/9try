@@ -8,6 +8,11 @@ export const isSupabaseConfigured = Boolean(url && key);
 export const supabase = isSupabaseConfigured ? createClient(url!, key!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
 /** Where the project's Edge Functions are served. */
 export const functionsUrl = `${url ?? ""}/functions/v1`;
+/**
+ * The address of the data API and the key every visitor's browser holds. For the rare request that
+ * the client cannot make itself, such as one that must outlive the page.
+ */
+export const restApi = { url: `${url ?? ""}/rest/v1`, key: key ?? "" };
 
 /**
  * The sign-in methods the project has turned on, by name. This is what the server tells anyone who

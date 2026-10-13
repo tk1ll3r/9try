@@ -16,7 +16,7 @@ export function TodayTasksCard() {
   const tasks = today.data ?? [];
   const problem = error || (today.isError ? errorMessage(today.error, t("Chưa tải được công việc.")) : "");
 
-  return <Card title={t("Việc cần làm · {0}", tasks.length)} action={<Link to="/me/organizer" className="text-sm font-semibold underline">{t("Tất cả việc")}</Link>}>
+  return <Card title={t("Việc cần làm · {0}", tasks.length)} action={<Link to="/me/organizer" className="card-link">{t("Tất cả việc")}</Link>}>
     <TaskQuickAdd placeholder={t("Thêm việc hôm nay…")} />
     {problem && <div role="alert" className="mt-3 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={pending || today.isFetching} onClick={() => void today.refetch()}>{t("Thử lại")}</Button></div>}
     {undo && <div role="status" className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--soft)] p-3">{t("Đã hoàn thành việc.")}

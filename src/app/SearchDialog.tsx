@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRegistry, useSearchItems } from "../kernel/session";
+import { useNavigation, useSearchItems } from "../kernel/session";
 import { matchesSearch } from "../kernel/text";
 import { DialogPanel } from "../kernel/ui/DialogPanel";
 import { t } from "../kernel/i18n";
@@ -9,7 +9,7 @@ import { t } from "../kernel/i18n";
 /** Finds screens and whatever the modules offer through `searchItems`. Enter opens the first result. */
 export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChange(open: boolean): void }) {
   const load = useSearchItems();
-  const { navigation } = useRegistry();
+  const navigation = useNavigation();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   // Loaded when the dialog opens and kept for half a minute; typing only filters what is already here.
@@ -23,7 +23,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     navigate(to);
   }
 
-  return <DialogPanel open={open} onOpenChange={onOpenChange} title={t("Tìm kiếm")} description={t("Tìm việc, ghi chú, sự kiện, bạn bè, nhóm, cuộc trò chuyện và màn hình. Gõ không dấu cũng được.")}>
+  return <DialogPanel open={open} onOpenChange={onOpenChange} title={t("Tìm kiếm")} description={t("Tìm ghi chú, sự kiện, bạn bè, nhóm, cuộc trò chuyện và màn hình. Gõ không dấu cũng được.")}>
     <form onSubmit={event => { event.preventDefault(); if (found[0]) go(found[0].to); }}>
       <input data-dialog-initial-focus type="search" className="field w-full" aria-label={t("Từ khóa")} placeholder={t("Bạn tìm gì?")} value={query} onChange={event => setQuery(event.target.value)} />
     </form>

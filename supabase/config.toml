@@ -401,8 +401,11 @@ deno_version = 2
 verify_jwt = false
 
 [functions.process-reminders]
-# A scheduler calls it with CRON_SECRET, which the function compares itself.
+# The database calls it with CRON_SECRET, which the function compares itself.
 verify_jwt = false
+
+# `delete-account` and `send-test-push` are called by a signed-in person from the web app. The platform
+# checks their token first, which is the default, so they have no section here.
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

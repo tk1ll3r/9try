@@ -1,8 +1,10 @@
 import {
-  Beer, BellOff, BookOpen, BookOpenText, Briefcase, Bus, CalendarCheck2, CalendarPlus, CircleDot, Clapperboard, Coffee, Dumbbell,
-  Gamepad2, GraduationCap, Headphones, MapPin, MessageCircle, Moon, PartyPopper, ShoppingBag, Smile, Sparkles, Trophy, Utensils, Zap,
+  Beer, BellOff, Bike, BookOpen, BookOpenText, Briefcase, Bus, CalendarCheck2, CalendarPlus, Camera, CarFront, CircleDot, Clapperboard, Coffee, Dumbbell,
+  Gamepad2, Gift, GraduationCap, Headphones, Heart, Home, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Moon, Palette, PawPrint, PartyPopper, Pizza,
+  Plane, ShoppingBag, Smile, Sparkles, Star, Sun, Trophy, Utensils, Zap,
 } from "lucide-react";
 import { locale, t } from "../../../kernel/i18n";
+import type { CustomModeIcon } from "../domain/ActivityMode";
 
 export const presenceKey = ["presence"] as const;
 
@@ -53,7 +55,37 @@ export const activityGroups: { title: string; items: ModeChoice[] }[] = [
 export const choices: ModeChoice[] = activityGroups.flatMap(group => group.items);
 /** Shown for a key this version of the app does not know, such as one added by a newer version. */
 const other: ModeChoice = { id: "other", label: t("Đang làm việc khác"), Icon: Sparkles, color: "#6b7280" };
-export const choiceOf = (mode: string | undefined): ModeChoice | undefined => mode ? choices.find(choice => choice.id === mode) ?? other : undefined;
+export const customModeColors = ["#22c55e", "#3b82f6", "#8b5cf6", "#a16207", "#ec4899", "#ef4444", "#06b6d4", "#d97706"] as const;
+export const customModeIcons: Record<CustomModeIcon, ModeChoice["Icon"]> = {
+  sparkles: Sparkles, coffee: Coffee, book: BookOpen, briefcase: Briefcase, game: Gamepad2, smile: Smile, camera: Camera, food: Utensils,
+  heart: Heart, star: Star, music: Headphones, leaf: Leaf, sun: Sun, moon: Moon, paw: PawPrint, bike: Bike,
+  car: CarFront, plane: Plane, home: Home, laptop: Laptop, palette: Palette, pizza: Pizza, gift: Gift, dumbbell: Dumbbell,
+};
+export const customModeIconOptions: { id: CustomModeIcon; label: string }[] = [
+  { id: "sparkles", label: t("Lấp lánh") }, { id: "coffee", label: t("Cà phê") }, { id: "book", label: t("Sách") },
+  { id: "briefcase", label: t("Công việc") }, { id: "game", label: t("Trò chơi") }, { id: "smile", label: t("Vui vẻ") },
+  { id: "camera", label: t("Máy ảnh") }, { id: "food", label: t("Đồ ăn") },
+  { id: "heart", label: t("Tình yêu") }, { id: "star", label: t("Ngôi sao") }, { id: "music", label: t("Âm nhạc") }, { id: "leaf", label: t("Thiên nhiên") },
+  { id: "sun", label: t("Mặt trời") }, { id: "moon", label: t("Mặt trăng") }, { id: "paw", label: t("Thú cưng") }, { id: "bike", label: t("Đạp xe") },
+  { id: "car", label: t("Ô tô") }, { id: "plane", label: t("Du lịch") }, { id: "home", label: t("Ở nhà") }, { id: "laptop", label: t("Máy tính") },
+  { id: "palette", label: t("Nghệ thuật") }, { id: "pizza", label: t("Pizza") }, { id: "gift", label: t("Quà tặng") }, { id: "dumbbell", label: t("Thể dục") },
+];
+type ModePresentation = {
+  label?: string | null; icon?: CustomModeIcon | null; color?: string | null;
+  modeLabel?: string | null; modeIcon?: CustomModeIcon | null; modeColor?: string | null;
+};
+export const choiceOf = (mode: string | undefined, presentation?: ModePresentation | null): ModeChoice | undefined => {
+  if (!mode) return undefined;
+  const builtin = choices.find(choice => choice.id === mode);
+  if (builtin) return builtin;
+  const label = presentation?.label ?? presentation?.modeLabel;
+  const icon = presentation?.icon ?? presentation?.modeIcon;
+  const color = presentation?.color ?? presentation?.modeColor;
+  if (label && icon && color) {
+    return { id: mode, label, Icon: customModeIcons[icon], color };
+  }
+  return { ...other, id: mode };
+};
 
 /** The activities offered for one tap when nothing was chosen before. */
 export const quickDefaults = ["free", "studying", "school", "gaming", "coffee"];
@@ -67,7 +99,7 @@ export function timeLeft(expiresAt: string, now: number): string {
   return t("còn {0}", hours ? t("{0} giờ{1}", hours, rest ? t(" {0} phút", rest) : "") : t("{0} phút", rest));
 }
 
-const reasonIcons: Record<string, typeof Sparkles> = { meetup: CalendarCheck2, invite: CalendarPlus, unread: MessageCircle, chat: MessageCircle, location: MapPin, mode: Zap, free: Smile };
+const reasonIcons: Record<string, typeof Sparkles> = { meetup: CalendarCheck2, invite: CalendarPlus, room: MessagesSquare, unread: MessageCircle, chat: MessageCircle, location: MapPin, mode: Zap, free: Smile, moment: Camera };
 /** The icon in front of a reason a friend is placed high. A kind from a newer module gets the general one. */
 export const reasonIcon = (kind: string) => reasonIcons[kind] ?? Sparkles;
 

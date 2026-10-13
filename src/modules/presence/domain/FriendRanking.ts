@@ -1,10 +1,11 @@
 import type { ActiveMode } from "./ActivityMode";
 import { t } from "../../../kernel/i18n";
 
-/** The part of a friend the ranking needs. */
+/** The part of a friend the ranking needs, and the picture the screen draws them with. */
 export interface Person {
   userId: string;
   displayName: string;
+  avatarUrl?: string | null;
 }
 
 /** A reason to place a friend higher. Modules report these (the kernel's `FriendSignal` has this shape). */
@@ -28,7 +29,7 @@ export interface RankedFriend<Friend extends Person = Person> {
 }
 
 /** What each kind of reason is worth at full strength. A kind that is not listed is worth `otherWeight`. */
-export const defaultWeights: Readonly<Record<string, number>> = { meetup: 100, invite: 70, unread: 60, free: 55, location: 50, chat: 45, mode: 40 };
+export const defaultWeights: Readonly<Record<string, number>> = { meetup: 100, invite: 70, room: 65, unread: 60, free: 55, location: 50, chat: 45, moment: 45, mode: 40 };
 const otherWeight = 20;
 /** A mode counts in full for this long after it was set, then for less. */
 const freshMs = 15 * 60_000;
@@ -43,9 +44,18 @@ export class FriendRanking {
 
   rank<Friend extends Person>(friends: readonly Friend[], modes: readonly ActiveMode[], signals: readonly Reason[], pinned: ReadonlySet<string>, now: Date): RankedFriend<Friend>[] {
     const at = now.getTime();
+    const modeByPerson = new Map<string, ActiveMode>();
+    for (const mode of modes) if (!modeByPerson.has(mode.userId)) modeByPerson.set(mode.userId, mode);
+    const signalsByPerson = new Map<string, Reason[]>();
+    for (const signal of signals) {
+      const own = signalsByPerson.get(signal.userId) ?? [];
+      own.push(signal);
+      signalsByPerson.set(signal.userId, own);
+    }
     return friends.map(friend => {
-      const mode = modes.find(item => item.userId === friend.userId && Date.parse(item.expiresAt) > at);
-      const own = signals.filter(signal => signal.userId === friend.userId);
+      const candidate = modeByPerson.get(friend.userId);
+      const mode = candidate && Date.parse(candidate.expiresAt) > at ? candidate : undefined;
+      const own = [...(signalsByPerson.get(friend.userId) ?? [])];
       if (mode) {
         const fresh = at - Date.parse(mode.startedAt) < freshMs;
         own.push({ userId: friend.userId, kind: "mode", strength: fresh ? 1 : 0.6, label: fresh ? t("Vừa bật") : undefined });

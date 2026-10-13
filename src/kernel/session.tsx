@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { AgendaItem, FeatureModule, FriendSignal, ModuleRegistry, SearchItem } from "./module";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useFeatures } from "./features";
+import type { AgendaItem, FeatureModule, FriendSignal, ModuleRegistry, NavContribution, SearchItem } from "./module";
 
 /** Everything that belongs to one signed-in user. */
 class Session {
@@ -32,7 +33,11 @@ const Current = createContext<Session | null>(null);
  */
 export function SessionProvider({ userId, registry, children }: { userId: string; registry: ModuleRegistry; children: ReactNode }) {
   const [session] = useState(() => new Session(userId, registry));
-  const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+  // Realtime marks a query stale when its rows change. A screen opened again inside a minute
+  // shows the last answer at once, and focusing the window does not ask the database again.
+  const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: {
+    retry: false, staleTime: 60_000, refetchOnWindowFocus: false, refetchOnReconnect: false,
+  } } }));
   // In development React's StrictMode runs this cleanup right after the first mount and mounts again.
   // Ending the session there would leave the screens holding dead services, so the end waits a moment
   // and the second mount calls it off. A real unmount (sign-out, another account) lets it happen.
@@ -60,6 +65,17 @@ export function useRegistry(): ModuleRegistry {
 
 export function useUserId(): string {
   return useSession().userId;
+}
+
+/**
+ * The screens this person can open. The sidebar, the bottom bar, the Menu, the shortcuts and the search
+ * all read this one list, so none of them can show a screen that another one hides. A screen that
+ * needs a capability is in the list only for an account the server gave it to.
+ */
+export function useNavigation(): readonly NavContribution[] {
+  const { navigation } = useSession().registry;
+  const features = useFeatures();
+  return useMemo(() => navigation.filter(item => !item.feature || features.has(item.feature)), [navigation, features]);
 }
 
 /** Loads what every module offers to the global search. A module that fails is left out. */

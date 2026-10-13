@@ -15,7 +15,7 @@ export function MeetupStatsCard({ days }: { days: number }) {
   const userId = useUserId();
   const list = useQuery({ queryKey: [...meetupsKey, "list"], queryFn: () => meetups.list() });
   const stats = meetupStats(list.data ?? [], userId, days);
-  return <Card title={t("Hoạt động")} action={<Link to="/meetups" className="text-sm font-semibold underline">{t("Mở hoạt động")}</Link>}>
+  return <Card title={t("Hoạt động")} action={<Link to="/meetups" className="card-link">{t("Mở hoạt động")}</Link>}>
     {list.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(list.error, t("Không thể tải hoạt động."))}</p>
       : <div className="grid grid-cols-3 gap-2">
         <StatTile value={stats.went} label={t("buổi đã diễn ra")} />

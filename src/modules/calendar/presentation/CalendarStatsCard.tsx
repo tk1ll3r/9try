@@ -28,7 +28,7 @@ export function CalendarStatsCard({ days }: { days: number }) {
   });
   const perDay = new Map((shown.data ?? []).map(item => [item.day, item]));
   const total = (tone: "class" | "event" | "activity") => (shown.data ?? []).reduce((sum, item) => sum + item[tone], 0);
-  return <Card title={t("Lịch")} action={<Link to="/calendar" className="text-sm font-semibold underline">{t("Mở lịch")}</Link>}>
+  return <Card title={t("Lịch")} action={<Link to="/calendar" className="card-link">{t("Mở lịch")}</Link>}>
     {shown.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(shown.error, t("Chưa tải được lịch."))}</p> : <>
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={hours(total("class"))} label={t("giờ học")} />

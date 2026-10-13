@@ -7,45 +7,48 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: light;
-  --paper: #f4f1e8;
-  --surface: #fffdf7;
-  --soft: #eae7dd;
-  --ink: #171a12;
-  --muted: #696c62;
-  --lime: #d9ff79;
-  --lime-strong: #8dbb20;
-  --focus: #507100;
-  --border: #d8d7ce;
+  --paper: #fff5f8;
+  --surface: #fffbfd;
+  --soft: #fbe4ed;
+  --ink: #311726;
+  --muted: #765b69;
+  --lime: #f7bdd7;
+  --lime-strong: #cf3e80;
+  --focus: #a62b62;
+  --border: #ead2dc;
   --danger: #b91c1c;
   --success: #166534;
   --warning: #92400e;
   --overlay: rgba(15, 20, 12, .55);
   /* What a calendar entry is, as a color: the user's own event, a class, a plan made with others, a friend's busy time. */
-  --tone-event: #5d8c00;
+  --tone-event: #c93678;
   --tone-class: #0b74c4;
   --tone-activity: #d9620a;
   --tone-busy: #8b8e83;
+  /* Water on the map. The other colors of the map are the tokens above; scripts/build-map-style.mjs reads them from this file. */
+  --map-water: #e6cad7;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #11130e;
-  --surface: #191c15;
-  --soft: #23271e;
-  --ink: #f5f3e9;
-  --muted: #a9ac9f;
-  --lime: #d9ff79;
-  --lime-strong: #b9eb47;
-  --focus: #d9ff79;
-  --border: #3b4035;
+  --paper: #160f14;
+  --surface: #21151d;
+  --soft: #32202c;
+  --ink: #fff3f8;
+  --muted: #c6aab7;
+  --lime: #f4a3cb;
+  --lime-strong: #ff75ba;
+  --focus: #ff9aca;
+  --border: #503746;
   --danger: #fca5a5;
   --success: #86efac;
   --warning: #fcd34d;
   --overlay: rgba(0, 0, 0, .65);
-  --tone-event: #b9eb47;
+  --tone-event: #ff75ba;
   --tone-class: #7dd3fc;
   --tone-activity: #fdba74;
   --tone-busy: #8b8e83;
+  --map-water: #392733;
 }
 
 @layer base {
@@ -58,6 +61,13 @@
 
 /* In a layer so that utilities such as `pl-10` can override it. */
 @layer components {
+  /* Keep the phone map and its sheet above the fixed navigation, including the iPhone home-indicator area. */
+  .map-phone-frame {
+    height: max(9rem, calc(100svh - 17rem - env(safe-area-inset-bottom) - max(0px, env(safe-area-inset-top) - 1.25rem)));
+  }
+
+  /* The link in a card's heading ("Mở lịch", "Tất cả việc"): tall enough for a finger, without making the heading taller. */
+  .card-link { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; font-size: .875rem; font-weight: 600; text-decoration: underline; white-space: nowrap; }
   .field {
     min-height: 44px;
     border-radius: 16px;
@@ -90,15 +100,12 @@
 @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(4%, -6%, 0) scale(1.12); } }
 @keyframes flicker { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.14) rotate(4deg); } }
 @keyframes loading-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
 
 @layer components {
-  /* A screen's parts arrive one after the other when the screen opens. */
-  .page-slot > * > * { animation: rise .5s var(--ease-out) both; }
-  .page-slot > * > *:nth-child(2) { animation-delay: 50ms; }
-  .page-slot > * > *:nth-child(3) { animation-delay: 100ms; }
-  .page-slot > * > *:nth-child(4) { animation-delay: 150ms; }
-  .page-slot > * > *:nth-child(5) { animation-delay: 200ms; }
-  .page-slot > * > *:nth-child(n + 6) { animation-delay: 250ms; }
+  /* The screen fades in as one piece. Staggering each block kept the page unreadable for half a second after every tap. */
+  .page-slot > * { animation: fade-in .16s var(--ease-out) both; }
 
   /* Cards and animated parts each paint as a layer, later ones on top. The part that holds an open
      menu is lifted, so the menu is not covered by the part below it. */
@@ -109,20 +116,34 @@
   .animate-slide-up { animation: slide-up .4s var(--ease-out) both; }
   .animate-flicker { animation: flicker 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
 
-  /* A row or tile that reacts to the pointer and to a press. */
-  .pressable { transition: transform .2s var(--ease-out), background-color .2s, box-shadow .2s; }
-  .pressable:hover { transform: translateY(-2px); }
+  .animate-float { animation: float 7s ease-in-out infinite; }
+
+  /* The page for visitors: a part rises into place the first time it is seen, and the lines of its drawings draw themselves. */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s var(--ease-out), transform .7s var(--ease-out); }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal .draw path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .reveal.in .draw path { animation: draw .9s .3s var(--ease-out) forwards; }
+
+  /* A row or tile that reacts to a press. The lift is only for a mouse, so a finger tap does not leave the row hovering. */
+  .pressable { transition: transform .15s var(--ease-out), background-color .15s, box-shadow .15s; }
+  @media (hover: hover) and (pointer: fine) { .pressable:hover { transform: translateY(-2px); } }
   .pressable:active { transform: scale(.97); }
 
   /* Frosted surfaces let the page show through the bars that float over it. */
   .glass { background: color-mix(in srgb, var(--surface) 72%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
 
-  /* Soft lights that drift slowly behind every screen. */
+  /* Soft lights behind a screen. They drift on the public pages. Inside the app they stay put: the same drift
+     measured 37 frames a second while dragging the map, and 60 with the lights still. A phone drops the blur too. */
   .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
   .aurora i { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .5; animation: drift 18s ease-in-out infinite; }
-  .aurora i:nth-child(1) { left: -10%; top: -12%; width: 46vmax; height: 46vmax; background: color-mix(in srgb, var(--lime) 55%, transparent); }
-  .aurora i:nth-child(2) { right: -14%; top: 22%; width: 40vmax; height: 40vmax; background: color-mix(in srgb, #7dd3fc 38%, transparent); animation-duration: 24s; animation-direction: reverse; }
-  .aurora i:nth-child(3) { left: 18%; bottom: -22%; width: 44vmax; height: 44vmax; background: color-mix(in srgb, #fdba74 34%, transparent); animation-duration: 30s; }
+  .aurora i:nth-child(1) { left: -10%; top: -12%; width: 46vmax; height: 46vmax; background: color-mix(in srgb, #f472b6 52%, transparent); }
+  .aurora i:nth-child(2) { right: -14%; top: 22%; width: 40vmax; height: 40vmax; background: color-mix(in srgb, #c084fc 36%, transparent); animation-duration: 24s; animation-direction: reverse; }
+  .aurora i:nth-child(3) { left: 18%; bottom: -22%; width: 44vmax; height: 44vmax; background: color-mix(in srgb, #fda4af 34%, transparent); animation-duration: 30s; }
+  .aurora-still i { animation: none; }
+  @media (max-width: 1023px) { .aurora i { filter: none; opacity: .22; animation: none; } }
+  /* On a screen with a map the lights stand still. Measured while dragging a map with 50 people on it (headless
+     Chromium, software rendering): 37 frames a second with the lights drifting, 60 with them still. */
+  :root:has(.maplibregl-map) .aurora i { animation: none; }
 
   /* Placeholder bars while a screen is loading. */
   .skeleton { border-radius: 20px; background: linear-gradient(100deg, var(--soft) 40%, color-mix(in srgb, var(--surface) 80%, var(--soft)) 50%, var(--soft) 60%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
@@ -137,18 +158,72 @@
   .dialog-content[data-state="open"] { animation: sheet-up .35s var(--ease-out); }
   .dialog-content[data-state="closed"] { animation: sheet-down .18s ease-in; }
 
-  /* A person's picture with a turning ring in the color of what they are doing. `--mode` is that color. */
+  /* A person's picture with a ring in the color of what they are doing. `--mode` is that color. The ring stays still. */
   .mode-ring { position: relative; display: grid; place-items: center; border-radius: 9999px; isolation: isolate; }
-  .mode-ring::before { content: ""; position: absolute; inset: -4px; z-index: -1; border-radius: inherit; background: conic-gradient(from 0turn, var(--mode), color-mix(in srgb, var(--mode) 15%, transparent) 35%, var(--mode) 70%, color-mix(in srgb, var(--mode) 30%, white) 85%, var(--mode)); animation: spin 5s linear infinite; }
-  .mode-ring::after { content: ""; position: absolute; inset: -4px; z-index: -2; border-radius: inherit; background: var(--mode); animation: halo 2.4s var(--ease-out) infinite; }
+  .mode-ring::before { content: ""; position: absolute; inset: -4px; z-index: -1; border-radius: inherit; background: conic-gradient(from 0turn, var(--mode), color-mix(in srgb, var(--mode) 15%, transparent) 35%, var(--mode) 70%, color-mix(in srgb, var(--mode) 30%, white) 85%, var(--mode)); }
   .mode-glow { box-shadow: 0 18px 50px -18px var(--mode), 0 0 0 1px color-mix(in srgb, var(--mode) 35%, transparent); }
 
   /* A live position on the map breathes; an old one stays still. */
   .marker-live::after { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 9999px; background: var(--lime-strong); animation: pulse-ring 2s var(--ease-out) infinite; }
+
+  /* A friend on the map: the face in a soft rim, and around it the color of what they are doing (`--mode`).
+     Grey once the position is old, a dashed rim around a position that was rounded before it was sent. */
+  .map-face { position: relative; display: block; width: 2.5rem; height: 2.5rem; border-radius: 9999px; isolation: isolate; cursor: pointer; }
+  .map-face-in { display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; border-radius: inherit; border: 2px solid var(--surface); background: var(--ink); color: var(--paper); font-size: .95rem; font-weight: 800; box-shadow: 0 8px 18px -8px rgb(0 0 0 / .55); }
+  .map-face-in img { width: 100%; height: 100%; object-fit: cover; }
+  .map-face[data-mode]::before { content: ""; position: absolute; inset: -4px; z-index: -1; border-radius: inherit; background: conic-gradient(from 0turn, var(--mode), color-mix(in srgb, var(--mode) 15%, transparent) 35%, var(--mode) 70%, color-mix(in srgb, var(--mode) 30%, white) 85%, var(--mode)); }
+  .map-face[data-mode].marker-live::after { inset: -4px; background: var(--mode); }
+  .map-face.marker-rough .map-face-in { border-style: dashed; }
+  .map-face.marker-old .map-face-in { background: var(--tone-busy); color: var(--surface); }
+  .map-face.marker-old img { filter: grayscale(1); opacity: .75; }
+  .map-face.marker-old[data-mode]::before { animation: none; opacity: .45; }
+  /* The name under a face. The map shows it from zoom 14, where faces no longer sit on each other. */
+  .map-name { position: absolute; left: 50%; top: calc(100% + 7px); display: none; max-width: 8rem; translate: -50% 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 9999px; background: color-mix(in srgb, var(--surface) 92%, transparent); padding: 1px 8px; color: var(--ink); font-size: .75rem; font-weight: 700; line-height: 1.25rem; box-shadow: 0 2px 8px -4px rgb(0 0 0 / .45); pointer-events: none; }
+  .map-names .map-name { display: block; }
+  /* The viewer: a dot in the calendar's blue, and around it the circle the true position is somewhere inside. */
+  .map-me { width: 1rem; height: 1rem; border-radius: 9999px; border: 2px solid var(--surface); background: var(--tone-class); box-shadow: 0 0 0 6px color-mix(in srgb, var(--tone-class) 22%, transparent), 0 2px 6px rgb(0 0 0 / .35); }
+  .map-me-around { position: absolute; left: 50%; top: 50%; z-index: -1; translate: -50% -50%; border-radius: 9999px; border: 1px solid color-mix(in srgb, var(--tone-class) 50%, transparent); background: color-mix(in srgb, var(--tone-class) 15%, transparent); pointer-events: none; }
 }
+
+/* MapLibre's own parts in the app's shapes and colors. Outside a layer and under .map-skin, so these
+   win over MapLibre's stylesheet, which arrives later with the map. */
+.map-skin .maplibregl-map { background: var(--paper); font: inherit; }
+.app-main {
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+.app-mobile-nav { left: max(.75rem, env(safe-area-inset-left)); right: max(.75rem, env(safe-area-inset-right)); }
+@media (min-width: 640px) { .app-main { padding-left: max(1.5rem, env(safe-area-inset-left)); padding-right: max(1.5rem, env(safe-area-inset-right)); } }
+@media (min-width: 1024px) {
+  .app-main {
+    padding-top: max(2rem, env(safe-area-inset-top));
+    padding-right: max(2rem, env(safe-area-inset-right));
+    padding-bottom: 2.5rem;
+    padding-left: max(2rem, env(safe-area-inset-left));
+  }
+}
+@media (max-width: 359px) { .app-mobile-nav { left: max(.25rem, env(safe-area-inset-left)); right: max(.25rem, env(safe-area-inset-right)); } }
+.map-skin .maplibregl-ctrl-group { overflow: hidden; border-radius: 1rem; background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 8px 24px -12px rgb(0 0 0 / .45), 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
+.map-skin .maplibregl-ctrl-group button { width: 2.75rem; height: 2.75rem; }
+.map-skin .maplibregl-ctrl-group button + button { border-top: 1px solid var(--border); }
+.map-skin .maplibregl-ctrl-group button:not(:disabled):hover { background-color: color-mix(in srgb, var(--ink) 8%, transparent); }
+.map-skin .maplibregl-ctrl-group button:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+:root[data-theme="dark"] .map-skin .maplibregl-ctrl-icon { filter: invert(1); }
+.map-skin .maplibregl-ctrl.maplibregl-ctrl-attrib { border-radius: .75rem; background: color-mix(in srgb, var(--surface) 84%, transparent); color: var(--muted); font-size: .6875rem; }
+.map-skin .maplibregl-ctrl-attrib a { color: var(--ink); }
+:root[data-theme="dark"] .map-skin .maplibregl-ctrl-attrib-button { filter: invert(1); }
+.map-skin .maplibregl-popup-content { border-radius: 1.25rem; background: var(--surface); color: var(--ink); padding: .875rem; font: inherit; box-shadow: 0 18px 40px -16px rgb(0 0 0 / .5), 0 0 0 1px color-mix(in srgb, var(--ink) 9%, transparent); }
+.map-skin .maplibregl-popup-tip { display: none; }
+/* Where a sheet lies over the foot of the map, the credits stand above it. */
+@media (max-width: 1279.98px) { .map-skin.map-under-sheet .maplibregl-ctrl-bottom-right, .map-skin.map-under-sheet .maplibregl-ctrl-bottom-left { bottom: 5.5rem; } }
 
 /* Motion is decoration here. People who ask for less get none of it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
-  .aurora i, .mode-ring::after, .marker-live::after { animation: none !important; }
+  .aurora i, .mode-ring::after, .marker-live::after, .map-face[data-mode]::before { animation: none !important; }
+  .animate-float { animation: none !important; }
+  .reveal { opacity: 1; transform: none; }
+  .reveal .draw path { stroke-dashoffset: 0; }
 }

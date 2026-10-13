@@ -3,9 +3,9 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { t } from "../i18n";
 
-// Original styling over Radix's maintained focus/keyboard primitives.
-export function DialogPanel({ open, onOpenChange, title, description, children, busy = false, alert = false, returnFocusId }: {
-  open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string; children: ReactNode; busy?: boolean; alert?: boolean; returnFocusId?: string;
+// Original styling over Radix's maintained focus/keyboard primitives. `size="sm"` is for a short form.
+export function DialogPanel({ open, onOpenChange, title, description, children, busy = false, alert = false, returnFocusId, size = "lg" }: {
+  open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string; children: ReactNode; busy?: boolean; alert?: boolean; returnFocusId?: string; size?: "sm" | "lg";
 }) {
   return <Dialog.Root open={open} onOpenChange={value => { if (!busy) onOpenChange(value); }}>
     <Dialog.Portal>
@@ -16,7 +16,7 @@ export function DialogPanel({ open, onOpenChange, title, description, children, 
       }} onCloseAutoFocus={event => {
         const trigger = returnFocusId ? document.getElementById(returnFocusId) : null;
         if (trigger) { event.preventDefault(); trigger.focus(); }
-      }} className="dialog-content fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--ink)] shadow-2xl sm:p-6">
+      }} className={`dialog-content fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${size === "sm" ? "max-w-lg" : "max-w-3xl"} -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--ink)] shadow-2xl sm:p-6`}>
         <div className="mb-2 flex items-start justify-between gap-4"><Dialog.Title className="text-2xl font-bold tracking-tight">{title}</Dialog.Title>
           <Dialog.Close disabled={busy} aria-label={t("Đóng hộp thoại")} className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-[var(--soft)] disabled:opacity-50"><X size={20} /></Dialog.Close>
         </div>

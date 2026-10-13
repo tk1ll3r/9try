@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { GraduationCap, Plus, Trash2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileUp, GraduationCap, Plus, Trash2 } from "lucide-react";
+import { type FormEvent, lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { localDateKey } from "../../../kernel/dates";
 import { errorMessage } from "../../../kernel/errors";
@@ -14,12 +14,17 @@ import { parseTimetable, weekdayNames, type ClassDraft } from "../domain/timetab
 import { calendarKey } from "./keys";
 import { locale, t } from "../../../kernel/i18n";
 
+// Reading an .ics file needs a parser that most visits never use.
+const IcsImportCard = lazy(() => import("./IcsImportCard").then(m => ({ default: m.IcsImportCard })));
+
 const inFourMonths = () => { const date = new Date(); date.setMonth(date.getMonth() + 4); return localDateKey(date); };
 
 /** The weekly classes of a term. Each class is a weekly event, so it also shows in the calendar and counts as busy. */
 export function TimetablePage() {
   const calendar = useModule(calendarModule);
   const confirm = useConfirm();
+  const queries = useQueryClient();
+  const [importing, setImporting] = useState(false);
   const classes = useQuery({ queryKey: [...calendarKey, "classes"], queryFn: () => calendar.listClasses() });
   const { run, pending, error } = useAction(calendarKey);
   const [termStart, setTermStart] = useState(() => localDateKey(new Date()));
@@ -83,6 +88,12 @@ export function TimetablePage() {
           {pasted.trim() && <p className="mt-2 text-sm">{t("{0} lớp đọc được{1}.", parsed.classes.length, parsed.rejected.length ? t(", {0} dòng không đọc được: {1}", parsed.rejected.length, parsed.rejected.join(" · ")) : "")}</p>}
           <Button className="mt-3" variant="secondary" disabled={pending || !parsed.classes.length} onClick={addPasted}><Plus size={17} /> {t("Thêm")} {parsed.classes.length || ""} {t("lớp")}</Button>
         </Card>
+      </div>
+
+      {/* A timetable that the school or another calendar app gives as a file. */}
+      <div>
+        <Button variant="ghost" aria-expanded={importing} onClick={() => setImporting(!importing)}><FileUp size={17} /> {importing ? t("Ẩn nhập lịch .ics") : t("Nhập thời khóa biểu từ file .ics")}</Button>
+        {importing && <div className="mt-3"><Suspense fallback={<p role="status">{t("Đang tải công cụ nhập lịch…")}</p>}><IcsImportCard classes onImported={() => queries.invalidateQueries({ queryKey: calendarKey })} /></Suspense></div>}
       </div>
 
       <Card title={t("Các lớp · {0}", classes.data?.length ?? 0)} action={<GraduationCap size={18} className="text-[var(--muted)]" />}>

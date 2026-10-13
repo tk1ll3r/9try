@@ -15,7 +15,7 @@ export function FriendRequestsCard() {
   const { run, pending, error } = useAction(friendsKey);
   if (!incoming.length) return null;
 
-  return <Card title={t("Lời mời kết bạn · {0}", incoming.length)} action={<Link to="/me/friends" className="text-sm font-semibold underline">{t("Bạn bè")}</Link>}>
+  return <Card title={t("Lời mời kết bạn · {0}", incoming.length)} action={<Link to="/me/friends" className="card-link">{t("Bạn bè")}</Link>}>
     <ul className="space-y-2">
       {incoming.map(item => <li key={item.userId} className="flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--soft)] p-3">
         <span className="min-w-32 flex-1">

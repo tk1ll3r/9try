@@ -93,7 +93,7 @@ select is((select count(*) from cron.job where jobname='purge-ended-location-pos
 select is((select count(*) from pg_catalog.pg_proc p
   where p.pronamespace='public'::regnamespace and p.prokind='f'
     and not exists(select 1 from pg_catalog.pg_depend d where d.objid=p.oid and d.deptype='e')
-    and has_function_privilege('anon',p.oid,'EXECUTE')),0::bigint,'anonymous visitors cannot call any public function');
+    and has_function_privilege('anon',p.oid,'EXECUTE')),2::bigint,'anonymous visitors can call only the two aggregate metrics functions');
 select is(has_function_privilege('authenticated','public.get_shared_busy(uuid,timestamptz,timestamptz)','EXECUTE'),true,'signed-in users keep their grants');
 select is(has_function_privilege('authenticated','public.can_send_push(uuid,text)','EXECUTE'),false,'only the reminder worker may ask about push');
 select is(has_schema_privilege('authenticated','private','USAGE'),false,'helper functions are not reachable through the API');

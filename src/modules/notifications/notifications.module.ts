@@ -1,11 +1,12 @@
 import { Bell } from "lucide-react";
-import { lazy } from "react";
+import { lazyRoute } from "../../kernel/lazyRoute";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import type { NotificationRepository } from "./domain/Notification";
 import { PushData } from "./infrastructure/PushData";
 import { SupabaseNotificationRepository } from "./infrastructure/SupabaseNotificationRepository";
 import { NotificationSettings } from "./presentation/NotificationSettings";
+import { PushSync } from "./presentation/PushSync";
 import { UnreadBadge } from "./presentation/UnreadBadge";
 import { t } from "../../kernel/i18n";
 
@@ -22,7 +23,8 @@ export const notificationsModule: FeatureModule<NotificationServices> = {
   }),
   navigation: [{ tab: "inbox", to: "/notifications", label: t("Thông báo"), icon: Bell, order: 10, badge: UnreadBadge }],
   settings: NotificationSettings,
+  indicator: PushSync,
   routes: [
-    { path: "notifications", component: lazy(() => import("./presentation/NotificationsPage").then(m => ({ default: m.NotificationsPage }))) },
+    { path: "notifications", ...lazyRoute(() => import("./presentation/NotificationsPage").then(m => ({ default: m.NotificationsPage }))) },
   ],
 };

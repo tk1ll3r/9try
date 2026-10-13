@@ -2,7 +2,7 @@
 -- a = 901, b = 902 (friend of a), c = 903 (stranger), d = 904 (in a's group, not a friend).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 insert into auth.users(id, instance_id, aud, role, email)
 values
@@ -42,6 +42,16 @@ select is((select count(*) from public.notifications where user_id='00000000-000
 select is((select body from public.notifications where user_id='00000000-0000-4000-8000-000000000902' and category='chat_message'),'','the notification carries no message text');
 select is((select count(*) from realtime.messages where event='chat' and topic='user:00000000-0000-4000-8000-000000000902'),2::bigint,'the recipient gets a realtime event per message');
 
+-- Read in the inbox without opening the conversation, and pushed already: the next message is told again.
+update public.notifications set read_at=now() where user_id='00000000-0000-4000-8000-000000000902' and category='chat_message';
+update public.reminders set status='delivered' where user_id='00000000-0000-4000-8000-000000000902' and category='chat_message';
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',true);
+select public.send_message('00000000-0000-4000-8000-0000000009ef',current_setting('test.direct')::uuid,'Còn đó không?');
+reset role;
+select is((select count(*) from public.notifications where user_id='00000000-0000-4000-8000-000000000902' and category='chat_message' and read_at is null),1::bigint,'a message after the notification was read in the inbox is told again');
+select is((select status from public.reminders where user_id='00000000-0000-4000-8000-000000000902' and category='chat_message'),'pending','and it is queued for a push again');
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000902',true);
 select public.mark_conversation_read(current_setting('test.direct')::uuid);
@@ -60,7 +70,7 @@ select is((select count(*) from public.messages),0::bigint,'the tables cannot be
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',true);
 select public.remove_friend('00000000-0000-4000-8000-000000000902');
 select throws_ok($$ select public.send_message('00000000-0000-4000-8000-0000000009e4',current_setting('test.direct')::uuid,'x') $$,'P0001','conversation closed','nothing can be sent after the friendship ends');
-select is((select count(*) from public.list_messages(current_setting('test.direct')::uuid)),2::bigint,'the history stays readable');
+select is((select count(*) from public.list_messages(current_setting('test.direct')::uuid)),3::bigint,'the history stays readable');
 select public.block_user('00000000-0000-4000-8000-000000000902');
 select is((select count(*) from public.list_conversations()),0::bigint,'a block hides the conversation');
 

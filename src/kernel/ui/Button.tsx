@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from "react";
 
 const looks = {
   primary: "bg-[var(--ink)] text-[var(--paper)] hover:shadow-lg",
-  secondary: "bg-[var(--lime)] text-[#1d230e] hover:shadow-[0_10px_30px_-12px_var(--lime-strong)]",
+  secondary: "bg-[var(--lime)] text-[var(--ink)] hover:shadow-[0_10px_30px_-12px_var(--lime-strong)]",
   ghost: "bg-transparent hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]",
   danger: "bg-red-600 text-white hover:shadow-lg",
   // White in both themes: the look Google asks for on its sign-in button.

@@ -8,9 +8,10 @@ import { useAgenda, useModule } from "../../../kernel/session";
 import { Button } from "../../../kernel/ui/Button";
 import { MoreMenu } from "../../../kernel/ui/MoreMenu";
 import { calendarModule } from "../calendar.module";
-import { dayTitle, entryOf, entryOfAgenda, isDay, startOfDay, type CalendarEntry } from "../domain/calendarView";
+import { clock, dayTitle, entryOf, entryOfAgenda, isDay, shiftDays, startOfDay, type CalendarEntry } from "../domain/calendarView";
 import { toIcs } from "../domain/icsExport";
 import type { CalendarOccurrence } from "../domain/Occurrence";
+import type { EventSeed } from "../domain/quickEvent";
 import { CalendarBoard } from "./CalendarBoard";
 import { CalendarFeedCard } from "./CalendarFeedCard";
 import { EventDialog } from "./EventDialog";
@@ -29,12 +30,12 @@ export function CalendarPage() {
   const queries = useQueryClient();
   const today = localDateKey(new Date());
   // Another screen can open the calendar on a day: /calendar?date=2026-10-08.
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const wanted = params.get("date");
   const [day, setDay] = useState(() => isDay(wanted) ? wanted : today);
   useEffect(() => { if (isDay(wanted)) setDay(wanted); }, [wanted]);
   const [range, setRange] = useState<[from: string, until: string]>();
-  const [adding, setAdding] = useState<{ day: string; time?: string }>({ day });
+  const [adding, setAdding] = useState<EventSeed>({ day });
   const [addOpen, setAddOpen] = useState(false);
   // `opened` counts the openings, so an event opened again after a change shows its new values.
   const [selected, setSelected] = useState<CalendarOccurrence | null>(null);
@@ -56,10 +57,25 @@ export function CalendarPage() {
     },
   });
 
-  function add(onDay: string, time?: string) {
+  function add(seed: EventSeed) {
     setNotice("");
-    setAdding({ day: onDay, time });
+    setAdding(seed);
     setAddOpen(true);
+  }
+  // Another screen can ask for a new event by name: /calendar?new=Cà phê. The name leaves the address once it is taken.
+  const asked = params.get("new");
+  useEffect(() => {
+    if (asked === null) return;
+    add({ day: today, title: asked.slice(0, 240) });
+    setParams(current => { current.delete("new"); return current; }, { replace: true });
+  }, [asked]);
+  // A copy starts from the same name, time, length and place. Who sees it is not copied: a new event is private.
+  function duplicate(event: CalendarOccurrence) {
+    setEditOpen(false);
+    const from = new Date(event.start);
+    add(event.allDay
+      ? { day: event.start, lastDay: shiftDays(event.end, -1), title: event.title, place: event.place ?? "" }
+      : { day: localDateKey(from), time: clock(from.getHours() * 60 + from.getMinutes()), minutes: (new Date(event.end).getTime() - from.getTime()) / 60_000, title: event.title, place: event.place ?? "" });
   }
   // What another module put on the calendar is changed on that module's screen.
   function open(entry: CalendarEntry) {
@@ -91,7 +107,7 @@ export function CalendarPage() {
         <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">{t("Lịch")}</h1>
       </div>
       <div className="flex items-center gap-1">
-        <Button id="create-event-trigger" onClick={() => add(day)}><CalendarPlus size={17} /> {t("Thêm sự kiện")}</Button>
+        <Button id="create-event-trigger" onClick={() => add({ day })}><CalendarPlus size={17} /> {t("Thêm sự kiện")}</Button>
         <MoreMenu label={t("Nhập, xuất và liên kết lịch")}>
           <button type="button" onClick={() => setExtra(extra === "import" ? "" : "import")}><FileUp size={17} /> {extra === "import" ? t("Ẩn nhập lịch .ics") : t("Nhập lịch .ics")}</button>
           <button type="button" onClick={() => void exportIcs()}><Download size={17} /> {t("Xuất lịch .ics")}</button>
@@ -106,9 +122,9 @@ export function CalendarPage() {
     {extra === "import" && <Suspense fallback={<p role="status">{t("Đang tải công cụ nhập lịch…")}</p>}><IcsImportCard onImported={() => queries.invalidateQueries({ queryKey: calendarKey })} /></Suspense>}
     {extra === "feed" && <CalendarFeedCard />}
 
-    <CalendarBoard entries={shown.data?.entries ?? []} day={day} onDay={setDay} onRange={(from, until) => setRange([from, until])} onOpen={open} onAdd={add} />
+    <CalendarBoard entries={shown.data?.entries ?? []} day={day} onDay={setDay} onRange={(from, until) => setRange([from, until])} onOpen={open} onAdd={(onDay, time) => add({ day: onDay, time })} />
 
     <NewEventDialog open={addOpen} onOpenChange={setAddOpen} at={adding} onCreated={setDay} />
-    {selected && <EventDialog key={opened} occurrence={selected} open={editOpen} onOpenChange={setEditOpen} onDone={setNotice} />}
+    {selected && <EventDialog key={opened} occurrence={selected} open={editOpen} onOpenChange={setEditOpen} onDone={setNotice} onDuplicate={() => duplicate(selected)} />}
   </div>;
 }

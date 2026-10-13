@@ -79,7 +79,8 @@ try {
   try {
     const pages = await Promise.all(persons.map(async (person, index) => {
       const page = await contexts[index].newPage();
-      await page.route('https://tiles.openfreemap.org/**', route => route.fulfill({ json: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e9e5d7' } }] } }));
+      // The app's two map styles (public/map) are answered with a bare background, so no tile service is asked.
+      await page.route('**/map/*.json', route => route.fulfill({ json: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e9e5d7' } }] } }));
       await page.addInitScript(({ session }) => {
         localStorage.setItem('sb-127-auth-token', JSON.stringify(session));
         window.__gpsWatchCount = 0;

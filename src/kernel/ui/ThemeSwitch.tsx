@@ -10,7 +10,7 @@ export function ThemeSwitch() {
   const current = useSyncExternalStore(theme.subscribe, theme.get);
   return <div role="group" aria-label={t("Giao diện")} className="flex gap-1 rounded-2xl bg-[var(--soft)] p-1">
     {choices.map(([name, label, Icon]) => <button key={name} type="button" aria-pressed={current === name} onClick={() => theme.set(name)}
-      className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${current === name ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
+      className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${current === name ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>
       <Icon size={15} /> {label}
     </button>)}
   </div>;

@@ -1,5 +1,5 @@
 import { CircleUserRound, Settings, ShieldCheck } from "lucide-react";
-import { lazy } from "react";
+import { lazyRoute } from "../../kernel/lazyRoute";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import type { ProfileRepository } from "./domain/Profile";
@@ -19,8 +19,8 @@ export const identityModule: FeatureModule<ProfileRepository> = {
   today: { order: 2, card: InstallCard },
   settings: AccountSettings,
   routes: [
-    { path: "me", component: lazy(() => import("./presentation/ProfilePage").then(m => ({ default: m.ProfilePage }))) },
-    { path: "me/privacy", component: lazy(() => import("./presentation/PrivacyPage").then(m => ({ default: m.PrivacyPage }))) },
-    { path: "me/settings", component: lazy(() => import("./presentation/SettingsPage").then(m => ({ default: m.SettingsPage }))) },
+    { path: "me", ...lazyRoute(() => import("./presentation/ProfilePage").then(m => ({ default: m.ProfilePage }))) },
+    { path: "me/privacy", ...lazyRoute(() => import("./presentation/PrivacyPage").then(m => ({ default: m.PrivacyPage }))) },
+    { path: "me/settings", ...lazyRoute(() => import("./presentation/SettingsPage").then(m => ({ default: m.SettingsPage }))) },
   ],
 };

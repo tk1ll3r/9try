@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { LocationRepository, OwnedLocationSession, VisibleLocation } from "../domain/Location";
+import { defaultNearbyPreference, type LocationNearbyPreference, type LocationRepository, type OwnedLocationSession, type VisibleLocation } from "../domain/Location";
 import { t } from "../../../kernel/i18n";
 
 export class SupabaseLocationRepository implements LocationRepository {
@@ -7,16 +7,16 @@ export class SupabaseLocationRepository implements LocationRepository {
 
   async listOwned(): Promise<OwnedLocationSession[]> {
     const { data, error } = await this.db.from("location_sessions")
-      .select("id,expires_at,approximate").eq("owner_id", this.userId)
+      .select("id,expires_at,approximate,permanent").eq("owner_id", this.userId)
       .is("stopped_at", null).gt("expires_at", new Date().toISOString())
       .order("expires_at", { ascending: true });
     if (error) throw error;
     return data ?? [];
   }
 
-  async start(durationMinutes: number, recipientIds: string[], approximate: boolean): Promise<string> {
+  async start(durationMinutes: number | null, recipientIds: string[], approximate: boolean): Promise<string> {
     const { data, error } = await this.db.rpc("start_location_session_for", {
-      p_duration_minutes: durationMinutes, p_recipient_ids: recipientIds, p_approximate: approximate,
+      p_duration_minutes: durationMinutes ?? 0, p_recipient_ids: recipientIds, p_approximate: approximate,
     });
     if (error) throw error;
     return data as string;
@@ -59,6 +59,26 @@ export class SupabaseLocationRepository implements LocationRepository {
 
   async ask(userId: string): Promise<void> {
     const { error } = await this.db.rpc("request_location", { p_user_id: userId });
+    if (error) throw error;
+  }
+
+  async nearbyPreference(): Promise<LocationNearbyPreference> {
+    const { data, error } = await this.db.rpc("get_location_nearby_preference");
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? {
+      radiusM: Number(row.radius_m),
+      repeatMinutes: Number(row.repeat_minutes),
+    } : defaultNearbyPreference;
+  }
+
+  async saveNearbyPreference(preference: LocationNearbyPreference): Promise<void> {
+    const { error } = await this.db.rpc("save_location_nearby_preference", {
+      // Keep the legacy RPC argument for deployed clients; alerts are automatic now.
+      p_enabled: true,
+      p_radius_m: preference.radiusM,
+      p_repeat_minutes: preference.repeatMinutes,
+    });
     if (error) throw error;
   }
 }

@@ -40,7 +40,7 @@ export function WeekGrid({ week, day, today, now, byDay, onDay, onOpen, onAdd }:
       {week.map((date, index) => <button key={date} type="button" aria-pressed={date === day} aria-current={date === today ? "date" : undefined} aria-label={dayTitle(date)} onClick={() => onDay(date)}
         className="flex flex-col items-center gap-0.5 pb-2 text-[11px] font-bold tracking-wider text-[var(--muted)]">
         {weekdayLetters[index]}
-        <span className={`grid size-8 place-items-center rounded-full text-sm tracking-normal ${date === day ? "bg-[var(--ink)] text-[var(--paper)]" : date === today ? "bg-[var(--lime)] text-[#1d230e]" : "text-[var(--ink)]"}`}>{Number(date.slice(8))}</span>
+        <span className={`grid size-8 place-items-center rounded-full text-sm tracking-normal ${date === day ? "bg-[var(--ink)] text-[var(--paper)]" : date === today ? "bg-[var(--lime)] text-[var(--ink)]" : "text-[var(--ink)]"}`}>{Number(date.slice(8))}</span>
       </button>)}
 
       {columns.some(column => column.whole.length) && <>

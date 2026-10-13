@@ -11,7 +11,7 @@ export function TaskStatsCard({ days }: { days: number }) {
   const list = useAllTasks();
   const stats = taskStats(list.data ?? [], days);
   const perDay = new Map(stats.perDay.map(item => [item.day, item.done]));
-  return <Card title={t("Việc")} action={<Link to="/me/organizer" className="text-sm font-semibold underline">{t("Mở việc")}</Link>}>
+  return <Card title={t("Việc")} action={<Link to="/me/organizer" className="card-link">{t("Mở việc")}</Link>}>
     {list.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(list.error, t("Chưa tải được công việc."))}</p> : <>
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={stats.done} label={t("việc đã xong")} />

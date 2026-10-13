@@ -4,10 +4,14 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
+import { matchesSearch } from "../../../kernel/text";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { Avatar } from "../../../kernel/ui/Avatar";
 import { useConfirm } from "../../../kernel/ui/Confirm";
+import { MoreMenu } from "../../../kernel/ui/MoreMenu";
+import { GroupBookLink } from "../../expenses";
 import { Membership } from "../domain/Group";
 import { groupsModule } from "../groups.module";
 import { roleLabel } from "./GroupsPage";
@@ -30,7 +34,9 @@ export function GroupPage() {
   const [maxUses, setMaxUses] = useState(1);
   const [inviteUrl, setInviteUrl] = useState("");
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
   const problem = error || (members.isError ? errorMessage(members.error, t("Không thể tải nhóm.")) : "");
+  const shown = (members.data ?? []).filter(member => !search.trim() || matchesSearch(`${member.displayName} ${member.username ?? ""}`, search.trim()));
 
   function act(job: () => Promise<unknown>, success = "", after?: () => void) {
     setMessage("");
@@ -48,7 +54,10 @@ export function GroupPage() {
         <Link to="/groups" className="mb-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--muted)]"><ArrowLeft size={16} /> {t("Quay lại nhóm")}</Link>
         <h1 className="text-4xl font-black tracking-[-.045em]">{group?.name ?? t("Nhóm")}</h1>
         {group?.description && <p className="mt-2 text-[var(--muted)]">{group.description}</p>}
-        <Link to={`/chat/group/${groupId}`} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 text-sm font-semibold text-[#1d230e]"><MessageCircle size={17} /> {t("Trò chuyện nhóm")}</Link>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link to={`/chat/group/${groupId}`} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 text-sm font-semibold text-[var(--ink)]"><MessageCircle size={17} /> {t("Trò chuyện nhóm")}</Link>
+          <GroupBookLink groupId={groupId} />
+        </div>
       </header>
 
       {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={members.isFetching} onClick={() => void members.refetch()}>{t("Thử tải lại")}</Button></div>}
@@ -57,28 +66,29 @@ export function GroupPage() {
       <Card title={t("Thành viên · {0}", members.data?.length ?? 0)}>
         {members.isPending && <p role="status">{t("Đang tải thành viên…")}</p>}
         <div className="space-y-2">
-          {(members.data ?? []).map((member) => (
-            <div key={member.userId} className="flex flex-col gap-3 rounded-2xl bg-[var(--soft)] p-3 sm:flex-row sm:items-center">
-              <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--ink)] font-bold text-[var(--paper)]">{member.displayName.slice(0, 1).toUpperCase()}</div>
+          {(members.data?.length ?? 0) > 8 && <input type="search" className="field mb-1 w-full" aria-label={t("Tìm thành viên")} placeholder={t("Tìm thành viên…")} value={search} onChange={event => setSearch(event.target.value)} />}
+          {shown.map((member) => (
+            <div key={member.userId} className="flex items-center gap-3 rounded-2xl bg-[var(--soft)] p-3">
+              <Avatar name={member.displayName} src={member.avatarUrl} className="size-11 shrink-0 bg-[var(--ink)] font-bold text-[var(--paper)]" />
               <div className="min-w-0 flex-1">
-                <p className="font-bold">{member.displayName}{member.userId === userId ? t(" · Bạn") : ""}</p>
-                <p className="text-xs text-[var(--muted)]">{member.username ? `@${member.username}` : t("Chưa có username")} · {roleLabel[member.role]}</p>
+                <p className="truncate font-bold">{member.displayName}{member.userId === userId ? t(" · Bạn") : ""}</p>
+                <p className="truncate text-xs text-[var(--muted)]">{member.username ? `@${member.username}` : t("Chưa có username")} · {roleLabel[member.role]}</p>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {me.canManageRole(member) && <>
-                  <Button variant="ghost" className="px-3" disabled={pending} onClick={() => act(() => groups.setRole(groupId, member.userId, member.role === "admin" ? "member" : "admin"))}>
-                    <ShieldCheck size={16} /> {member.role === "admin" ? t("Bỏ quản trị") : t("Cho làm quản trị")}
-                  </Button>
-                  <Button variant="ghost" className="px-3" disabled={pending} onClick={async () => {
-                    if (await confirm({ title: t("Chuyển quyền chủ nhóm?"), body: t("{0} sẽ là chủ nhóm. Bạn ở lại nhóm với vai trò quản trị.", member.displayName), action: t("Chuyển quyền"), danger: false })) act(() => groups.transferOwnership(groupId, member.userId), t("Đã chuyển quyền chủ nhóm cho {0}.", member.displayName));
-                  }}><Crown size={16} /> {t("Chuyển chủ nhóm")}</Button>
-                </>}
-                {me.canRemove(member) && <Button variant="ghost" className="px-3" disabled={pending} onClick={async () => {
+              {/* What an owner or an admin can do to a member is behind "…": a row is a name, and a class has forty of them. */}
+              {(me.canManageRole(member) || me.canRemove(member)) && <MoreMenu label={t("Thao tác khác với {0}", member.displayName)}>
+                {me.canManageRole(member) && <button type="button" disabled={pending} onClick={() => act(() => groups.setRole(groupId, member.userId, member.role === "admin" ? "member" : "admin"))}>
+                  <ShieldCheck size={16} /> {member.role === "admin" ? t("Bỏ quản trị") : t("Cho làm quản trị")}
+                </button>}
+                {me.canManageRole(member) && <button type="button" disabled={pending} onClick={async () => {
+                  if (await confirm({ title: t("Chuyển quyền chủ nhóm?"), body: t("{0} sẽ là chủ nhóm. Bạn ở lại nhóm với vai trò quản trị.", member.displayName), action: t("Chuyển quyền"), danger: false })) act(() => groups.transferOwnership(groupId, member.userId), t("Đã chuyển quyền chủ nhóm cho {0}.", member.displayName));
+                }}><Crown size={16} /> {t("Chuyển chủ nhóm")}</button>}
+                {me.canRemove(member) && <button type="button" disabled={pending} className="text-[var(--danger)]" onClick={async () => {
                   if (await confirm({ title: t("Xóa khỏi nhóm?"), body: t("{0} sẽ không còn là thành viên của nhóm này.", member.displayName), action: t("Xóa khỏi nhóm") })) act(() => groups.removeMember(groupId, member.userId));
-                }}><UserMinus size={16} /> {t("Xóa")}</Button>}
-              </div>
+                }}><UserMinus size={16} /> {t("Xóa khỏi nhóm")}</button>}
+              </MoreMenu>}
             </div>
           ))}
+          {search.trim() && !shown.length && <p className="py-4 text-center text-sm text-[var(--muted)]">{t("Không có thành viên nào tên như vậy.")}</p>}
         </div>
       </Card>
 

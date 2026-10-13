@@ -105,7 +105,7 @@ function DayGrid({ weeks, day, today, byDay, onDay, detail }: {
         return <button key={date} type="button" aria-pressed={chosen} aria-current={date === today ? "date" : undefined}
           aria-label={`${dayTitle(date)}${list.length ? t(", {0} mục", list.length) : ""}`} onClick={() => onDay(date)}
           className={`flex min-h-[3.25rem] min-w-0 flex-col items-center gap-1 rounded-2xl p-1 transition-colors duration-200 ${detail ? "md:min-h-28 md:items-stretch md:text-left" : ""} ${chosen ? "bg-[var(--soft)]" : "hover:bg-[color-mix(in_srgb,var(--soft)_55%,transparent)]"}`}>
-          <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold ${chosen ? "bg-[var(--ink)] text-[var(--paper)]" : date === today ? "bg-[var(--lime)] text-[#1d230e]" : outside ? "text-[var(--muted)] opacity-50" : ""}`}>{Number(date.slice(8))}</span>
+          <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold ${chosen ? "bg-[var(--ink)] text-[var(--paper)]" : date === today ? "bg-[var(--lime)] text-[var(--ink)]" : outside ? "text-[var(--muted)] opacity-50" : ""}`}>{Number(date.slice(8))}</span>
           <span className={`flex h-1.5 gap-0.5 ${detail ? "md:hidden" : ""}`}>
             {list.slice(0, 3).map(entry => <i key={entry.id} style={toneOf(entry)} className="size-1.5 rounded-full bg-[var(--tone)]" />)}
           </span>
@@ -127,9 +127,9 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
   const minute = now.getHours() * 60 + now.getMinutes();
   return <section aria-label={t("Lịch {0}", dayTitle(day))} className={className}>
     <div className="mb-3 flex min-h-10 items-center justify-between gap-3">
-      <h3 className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-bold">{near && <span className="rounded-full bg-[var(--lime)] px-2.5 py-1 text-xs text-[#1d230e]">{near}</span>}<span>{dayTitle(day)}</span></h3>
+      <h3 className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-bold">{near && <span className="rounded-full bg-[var(--lime)] px-2.5 py-1 text-xs text-[var(--ink)]">{near}</span>}<span>{dayTitle(day)}</span></h3>
       {onAdd && <button type="button" aria-label={t("Thêm sự kiện vào {0}", dayTitle(day))} onClick={() => onAdd(day)}
-        className="pressable grid size-10 shrink-0 place-items-center rounded-full bg-[var(--lime)] text-[#1d230e]"><Plus size={19} /></button>}
+        className="pressable grid size-10 shrink-0 place-items-center rounded-full bg-[var(--lime)] text-[var(--ink)]"><Plus size={19} /></button>}
     </div>
     {entries.length ? <ul className="space-y-2">
       {entries.map(entry => {
@@ -156,7 +156,7 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
                 {entry.recurring && <span className="inline-flex items-center gap-1"><Repeat2 size={12} />{t("Lặp lại")}</span>}
               </span>
             </span>
-            {running && <span className="self-center rounded-full bg-[var(--lime)] px-2 py-0.5 text-[11px] font-bold text-[#1d230e]">{t("Đang diễn ra")}</span>}
+            {running && <span className="self-center rounded-full bg-[var(--lime)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink)]">{t("Đang diễn ra")}</span>}
           </Row>
         </li>;
       })}

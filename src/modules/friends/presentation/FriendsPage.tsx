@@ -4,11 +4,15 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule } from "../../../kernel/session";
+import { matchesSearch } from "../../../kernel/text";
 import { useAction } from "../../../kernel/useAction";
+import { Avatar } from "../../../kernel/ui/Avatar";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { useConfirm } from "../../../kernel/ui/Confirm";
 import { MoreMenu } from "../../../kernel/ui/MoreMenu";
+import { ProfileCardDialog } from "../../identity";
+import { onlineLabel, useFriendPresence } from "../../presence";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
 import { locale, t } from "../../../kernel/i18n";
@@ -20,14 +24,20 @@ export function FriendsPage() {
   const shares = useQuery({ queryKey: [...friendsKey, "shares"], queryFn: () => friends.availabilitySharedWith() });
   const blocked = useQuery({ queryKey: [...friendsKey, "blocked"], queryFn: () => friends.listBlocked() });
   const { run, pending, error } = useAction(friendsKey);
+  const online = useFriendPresence();
   const [username, setUsername] = useState("");
+  const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [invite, setInvite] = useState<{ url: string; expiresAt: string } | null>(null);
+  // The friend whose card is open. It stays in the dialog while the dialog closes.
+  const [card, setCard] = useState<{ userId: string; name: string } | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
 
   const items = connections.data ?? [];
   const accepted = items.filter(item => item.status === "accepted");
   const incoming = items.filter(item => item.status === "pending" && item.direction === "incoming");
   const outgoing = items.filter(item => item.status === "pending" && item.direction === "outgoing");
+  const shown = search.trim() ? accepted.filter(item => matchesSearch(`${item.displayName} ${item.username ?? ""}`, search.trim())) : accepted;
   const sharedWith = shares.data ?? new Set<string>();
   const loading = connections.isPending;
   const problem = error || (connections.isError ? errorMessage(connections.error, t("Không thể tải bạn bè.")) : "");
@@ -50,9 +60,13 @@ export function FriendsPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <p className="text-sm font-semibold text-[var(--muted)]">{t("Những người bạn đã kết nối")}</p>
-        <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">{t("Bạn bè")}</h1>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[var(--muted)]">{t("Những người bạn đã kết nối")}</p>
+          <h1 className="mt-1 text-4xl font-black tracking-[-.045em]">{t("Bạn bè")}</h1>
+        </div>
+        {/* The two ways to add someone are at the foot of the page, under a list that grows. */}
+        <Button variant="secondary" onClick={() => document.getElementById("friend-username")?.focus()}><UserPlus size={17} /> {t("Thêm bạn")}</Button>
       </header>
 
       {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={connections.isFetching} onClick={() => void connections.refetch()}>{t("Thử tải lại")}</Button></div>}
@@ -64,7 +78,7 @@ export function FriendsPage() {
         <Card title={t("Đang chờ bạn · {0}", incoming.length)}>
           <div className="space-y-2">
             {incoming.map((item) => (
-              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+              <PersonRow key={item.userId} name={item.displayName} username={item.username} avatarUrl={item.avatarUrl} actions={
                 <>
                   <Button disabled={pending} className="px-3" onClick={() => act(() => friends.respond(item.userId, true))}><Check size={16} /> {t("Chấp nhận")}</Button>
                   <Button disabled={pending} variant="ghost" className="px-3" onClick={() => act(() => friends.respond(item.userId, false))}><X size={16} /> {t("Từ chối")}</Button>
@@ -77,13 +91,17 @@ export function FriendsPage() {
 
       <Card title={t("Bạn bè · {0}", accepted.length)}>
         {!loading && !problem && accepted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted)]">{t("Chưa có kết nối nào.")}</p>
+          <p className="py-8 text-center text-sm text-[var(--muted)]">{t("Chưa có bạn nào. Thêm một người bằng username, hoặc gửi cho họ liên kết kết bạn ở bên dưới.")}</p>
         ) : (
           <div className="space-y-2">
-            {accepted.map((item) => {
+            {accepted.length > 8 && <input type="search" className="field mb-1 w-full" aria-label={t("Tìm trong bạn bè")} placeholder={t("Tìm trong bạn bè…")} value={search} onChange={event => setSearch(event.target.value)} />}
+            {search.trim() && !shown.length && <p className="py-4 text-center text-sm text-[var(--muted)]">{t("Không có người bạn nào tên như vậy.")}</p>}
+            {shown.map((item) => {
               const sharing = sharedWith.has(item.userId);
               return (
-                <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+                <PersonRow key={item.userId} name={item.displayName} username={item.username} avatarUrl={item.avatarUrl}
+                  status={online.get(item.userId)?.state === "idle" ? undefined : online.get(item.userId) && onlineLabel(online.get(item.userId), new Date())}
+                  onOpen={() => { setCard({ userId: item.userId, name: item.displayName }); setCardOpen(true); }} actions={
                   <>
                     <Link to={`/chat/with/${item.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--surface)] px-3 py-2.5 text-sm font-semibold"><MessageCircle size={16} /> {t("Nhắn tin")}</Link>
                     <MoreMenu label={t("Thao tác khác với {0}", item.displayName)}>
@@ -108,7 +126,7 @@ export function FriendsPage() {
         <Card title={t("Đã gửi · {0}", outgoing.length)}>
           <div className="space-y-2">
             {outgoing.map((item) => (
-              <PersonRow key={item.userId} name={item.displayName} username={item.username} actions={
+              <PersonRow key={item.userId} name={item.displayName} username={item.username} avatarUrl={item.avatarUrl} actions={
                 <Button disabled={pending} variant="ghost" onClick={() => act(() => friends.cancelRequest(item.userId))}><X size={16} /> {t("Hủy lời mời")}</Button>
               } />
             ))}
@@ -157,20 +175,31 @@ export function FriendsPage() {
           </div>
         </Card>
       )}
+
+      {card && <ProfileCardDialog userId={card.userId} name={card.name} open={cardOpen} onOpenChange={setCardOpen}>
+        {/* Said in full on the card: a friend who does not share this, or has been away, is "status unavailable". */}
+        <p className="w-full text-sm text-[var(--muted)]">{onlineLabel(online.get(card.userId), new Date())}</p>
+        <Link to={`/chat/with/${card.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--ink)] px-4 text-sm font-semibold text-[var(--paper)]"><MessageCircle size={16} /> {t("Nhắn tin")}</Link>
+        <Link to={`/calendar/shared/${card.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--soft)] px-4 text-sm font-semibold"><CalendarDays size={16} /> {t("Xem lịch")}</Link>
+      </ProfileCardDialog>}
     </div>
   );
 }
 
-function PersonRow({ name, username, actions }: { name: string; username: string | null; actions: ReactNode }) {
+/** One person with what can be done about them. With `onOpen`, the picture and the name open the person's card. */
+function PersonRow({ name, username, avatarUrl, status, onOpen, actions }: { name: string; username: string | null; avatarUrl?: string | null; status?: string; onOpen?(): void; actions: ReactNode }) {
+  const who = <>
+    <Avatar name={name} src={avatarUrl} className="size-11 shrink-0 bg-[var(--ink)] font-bold text-[var(--paper)]" />
+    <span className="min-w-0 flex-1">
+      <span className="block truncate font-bold">{name}</span>
+      <span className="block truncate text-xs text-[var(--muted)]">{username ? `@${username}` : t("Chưa có username")}{status && <> · <span className="font-semibold text-emerald-600 dark:text-emerald-400">{status}</span></>}</span>
+    </span>
+  </>;
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--soft)] p-3">
-      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--ink)] font-bold text-[var(--paper)]">
-        {name.slice(0, 1).toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-bold">{name}</p>
-        <p className="text-xs text-[var(--muted)]">{username ? `@${username}` : t("Chưa có username")}</p>
-      </div>
+      {/* The name keeps a width of its own. Beside two wide buttons it used to shrink to nothing on a phone; now the buttons go to the next line. */}
+      {onOpen ? <button type="button" aria-label={t("Xem hồ sơ của {0}", name)} onClick={onOpen} className="flex min-w-[7.5rem] flex-1 items-center gap-3 rounded-xl text-left">{who}</button>
+        : <div className="flex min-w-[7.5rem] flex-1 items-center gap-3">{who}</div>}
       <div className="flex flex-wrap items-center gap-1">{actions}</div>
     </div>
   );

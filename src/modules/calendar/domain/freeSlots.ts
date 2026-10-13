@@ -7,7 +7,7 @@ export interface Interval {
 }
 
 /** An occurrence as the time it blocks. An all-day event blocks its local days from midnight to midnight. */
-export function toInterval(occurrence: CalendarOccurrence): Interval {
+export function toInterval(occurrence: Pick<CalendarOccurrence, "allDay" | "start" | "end">): Interval {
   return occurrence.allDay
     ? { start: new Date(`${occurrence.start}T00:00:00`).getTime(), end: new Date(`${occurrence.end}T00:00:00`).getTime() }
     : { start: Date.parse(occurrence.start), end: Date.parse(occurrence.end) };

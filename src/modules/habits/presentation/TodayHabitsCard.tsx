@@ -37,7 +37,7 @@ export function TodayHabitsCard() {
   if (!list.data?.length) return null;
   const left = list.data.filter(habit => !habit.done);
 
-  return <Card title={left.length ? t("Thói quen · còn {0}", left.length) : t("Thói quen · xong hết")} action={<Link to="/habits" className="text-sm font-semibold underline">{t("Tất cả")}</Link>}>
+  return <Card title={left.length ? t("Thói quen · còn {0}", left.length) : t("Thói quen · xong hết")} action={<Link to="/habits" className="card-link">{t("Tất cả")}</Link>}>
     <ul className="space-y-2">
       {[...left, ...list.data.filter(habit => habit.done)].map(habit => <li key={habit.id} className="rounded-2xl bg-[var(--soft)] p-2">
         <HabitToggle habit={habit} disabled={pending} onToggle={() => run(() => habit.done ? habits.undoDone(habit.id) : habits.markDone(habit.id))} />

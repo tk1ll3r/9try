@@ -8,23 +8,21 @@ Vietnamese-first social planning and personal organization web app for trusted f
 - Sign-in with Google (once it is turned on in Supabase), by emailed link or by 6-digit code; profiles.
 - Friends: requests, invite links, block and unblock.
 - Groups: roles, invite links with expiry and use limits, ownership transfer, archive.
-- Chat between friends and inside groups, with unread counts.
-- Meetups: proposal, time poll, RSVP with capacity enforced on the server, discussion, one page per meetup. A meetup in a group invites every member, and a confirmed one shows on the calendar.
-- Calendar, drawn by the app itself: a week list, a month and an hour grid, with a color for classes, events, plans with others and a friend's busy times. Timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group (changeable later), `.ics` import and export, and a private feed address for Google or Apple Calendar.
-- Timetable of weekly classes, and "Rảnh lúc nào?" to find times when chosen friends are all free; a free time becomes a proposal with those friends in one step.
-- A Today screen that every feature adds a card to: requests waiting for an answer, what comes next, tasks, habits, what friends are doing.
-- Tasks with labels (typed as `#nhãn`), an optional due time and sections by due date; habits with streaks; notes; reminders that the database puts into the inbox when they are due.
-- Live friend map: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
-- Mode, the home screen: what each friend says they are doing right now, with the friends who matter most at the moment on top (a meetup soon, unread messages, a live location, a pin) and the reason on each card. Your own mode is one tap.
+- A page for visitors who are not signed in, with drawings of what the app is and does.
+- Chat between friends and inside groups, with unread counts: replies, reactions, edit within 15 minutes, unsend, "Đã xem", typing, photos, cards that open an event, a location or a photo, search and mute.
+- Photos of the day on the Mode screen, for all friends or chosen ones, deleted after 24 hours.
+- Calendar, drawn by the app itself: a week list, a month and an hour grid, with a color for classes, events and a friend's busy times. Timed and all-day events, daily/weekly/monthly repeats with per-occurrence exceptions, private by default, sharing with chosen friends or a group (changeable later), `.ics` import (repeating events and timetables included) and export, and a private feed address for Google or Apple Calendar.
+- Timetable of weekly classes; habits with streaks; notes; reminders that the database puts into the inbox when they are due.
+- Live friend map in the app's own colors, with friends as faces: time-limited sharing with chosen friends, exact or approximate, latest position only, deleted on stop.
+- Mode, the home screen: what each friend says they are doing right now, with the friends who matter most at the moment on top (unread messages, a live location, a pin) and the reason on each card. Your own mode is one tap.
 - Notification center, with optional Web Push, quiet hours and per-category choices.
 - A privacy screen that lists what other people can see right now, with a stop button for each.
-- Statistics: tasks finished day by day, how well each habit was kept, hours on the calendar, meetups, and the busiest conversations, for the last 7 or 30 days.
 - Vietnamese and English. The language is chosen in the account menu or on the sign-in screen.
 - Search across the app (Ctrl/Cmd+K).
 - An account menu in the top right corner and a settings screen: light or dark look, push, data export, sign-out and guarded account deletion.
 - Installable PWA. The service worker caches the app shell only; Supabase and location responses are never cached.
 
-`docs/implementation-progress.md` says what is verified and what is not. The cloud project has migrations up to 0029; 0030 (reminders without the worker) is not applied there yet.
+`docs/implementation-progress.md` says what is verified and what is not, and its top entry says what is on the cloud.
 
 ## Architecture
 
@@ -37,6 +35,7 @@ See:
 - `docs/module-guide.md` (how to add a module)
 - `docs/implementation-progress.md` (what is implemented, with evidence and open checks)
 - `docs/master-plan.md` (the plan: architecture, UX, features, phases)
+- `docs/feature-plan-2.md` (the second plan, built on 2026-10-09: landing page, chat, photos on Mode, map look, .ics import, shared expense books)
 - `docs/permission-matrix.md`
 - `docs/deployment.md`
 - `docs/backup-restore.md`
@@ -60,7 +59,7 @@ Node 22.12 or newer is required (`.nvmrc`); Vite 8 and Vitest 4 do not start on 
 
 ```bash
 npm run typecheck
-npm test                  # unit tests, the architecture rules, the calendar-feed handler
+npm test                  # the map styles against the color tokens, unit tests, the architecture rules, the calendar-feed handler
 npm run test:db           # every migration + pgTAP files on an embedded Postgres, no Docker
 npm run build
 npm run test:e2e          # isolated mocked-browser UI tests; needs Playwright Chromium
@@ -76,21 +75,31 @@ npx supabase@2.119.0 migration up --local   # brings the local database up to th
 npm run test:db:local                       # pgTAP files in transactions that roll back; localhost only
 ```
 
+Push can be checked on one machine too, with real pushes and without a phone. It needs the local stack, Deno 2 and a way out to the internet; `docs/deployment.md`, "Checking push without a phone", says what it covers:
+
+```bash
+DENO=/path/to/deno npm run test:push:local
+```
+
 Do not run database tests against production. GitHub Actions now has a separate DB job; the new job has not yet been verified on CI. Earlier commits passed the typecheck, unit tests and build workflow on Node 24.
 
 ## Production
 
-Deploy `dist/` to Cloudflare and bind `gnouht.space`.
+The production app is served at `https://9try.gnouht.space/` through Cloudflare Workers static assets; Supabase provides the backend. See [`docs/deployment.md`](docs/deployment.md) for the current release and steps for a future deploy.
 
 Do **not** modify the existing `mcp.gnouht.space` DNS record, tunnel route or Cloudflare Access policy.
 
-External setup is intentionally not faked. Production still requires:
+A fresh production setup needs:
 - Supabase project URL + publishable key,
 - applying migrations,
 - deploying the Edge Functions (`process-reminders`, `delete-account`, `calendar-feed`),
 - the sign-in email template with the 6-digit code,
 - cron authorization for reminder processing,
 - VAPID keys for Web Push,
-- Cloudflare project/custom-domain binding for `gnouht.space`.
+- Cloudflare project/custom-domain binding for `9try.gnouht.space`.
 
 The app does not expose service-role or VAPID private keys to browser code.
+
+## Map style
+
+The two map styles in `public/map` are made by `scripts/build-map-style.mjs` from OpenFreeMap's Positron style (`scripts/map/positron.json`), a fork of [openmaptiles/positron-gl-style](https://github.com/openmaptiles/positron-gl-style), with its colors changed. Copyright (c) 2024, MapTiler.com & OpenMapTiles contributors; Copyright (c) 2015, CartoDB Inc. Its code is under the BSD 3-Clause License and its design under CC-BY 4.0, derived from CartoDB Basemaps by Stamen and Paul Norman for CartoDB Inc., CC-BY 3.0. The map shows the credits of OpenFreeMap, OpenMapTiles and OpenStreetMap in its corner.

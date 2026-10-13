@@ -21,7 +21,7 @@ test("the account menu in the top right corner: who is signed in, their screens,
   await expect(looks.getByRole("button", { name: "Tự động" })).toHaveAttribute("aria-pressed", "true");
   await looks.getByRole("button", { name: "Tối" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(17, 19, 14)");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(22, 15, 20)");
   await expect(screens).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -51,6 +51,9 @@ test("the account menu in the top right corner: who is signed in, their screens,
   await expect(screens).toBeVisible();
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator("details").filter({ has: screens }).getByRole("button", { name: "Đăng xuất" }).click();
+  // Signed out in a browser, a person is back at the page that says what the app is, one press from sign-in.
+  await expect(page.getByRole("heading", { level: 1, name: "Biết bạn bè đang làm gì. Hẹn nhau trong vài chạm." })).toBeVisible();
+  await page.getByRole("link", { name: "Đăng nhập", exact: true }).click();
   await expect(page.getByLabel("Email của bạn")).toBeVisible();
 });
 

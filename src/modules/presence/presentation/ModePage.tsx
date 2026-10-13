@@ -1,22 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck2, Radio, UserPlus } from "lucide-react";
+import { CalendarCheck2, Camera, Radio, UserPlus } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
-import { useFriendSignals, useModule, useUserId } from "../../../kernel/session";
+import { warmHandlers } from "../../../kernel/module";
+import { useFriendSignals, useModule, useRegistry, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { useFlip } from "../../../kernel/useFlip";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
+import { chatSignals, useConversations, useRooms } from "../../chat";
 import { useAcceptedFriends, useFriendPins } from "../../friends";
-import type { ActivityMode } from "../domain/ActivityMode";
+import { MomentFrame, momentSignals, useMomentPeople, useMoments } from "../../moments";
+import type { ActivityMode, CustomActivityMode } from "../domain/ActivityMode";
 import { featured, FriendRanking, type RankedFriend } from "../domain/FriendRanking";
 import { presenceModule } from "../presence.module";
 import { FeaturedFriend, FriendRow } from "./FriendCard";
 import { MemberAvatar } from "./MemberAvatar";
 import { choiceOf, choices, presenceKey, quickDefaults } from "./modes";
 import { MyModeHero } from "./MyModeHero";
+import { useFriendPresence } from "./useOnline";
 import { t } from "../../../kernel/i18n";
+import { useCustomModes } from "./useCustomModes";
 
 // Opened now and then, so the dialog code stays out of the home screen's download.
 const ModePicker = lazy(() => import("./ModePicker").then(m => ({ default: m.ModePicker })));
@@ -42,18 +47,27 @@ function rememberedRecent(): string[] {
  * moment (a meetup soon, unread messages, a live location, a pin) come first, each with the reason.
  */
 export function ModePage() {
-  const presence = useModule(presenceModule);
+  const presence = useModule(presenceModule).modes;
+  const online = useFriendPresence();
   const userId = useUserId();
+  const { routes } = useRegistry();
   const friends = useAcceptedFriends();
   const pins = useFriendPins();
+  // Who has a photo of the day: their face gets a camera, and a tap on it opens the photos.
+  const photos = useMomentPeople();
+  const momentList = useMoments();
+  const conversations = useConversations();
+  const rooms = useRooms();
+  const customModes = useCustomModes();
   const loadSignals = useFriendSignals();
-  // The realtime "presence" event reloads both at once; the timers cover a missed event.
-  const list = useQuery({ queryKey: presenceKey, queryFn: () => presence.list(), refetchInterval: 20_000 });
-  const signals = useQuery({ queryKey: [...presenceKey, "signals"], queryFn: loadSignals, refetchInterval: 30_000 });
+  // Realtime reloads these when they change. The timers only cover an event that was missed.
+  const list = useQuery({ queryKey: presenceKey, queryFn: () => presence.list(), refetchInterval: 120_000, staleTime: 60_000 });
+  const signals = useQuery({ queryKey: [...presenceKey, "signals"], queryFn: loadSignals, refetchInterval: 180_000, staleTime: 60_000 });
   const { run, pending, error } = useAction(presenceKey);
   const [minutes, setMinutes] = useState(rememberedMinutes);
   const [recent, setRecent] = useState(rememberedRecent);
   const [picking, setPicking] = useState(false);
+  const [captureRequest, setCaptureRequest] = useState(0);
   const [filter, setFilter] = useState("all");
   const [showIdle, setShowIdle] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -65,18 +79,33 @@ export function ModePage() {
   }, []);
 
   const mine = (list.data ?? []).find(item => item.userId === userId && Date.parse(item.expiresAt) > now);
-  const ranked = useMemo(() => ranking.rank(friends, list.data ?? [], signals.data ?? [], pins.pinned, new Date(now)),
-    [friends, list.data, signals.data, pins.pinned, now]);
+  const reasons = useMemo(() => [
+    ...chatSignals(conversations.data ?? [], new Date(now), rooms.data ?? []),
+    ...momentSignals(momentList.data ?? [], new Date(now)),
+    ...(signals.data ?? []),
+  ], [conversations.data, rooms.data, momentList.data, signals.data, now]);
+  const ranked = useMemo(() => ranking.rank(friends, list.data ?? [], reasons, pins.pinned, new Date(now)),
+    [friends, list.data, reasons, pins.pinned, now]);
 
   const hasMeetup = (item: RankedFriend) => item.reasons.some(reason => reason.kind === "meetup" || reason.kind === "invite");
   const active = ranked.filter(item => item.mode);
+  const visibleModeChoices = [...new Map([
+    ...choices,
+    ...(customModes.data ?? []).map(mode => choiceOf(mode.mode, mode)!),
+    ...active.flatMap(item => item.mode && !choices.some(choice => choice.id === item.mode!.mode) ? [choiceOf(item.mode.mode, item.mode)!] : []),
+  ].map(choice => [choice.id, choice] as const)).values()];
   const filters = [
     { id: "all", label: t("Tất cả"), count: ranked.length, Icon: undefined, color: undefined },
     { id: "meetup", label: t("Có hẹn"), count: ranked.filter(hasMeetup).length, Icon: CalendarCheck2, color: "var(--ink)" },
-    ...choices.map(choice => ({ id: choice.id, label: choice.label, count: active.filter(item => item.mode!.mode === choice.id).length, Icon: choice.Icon, color: choice.color })),
+    ...visibleModeChoices.map(choice => ({ id: choice.id, label: choice.label, count: active.filter(item => item.mode!.mode === choice.id).length, Icon: choice.Icon, color: choice.color })),
   ].filter(item => item.id === "all" || item.count > 0);
   // The activities offered for one tap: the ones used last on this device, then the usual ones.
-  const quick = [...new Set([...recent, ...quickDefaults])].flatMap(id => choices.find(choice => choice.id === id) ?? []).slice(0, quickCount);
+  const quick = [...new Set([...recent, ...quickDefaults])].flatMap(id => {
+    const builtin = choices.find(choice => choice.id === id);
+    if (builtin) return [builtin];
+    const custom = customModes.data?.find(mode => mode.mode === id);
+    return custom ? [choiceOf(custom.mode, custom)!] : [];
+  }).slice(0, quickCount);
   // A filter whose last person left falls back to everyone.
   const shown = filters.some(item => item.id === filter) ? filter : "all";
   const visible = ranked.filter(item => shown === "all" || (shown === "meetup" ? hasMeetup(item) : item.mode?.mode === shown));
@@ -85,7 +114,7 @@ export function ModePage() {
   const idle = rest.filter(item => !item.mode);
   const rows = showIdle ? rest : [...rest.filter(item => item.mode), ...idle.slice(0, idleShown)];
   const board = useFlip<HTMLDivElement>(visible.map(item => item.friend.userId).join());
-  const problem = error || pins.error || (list.isError ? errorMessage(list.error, t("Không tải được mode.")) : "");
+  const problem = error || pins.error || (list.isError ? errorMessage(list.error, t("Không tải được mode.")) : customModes.isError ? errorMessage(customModes.error, t("Không tải được mode.")) : "");
 
   function setMode(mode: ActivityMode | null) {
     run(() => presence.set(mode, minutes), () => {
@@ -102,25 +131,35 @@ export function ModePage() {
   }
 
   return <div className="space-y-4">
-    <header>
-      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--muted)]"><Radio size={16} className="text-[var(--lime-strong)]" /> {friends.length ? t("{0}/{1} bạn đang bật mode", active.length, friends.length) : t("Tự chọn, tự tắt, chỉ bạn bè thấy")}</p>
-      <h1 className="mt-1 text-3xl font-black tracking-[-.04em] sm:text-4xl">{t("Mọi người đang làm gì?")}</h1>
+    <header className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-sm font-semibold text-[var(--muted)]"><Radio size={16} className="text-[var(--lime-strong)]" /> {friends.length ? t("{0}/{1} bạn đang bật mode", active.length, friends.length) : t("Tự chọn, tự tắt, chỉ bạn bè thấy")}</p>
+        <h1 className="mt-1 text-3xl font-black tracking-[-.04em] sm:text-4xl">{t("Mọi người đang làm gì?")}</h1>
+      </div>
+      <Button variant="secondary" className="shrink-0" onClick={() => setCaptureRequest(value => value + 1)}><Camera size={17}/><span className="hidden sm:inline">{t("Chụp khoảnh khắc")}</span><span className="sm:hidden">{t("Chụp")}</span></Button>
     </header>
 
-    <MyModeHero mine={mine} now={now} minutes={minutes} quick={quick} pending={pending} onSet={setMode} onPick={() => setPicking(true)} />
-    {picking && <Suspense fallback={null}><ModePicker open onOpenChange={setPicking} mine={mine} minutes={minutes} onMinutes={chooseMinutes} pending={pending} onSet={setMode} /></Suspense>}
+    {/* On a wide screen the photo frame stands beside the person's own mode and the people who are active; on a phone it comes right under the mode. */}
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)] lg:grid-rows-[auto_auto_auto_1fr] lg:items-start">
+    <div className="min-w-0 lg:col-start-1"><MyModeHero mine={mine} now={now} minutes={minutes} quick={quick} pending={pending} onSet={setMode} onPick={() => setPicking(true)} /></div>
+    <MomentFrame mode={mine?.mode} modeMinutes={minutes} captureRequest={captureRequest} className="lg:col-start-2 lg:row-span-4 lg:row-start-1" />
+    {picking && <Suspense fallback={null}><ModePicker open onOpenChange={setPicking} mine={mine} minutes={minutes} customModes={customModes.data ?? []} onMinutes={chooseMinutes} pending={pending} onSet={setMode} onCreate={(mode: CustomActivityMode) => {
+      const next = [mode.mode, ...recent.filter(id => id !== mode.mode)].slice(0, quickCount);
+      setRecent(next); try { localStorage.setItem(recentKey, JSON.stringify(next)); } catch { /* It remains available in the full picker. */ }
+    }} /></Suspense>}
 
-    {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{problem} <Button variant="ghost" disabled={list.isFetching} onClick={() => void list.refetch()}>{t("Thử tải lại")}</Button></div>}
+    {problem && <div role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)] lg:col-start-1">{problem} <Button variant="ghost" disabled={list.isFetching || customModes.isFetching} onClick={() => { void list.refetch(); void customModes.refetch(); }}>{t("Thử tải lại")}</Button></div>}
 
     {/* Everyone who has a mode on, at a glance: a face, a ring in the activity's color and its icon. */}
-    {active.length > 0 && <section aria-label={t("Đang hoạt động")}>
+    {active.length > 0 && <section aria-label={t("Đang hoạt động")} className="min-w-0 lg:col-start-1">
       <h2 className="mb-1 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Đang hoạt động · {0}", active.length)}</h2>
       <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 pt-2 sm:mx-0 sm:px-1">
         {active.map(item => {
-          const choice = choiceOf(item.mode!.mode)!;
+          const choice = choiceOf(item.mode!.mode, item.mode)!;
+          const to = photos.get(item.friend.userId) ? `/moments/${item.friend.userId}/${photos.get(item.friend.userId)!.momentId}` : `/chat/with/${item.friend.userId}`;
           return <li key={item.friend.userId} className="w-[4.75rem] shrink-0">
-            <Link to={`/chat/with/${item.friend.userId}`} aria-label={`${item.friend.displayName}: ${choice.label}`} className="pressable flex flex-col items-center gap-1.5 text-center">
-              <MemberAvatar name={item.friend.displayName} choice={choice} />
+            <Link to={to} {...warmHandlers(routes, to)} aria-label={`${item.friend.displayName}: ${choice.label}`} className="pressable flex flex-col items-center gap-1.5 text-center">
+              <MemberAvatar name={item.friend.displayName} src={item.friend.avatarUrl} choice={choice} online={online.get(item.friend.userId)?.state} photo={photos.get(item.friend.userId)?.state} />
               <b className="max-w-full truncate text-sm">{item.friend.displayName}</b>
               <span className="-mt-1.5 max-w-full truncate text-[11px] text-[var(--muted)]">{choice.label}</span>
             </Link>
@@ -129,23 +168,24 @@ export function ModePage() {
       </ul>
     </section>}
 
-    {friends.length > 0 && filters.length > 1 && <div role="group" aria-label={t("Lọc bạn bè")} className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+    {friends.length > 0 && filters.length > 1 && <div role="group" aria-label={t("Lọc bạn bè")} className="-mx-4 flex min-w-0 gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 lg:col-start-1">
       {filters.map(item => <button key={item.id} type="button" aria-pressed={shown === item.id} onClick={() => setFilter(item.id)}
         className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${shown === item.id ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
         {item.Icon && <item.Icon size={15} style={shown === item.id ? undefined : { color: item.color }} />}
         {item.label}{item.id !== "all" && ` · ${item.count}`}
       </button>)}
     </div>}
+    </div>
 
     <div ref={board} className="space-y-4">
       {top.length > 0 && <section aria-label={t("Nổi bật")}>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Nổi bật")}</h2>
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{top.map(item => <FeaturedFriend key={item.friend.userId} item={item} now={now} pins={pins} />)}</ul>
+        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{top.map(item => <FeaturedFriend key={item.friend.userId} item={item} now={now} pins={pins} online={online.get(item.friend.userId)} />)}</ul>
       </section>}
 
       {rows.length > 0 && <section aria-label={t("Mọi người")}>
         {top.length > 0 && <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Mọi người")}</h2>}
-        <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{rows.map(item => <FriendRow key={item.friend.userId} item={item} now={now} pins={pins} />)}</ul>
+        <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{rows.map(item => <FriendRow key={item.friend.userId} item={item} now={now} pins={pins} online={online.get(item.friend.userId)} />)}</ul>
         {!showIdle && idle.length > idleShown && <Button variant="ghost" className="mt-2 w-full" onClick={() => setShowIdle(true)}>{t("Xem thêm {0} người", idle.length - idleShown)}</Button>}
       </section>}
     </div>
@@ -156,7 +196,7 @@ export function ModePage() {
     {friends.length === 0 && <Card>
       <div className="py-6 text-center">
         <p className="text-[var(--muted)]">{t("Kết bạn để thấy mode của nhau. Chỉ bạn bè đã kết nối mới thấy mode của bạn.")}</p>
-        <Link to="/me/friends" className="pressable mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 font-semibold text-[#1d230e]"><UserPlus size={17} /> {t("Thêm bạn bè")}</Link>
+        <Link to="/me/friends" className="pressable mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--lime)] px-4 font-semibold text-[var(--ink)]"><UserPlus size={17} /> {t("Thêm bạn bè")}</Link>
       </div>
     </Card>}
 

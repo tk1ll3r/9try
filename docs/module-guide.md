@@ -24,12 +24,17 @@
 | Put timed items on the calendar and under "Sắp tới" | `agenda` |
 | Move a friend up on the Mode screen, with a reason | `friendSignals`: return `{ userId, kind, strength, label, to }`. Give a new `kind` a weight in `FriendRanking` if 20 is not right |
 | Put a screen under another menu entry instead of in the menu | `parent: "/path-of-the-parent"` on the navigation entry |
+| Put a screen in a phone's bottom bar | `primary: 1…5` on the navigation entry. There are five places and they are taken; every other screen is in the Menu, two taps away |
+| Show a screen only to accounts the server has given a capability | `feature: "name"` on the navigation entry, a gate in the screen with `useFeatures()`, and `has_feature('name')` in the feature's policies and functions. The entry and the gate only hide; the database is what refuses |
 | List what the feature shares on the privacy screen, with a stop button | `privacy` |
 | Give the feature a section on the settings screen | `settings` |
 | Put a screen in the account menu in the top right corner | A navigation entry with `tab: "me"` |
 | Ask before a step that cannot be undone | `const confirm = useConfirm()`, then `if (await confirm({ title, body, action })) …`. Do not use `window.confirm` |
 | Make the feature's items findable in the global search | `searchItems` |
 | Reload a screen when the server changes something | Emit an event named after the query key from a database trigger with `private.emit` |
+| Keep photos | A private bucket made by the migration, `toJpeg` from `kernel/image.ts` before the upload, and `SignedFiles` from `kernel/files.ts` for the upload and the addresses. `src/modules/moments` is the example |
+| Let a thing be sent into a conversation as a card | `ShareToChatButton` from the chat module, with the thing's path inside the app and a title |
+| Draw a friend's mode on another screen | `useFriendModes()` from the presence module: the catalog entry of what each friend is doing, by user id |
 
 ## Text
 
@@ -47,4 +52,5 @@ One test file per module covers the entity's rules and the repository's scoping.
 2. New functions use `security definer set search_path = ''`, revoke `execute` from `public` and `anon`, and grant it to `authenticated`. Helpers that the API must not expose go in the `private` schema.
 3. Raise short error codes such as `routine not found`, and add their Vietnamese text to `src/kernel/errors.ts`.
 4. Add a pgTAP file in `supabase/tests/database/` that checks the rule for the owner, a friend, an ex-friend, a blocked user, a stranger and an anonymous visitor where it applies.
-5. Run `npm run test:db`, then `npx supabase migration up --local` and `npm run test:db:local` when the local stack is running.
+5. A policy on `storage.objects` can only call functions in `public`: the signed-in role has no use of the `private` schema. Remove files through the Storage API. A row deleted from `storage.objects` by SQL leaves the stored file behind.
+6. Run `npm run test:db`, then `npx supabase migration up --local` and `npm run test:db:local` when the local stack is running.

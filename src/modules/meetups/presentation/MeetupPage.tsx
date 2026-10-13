@@ -8,6 +8,7 @@ import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { useConfirm } from "../../../kernel/ui/Confirm";
+import { DiscussionButton, ShareToChatButton } from "../../chat";
 import { PeoplePicker } from "../../friends";
 import { MeetupPolicy, type MeetupSummary } from "../domain/Meetup";
 import { meetupsModule } from "../meetups.module";
@@ -103,6 +104,9 @@ function MeetupDetail({ item }: { item: MeetupSummary }) {
           }}><XCircle size={16} /> {t("Hủy hoạt động")}</Button>
         )}
       </div>
+
+      {/* A chat that lasts as long as the meetup: the organizer turns it on, everyone who is invited may join. */}
+      {item.status !== "canceled" && <div className="mt-3 flex flex-wrap items-center gap-2"><DiscussionButton source={{ kind: "meetup", id: item.id }} canOpen={policy.canCancel} /><ShareToChatButton path={`/meetups/${item.id}`} title={item.title} /></div>}
 
       {!!detail.data?.participants.length && (
         <ul aria-label={t("Người được mời")} className="mt-4 flex flex-wrap gap-2">

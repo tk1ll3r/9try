@@ -1,6 +1,8 @@
-import { ChevronRight, X } from "lucide-react";
+import { CalendarPlus, ChevronRight, X } from "lucide-react";
 import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../../../kernel/ui/Button";
+import { DiscussionButton } from "../../chat";
 import { remainingShare, type ActiveMode, type ActivityMode } from "../domain/ActivityMode";
 import { choiceOf, durationLabel, timeLeft, type ModeChoice } from "./modes";
 import { t } from "../../../kernel/i18n";
@@ -12,11 +14,12 @@ const ring = 2 * Math.PI * 34;
  * empties as the time runs out. Without one: a handful of activities to turn on with one tap.
  */
 export function MyModeHero({ mine, now, minutes, quick, pending, onSet, onPick }: {
+  /** The user's own mode, when one is on. */
   mine?: ActiveMode; now: number; minutes: number; quick: ModeChoice[]; pending: boolean; onSet(mode: ActivityMode | null): void; onPick(): void;
 }) {
-  const choice = choiceOf(mine?.mode);
+  const choice = choiceOf(mine?.mode, mine);
   return <section aria-label={t("Mode của bạn")} style={{ "--mode": choice?.color ?? "var(--lime-strong)" } as CSSProperties}
-    className={`relative overflow-hidden rounded-[30px] border border-black/8 bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] p-4 backdrop-blur-md transition-shadow duration-500 sm:p-5 dark:border-white/8 ${choice ? "mode-glow" : ""}`}>
+    className={`relative overflow-hidden rounded-[30px] border border-black/8 bg-[var(--surface)] p-4 sm:p-5 dark:border-white/8 ${choice ? "mode-glow" : ""}`}>
     <span aria-hidden className="pointer-events-none absolute -right-14 -top-16 size-56 rounded-full bg-[var(--mode)] opacity-25 blur-3xl transition-colors duration-700" />
     {mine && choice ? <div className="relative flex items-center gap-4">
       <span key={choice.id} className="animate-pop relative grid size-20 shrink-0 place-items-center">
@@ -35,7 +38,15 @@ export function MyModeHero({ mine, now, minutes, quick, pending, onSet, onPick }
         <div className="mt-2 flex flex-wrap gap-2">
           <Button variant="secondary" className="min-h-9 px-3 py-1.5" disabled={pending} onClick={onPick}>{t("Đổi mode")}</Button>
           <Button variant="ghost" className="min-h-9 px-3 py-1.5" disabled={pending} aria-label={t("Tắt mode")} onClick={() => onSet(null)}><X size={16} /> {t("Tắt")}</Button>
+          {/* What a person is doing now, as a plan on the calendar: the new event opens with the activity's name. */}
+          {/* A chat with the friends who see this mode. It closes when the mode ends. */}
+          <DiscussionButton key={mine.startedAt} source={{ kind: "mode", id: mine.userId }} canOpen />
+          <Link to={`/calendar?new=${encodeURIComponent(choice.label)}`} aria-label={t("Lên lịch: {0}", choice.label)} className="pressable inline-flex min-h-9 items-center gap-2 rounded-2xl px-3 py-1.5 text-sm font-semibold hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]"><CalendarPlus size={16} /> {t("Lên lịch")}</Link>
         </div>
+        {quick.filter(item => item.id !== mine.mode).slice(0, 3).length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label={t("Đổi mode nhanh")}>
+          {quick.filter(item => item.id !== mine.mode).slice(0, 3).map(item => <button key={item.id} type="button" disabled={pending} onClick={() => onSet(item.id)}
+            className="pressable inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 text-xs font-semibold disabled:opacity-60"><item.Icon size={15} style={{ color: item.color }}/>{item.label}</button>)}
+        </div>}
       </div>
     </div> : <div className="relative">
       <p role="status" className="sr-only">{t("Chưa bật mode")}</p>

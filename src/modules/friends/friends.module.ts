@@ -1,5 +1,5 @@
 import { Users } from "lucide-react";
-import { lazy } from "react";
+import { lazyRoute } from "../../kernel/lazyRoute";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
 import type { FriendRepository } from "./domain/Friend";
@@ -17,7 +17,7 @@ export const friendsModule: FeatureModule<FriendRepository> = {
     .map(friend => ({ title: friend.displayName, kind: t("Bạn bè"), to: "/me/friends", keywords: friend.username ?? "" })),
   navigation: [{ tab: "together", to: "/me/friends", label: t("Bạn bè"), icon: Users, order: 10 }],
   routes: [
-    { path: "me/friends", component: lazy(() => import("./presentation/FriendsPage").then(m => ({ default: m.FriendsPage }))) },
-    { path: "invite/friend/:token", component: lazy(() => import("./presentation/FriendInvitePage").then(m => ({ default: m.FriendInvitePage }))) },
+    { path: "me/friends", ...lazyRoute(() => import("./presentation/FriendsPage").then(m => ({ default: m.FriendsPage }))) },
+    { path: "invite/friend/:token", ...lazyRoute(() => import("./presentation/FriendInvitePage").then(m => ({ default: m.FriendInvitePage }))) },
   ],
 };

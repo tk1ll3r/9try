@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import type { FriendConnection } from "../domain/Friend";
@@ -8,12 +9,15 @@ export const friendsKey = ["friends"] as const;
 
 export function useFriendConnections() {
   const friends = useModule(friendsModule);
-  return useQuery({ queryKey: [...friendsKey, "list"], queryFn: () => friends.list() });
+  // The list carries each friend's picture, so a screen that opens does not fetch it again within a minute.
+  // A change the user makes, and a "friends" event from the server, reload it at once.
+  return useQuery({ queryKey: [...friendsKey, "list"], queryFn: () => friends.list(), staleTime: 60_000 });
 }
 
-/** Accepted friends only; empty while loading. */
+/** Accepted friends only; empty while loading. The same list until the friends change, so what is built from it is not rebuilt on every render. */
 export function useAcceptedFriends(): FriendConnection[] {
-  return (useFriendConnections().data ?? []).filter(friend => friend.status === "accepted");
+  const { data } = useFriendConnections();
+  return useMemo(() => (data ?? []).filter(friend => friend.status === "accepted"), [data]);
 }
 
 const nobody: ReadonlySet<string> = new Set();

@@ -19,7 +19,7 @@ export function MeetupInvitesCard() {
   const waiting = (list.data ?? []).filter(item => item.rsvp === "pending" && new MeetupPolicy(item, userId).canRespond);
   if (!waiting.length) return null;
 
-  return <Card title={t("Lời mời hoạt động · {0}", waiting.length)} action={<Link to="/meetups" className="text-sm font-semibold underline">{t("Hoạt động")}</Link>}>
+  return <Card title={t("Lời mời hoạt động · {0}", waiting.length)} action={<Link to="/meetups" className="card-link">{t("Hoạt động")}</Link>}>
     <ul className="space-y-2">
       {waiting.map(item => <li key={item.id} className="rounded-2xl bg-[var(--soft)] p-3">
         <Link to={`/meetups/${item.id}`} className="block break-words font-bold hover:underline">{item.title}</Link>

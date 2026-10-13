@@ -1,7 +1,10 @@
 import { MessageCircle, Star } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import { warmHandlers } from "../../../kernel/module";
+import { useRegistry } from "../../../kernel/session";
 import type { RankedFriend } from "../domain/FriendRanking";
+import { onlineLabel, type OnlineFriend } from "../domain/Online";
 import { MemberAvatar } from "./MemberAvatar";
 import { choiceOf, reasonIcon, timeLeft } from "./modes";
 import { t } from "../../../kernel/i18n";
@@ -12,9 +15,11 @@ export interface Pins {
   toggle(userId: string): void;
 }
 
-const modeLine = (item: RankedFriend, now: number) => {
-  const choice = choiceOf(item.mode?.mode);
-  return choice && item.mode ? `${choice.label} · ${timeLeft(item.mode.expiresAt, now)}` : t("Chưa bật mode");
+/** What the person says they are doing, then whether their app is open, when they share that and it was open lately. */
+const modeLine = (item: RankedFriend, now: number, online?: OnlineFriend) => {
+  const choice = choiceOf(item.mode?.mode, item.mode);
+  const mode = choice && item.mode ? `${choice.label} · ${timeLeft(item.mode.expiresAt, now)}` : t("Chưa bật mode");
+  return online && online.state !== "idle" ? `${mode} · ${onlineLabel(online, new Date(now))}` : mode;
 };
 
 function PinButton({ item, pins }: { item: RankedFriend; pins: Pins }) {
@@ -27,17 +32,19 @@ function PinButton({ item, pins }: { item: RankedFriend; pins: Pins }) {
 }
 
 /** A friend worth noticing right now: who, what they are doing, and why they are up here. */
-export function FeaturedFriend({ item, now, pins }: { item: RankedFriend; now: number; pins: Pins }) {
-  const choice = choiceOf(item.mode?.mode);
+export function FeaturedFriend({ item, now, pins, online }: { item: RankedFriend; now: number; pins: Pins; online?: OnlineFriend }) {
+  const { routes } = useRegistry();
+  const choice = choiceOf(item.mode?.mode, item.mode);
   const name = item.friend.displayName;
+  const chatTo = `/chat/with/${item.friend.userId}`;
   return <li data-flip={item.friend.userId} style={choice ? { "--mode": choice.color } as CSSProperties : undefined}
-    className={`rounded-3xl border border-black/8 bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] p-3 backdrop-blur-md dark:border-white/8 ${choice ? "mode-glow" : ""}`}>
+    className={`rounded-3xl border border-black/8 bg-[var(--surface)] p-3 dark:border-white/8 ${choice ? "mode-glow" : ""}`}>
     <div className="flex items-center gap-1">
-      <Link to={`/chat/with/${item.friend.userId}`} aria-label={t("Nhắn tin cho {0}", name)} className="pressable flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-1">
-        <MemberAvatar name={name} choice={choice} />
+      <Link to={chatTo} {...warmHandlers(routes, chatTo)} aria-label={t("Nhắn tin cho {0}", name)} className="pressable flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-1">
+        <MemberAvatar name={name} src={item.friend.avatarUrl} choice={choice} online={online?.state} />
         <span className="min-w-0">
           <b className="block truncate text-lg">{name}</b>
-          <span className="block truncate text-sm text-[var(--muted)]">{modeLine(item, now)}</span>
+          <span className="block truncate text-sm text-[var(--muted)]">{modeLine(item, now, online)}</span>
         </span>
         <MessageCircle size={18} className="ml-auto shrink-0 text-[var(--muted)]" />
       </Link>
@@ -48,21 +55,23 @@ export function FeaturedFriend({ item, now, pins }: { item: RankedFriend; now: n
         const Icon = reasonIcon(reason.kind);
         const chip = <><Icon size={14} className="shrink-0" /> <span className="truncate">{reason.label}</span></>;
         const look = "inline-flex max-w-full min-h-8 items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 text-xs font-semibold";
-        return <li key={reason.kind} className="min-w-0">{reason.to ? <Link to={reason.to} className={`${look} hover:underline`}>{chip}</Link> : <span className={look}>{chip}</span>}</li>;
+        return <li key={reason.kind} className="min-w-0">{reason.to ? <Link to={reason.to} {...warmHandlers(routes, reason.to)} className={`${look} hover:underline`}>{chip}</Link> : <span className={look}>{chip}</span>}</li>;
       })}
     </ul>}
   </li>;
 }
 
 /** Everyone else, one compact row each. */
-export function FriendRow({ item, now, pins }: { item: RankedFriend; now: number; pins: Pins }) {
+export function FriendRow({ item, now, pins, online }: { item: RankedFriend; now: number; pins: Pins; online?: OnlineFriend }) {
+  const { routes } = useRegistry();
   const name = item.friend.displayName;
+  const chatTo = `/chat/with/${item.friend.userId}`;
   return <li data-flip={item.friend.userId} className="flex items-center gap-1 rounded-2xl bg-[var(--soft)] p-1.5">
-    <Link to={`/chat/with/${item.friend.userId}`} aria-label={t("Nhắn tin cho {0}", name)} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1">
-      <MemberAvatar name={name} choice={choiceOf(item.mode?.mode)} size="sm" />
+    <Link to={chatTo} {...warmHandlers(routes, chatTo)} aria-label={t("Nhắn tin cho {0}", name)} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1">
+        <MemberAvatar name={name} src={item.friend.avatarUrl} choice={choiceOf(item.mode?.mode, item.mode)} size="sm" online={online?.state} />
       <span className="min-w-0">
         <b className="block truncate">{name}</b>
-        <span className="block truncate text-xs text-[var(--muted)]">{modeLine(item, now)}</span>
+        <span className="block truncate text-xs text-[var(--muted)]">{modeLine(item, now, online)}</span>
       </span>
     </Link>
     <PinButton item={item} pins={pins} />

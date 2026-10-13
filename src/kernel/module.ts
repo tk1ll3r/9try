@@ -10,10 +10,36 @@ export interface RouteContribution {
   /** React Router path relative to "/". The home page is "". */
   readonly path: string;
   readonly component: ComponentType | LazyExoticComponent<ComponentType>;
+  /** Starts the screen's download. A press on its link calls this before the click navigates. */
+  readonly preload?: () => void;
 }
 
-/** The app's main destinations. "inbox" and "me" are the bell and the account menu in the top right corner; the others are the bottom tabs of a phone. */
-export type NavTab = "today" | "mode" | "plan" | "chat" | "together" | "stats" | "inbox" | "me";
+/** Starts the download of the screen `to` opens. A longer matching path wins over a prefix. */
+export function preloadRoute(routes: readonly RouteContribution[], to: string): void {
+  let best: RouteContribution | undefined;
+  let score = -1;
+  for (const route of routes) {
+    if (!route.preload) continue;
+    const pattern = route.path ? `/${route.path}` : "/";
+    if (matchPath({ path: pattern, end: true }, to) && pattern.length > score) {
+      score = pattern.length;
+      best = route;
+    }
+  }
+  best?.preload?.();
+}
+
+/** Handlers for a link: the screen starts downloading when the pointer arrives, before the click. */
+export function warmHandlers(routes: readonly RouteContribution[], to: string) {
+  const go = () => preloadRoute(routes, to);
+  return { onPointerEnter: go, onPointerDown: go, onFocus: go };
+}
+
+/**
+ * The part of the app a screen belongs to. "inbox" and "me" are the bell and the account menu in the top
+ * right corner. The others only group the screens in the Menu; see `menuSections`.
+ */
+export type NavTab = "today" | "mode" | "plan" | "chat" | "together" | "stats" | "inbox" | "me" | "menu";
 
 /** One screen in the navigation. */
 export interface NavContribution {
@@ -21,8 +47,15 @@ export interface NavContribution {
   readonly to: string;
   readonly label: string;
   readonly icon: (props: { size?: number }) => ReactNode;
-  /** Position inside the tab. The lowest one is where the tab lands. */
+  /** Position among the screens of the same part of the app. */
   readonly order: number;
+  /** Position in the bar at the bottom of a phone, which holds five screens. */
+  readonly primary?: number;
+  /**
+   * A capability the account must hold for this screen to be listed, such as "couple_expenses". The
+   * server gives capabilities and checks them itself; see `kernel/features.ts`.
+   */
+  readonly feature?: string;
   /** A small counter drawn on the icon, such as unread notifications. */
   readonly badge?: ComponentType;
   /**

@@ -14,7 +14,7 @@ export function ChatStatsCard() {
   const all = conversations.data ?? [];
   const busiest = all.filter(conversation => conversation.recentMessages > 0).sort((a, b) => b.recentMessages - a.recentMessages).slice(0, 4);
   const total = all.reduce((sum, conversation) => sum + conversation.recentMessages, 0);
-  return <Card title={t("Trò chuyện · 14 ngày qua")} action={<Link to="/chat" className="text-sm font-semibold underline">{t("Mở trò chuyện")}</Link>}>
+  return <Card title={t("Trò chuyện · 14 ngày qua")} action={<Link to="/chat" className="card-link">{t("Mở trò chuyện")}</Link>}>
     {conversations.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(conversations.error, t("Không tải được các cuộc trò chuyện."))}</p> : <>
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={total} label={t("tin nhắn")} />

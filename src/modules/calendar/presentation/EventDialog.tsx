@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Repeat2, Trash2, XCircle } from "lucide-react";
+import { Copy, Repeat2, Trash2, XCircle } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { localDateKey, localDateTimeKey } from "../../../kernel/dates";
-import { useModule } from "../../../kernel/session";
+import { useModule, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { useConfirm } from "../../../kernel/ui/Confirm";
 import { DialogPanel } from "../../../kernel/ui/DialogPanel";
+import { DiscussionButton, ShareToChatButton } from "../../chat";
 import { calendarModule } from "../calendar.module";
 import { dayTitle, shiftDays } from "../domain/calendarView";
 import type { CalendarOccurrence } from "../domain/Occurrence";
@@ -20,10 +21,13 @@ import { t } from "../../../kernel/i18n";
  * this one time or for every time; the place and the people who see it always belong to all of them.
  * `onDone` gets a sentence that says what happened.
  */
-export function EventDialog({ occurrence, open, onOpenChange, onDone }: {
+export function EventDialog({ occurrence, open, onOpenChange, onDone, onDuplicate }: {
   occurrence: CalendarOccurrence; open: boolean; onOpenChange(open: boolean): void; onDone(message: string): void;
+  /** Opens a new event that starts from this one. */
+  onDuplicate?(): void;
 }) {
   const calendar = useModule(calendarModule);
+  const userId = useUserId();
   const confirm = useConfirm();
   const { run, pending, error } = useAction(calendarKey);
   const { eventId, allDay, recurring } = occurrence;
@@ -99,6 +103,11 @@ export function EventDialog({ occurrence, open, onOpenChange, onDone }: {
         <Button type="submit" disabled={pending}>{pending ? t("Đang lưu…") : recurring ? t("Lưu riêng buổi này") : t("Lưu")}</Button>
         {recurring && <Button variant="secondary" disabled={pending} onClick={() => save(true)}><Repeat2 size={17} /> {t("Lưu cho mọi buổi")}</Button>}
         {recurring && <Button variant="ghost" disabled={pending} onClick={() => void skip()}><XCircle size={17} /> {t("Bỏ buổi này")}</Button>}
+        {onDuplicate && <Button variant="ghost" disabled={pending} onClick={onDuplicate}><Copy size={17} /> {t("Nhân bản")}</Button>}
+        {/* For an event that someone else sees: a chat with them that lasts as long as the event. A repeating event has one for each time. */}
+        {occurrence.visibility !== "only_me" && <DiscussionButton source={{ kind: "event", id: eventId, occurrence: recurring ? occurrence.occurrenceDate : undefined }} canOpen />}
+        {/* A card in a chat that opens this calendar as the reader may see it. Someone the event is not shown to sees nothing of it there. */}
+        {occurrence.visibility !== "only_me" && <ShareToChatButton path={`/calendar/shared/${userId}`} title={occurrence.title} />}
         <Button variant="ghost" className="text-[var(--danger)]" disabled={pending} onClick={() => void remove()}><Trash2 size={17} /> {recurring ? t("Xóa mọi buổi") : t("Xóa sự kiện")}</Button>
       </div>
     </form>

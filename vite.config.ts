@@ -15,8 +15,8 @@ export default defineConfig({
         short_name: "Gnouht",
         description: "Lên lịch, gặp gỡ và giữ kết nối với những người thân thiết.",
         lang: "vi",
-        theme_color: "#171a12",
-        background_color: "#f4f1e8",
+        theme_color: "#cf3e80",
+        background_color: "#fff5f8",
         display: "standalone",
         start_url: "/",
         icons: [
@@ -27,7 +27,7 @@ export default defineConfig({
         ],
         shortcuts: [
           { name: "Mode của bạn bè", url: "/" },
-          { name: "Việc hôm nay", url: "/today" },
+          { name: "Ghi chú", url: "/notes" },
           { name: "Lịch", url: "/calendar" },
           { name: "Vị trí bạn bè", url: "/me/location" },
           { name: "Thông báo", url: "/notifications" },

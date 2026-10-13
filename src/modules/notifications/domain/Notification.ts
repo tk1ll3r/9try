@@ -12,7 +12,10 @@ export interface NotificationPreferences {
   pushEnabled: boolean;
   quietStart: string;
   quietEnd: string;
+  /** By kind of notification. A kind that is not listed is on, except "friend_mode", which is off until asked for. */
   categoryPush: Record<string, boolean>;
+  /** A push then says only that something arrived, not who or what. */
+  privatePreviews: boolean;
 }
 
 /** The signed-in user's notification center. */

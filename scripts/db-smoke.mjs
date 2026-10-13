@@ -1,7 +1,7 @@
 // Runs the pgTAP files in supabase/tests/database.
 //
 //   npm run test:db              on an embedded Postgres (PGlite): applies every migration first, with
-//                                stand-ins for the Supabase roles, auth.uid(), pg_cron, realtime and pgTAP.
+//                                stand-ins for the Supabase roles, auth.uid(), pg_cron, realtime, Storage and pgTAP.
 //                                Needs no Docker. A smoke check.
 //   npm run test:db:local        on the local Supabase stack's own Postgres, with the real pgTAP. The
 //                                migrations must already be applied there (`supabase migration up --local`).
@@ -59,6 +59,15 @@ await db.exec(`
   create function realtime.topic() returns text language sql stable as $$ select nullif(current_setting('realtime.topic', true), '') $$;
   create function realtime.send(payload jsonb, event text, topic text, private boolean default true) returns void language sql as $$
     insert into realtime.messages(topic, event, payload, private) values (topic, event, payload, private) $$;
+  -- Storage stand-in: the two tables and the helper that the app's buckets, their policies and their functions use.
+  create schema storage;
+  create table storage.buckets(id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects(id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, owner_id text, created_at timestamptz default now(), metadata jsonb);
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant all on storage.objects to anon, authenticated, service_role;
+  create function storage.foldername(name text) returns text[] language sql immutable as $$
+    select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
   -- pgTAP stand-in for the functions the tests use.
   create function extensions.plan(n integer) returns text language sql as $$ select '1..' || n $$;
   create function extensions.is(have anyelement, want anyelement, description text) returns text language sql as $$

@@ -20,8 +20,11 @@ export function audienceProblem(choice: AudienceChoice): string {
   return "";
 }
 
-/** "Ai được xem?", with the friends or the group that the answer needs. Made for a two-column form. */
-export function AudienceFields({ value, onChange }: { value: AudienceChoice; onChange(next: AudienceChoice): void }) {
+/**
+ * "Ai được xem?", with the friends or the group that the answer needs. Made for a two-column form.
+ * `people={false}` leaves the list of friends to the form around it.
+ */
+export function AudienceFields({ value, onChange, people = true }: { value: AudienceChoice; onChange(next: AudienceChoice): void; people?: boolean }) {
   const groups = useMyGroups().data ?? [];
   return <>
     <label className="grid gap-1 text-sm font-semibold">{t("Ai được xem?")}
@@ -29,7 +32,7 @@ export function AudienceFields({ value, onChange }: { value: AudienceChoice; onC
         {(Object.keys(audienceNames) as CalendarVisibility[]).map(name => <option key={name} value={name}>{audienceNames[name]}</option>)}
       </select>
     </label>
-    {value.visibility === "selected_friends" && <div className="md:col-span-2">
+    {people && value.visibility === "selected_friends" && <div className="md:col-span-2">
       <PeoplePicker legend={t("Bạn bè được xem sự kiện này")} value={value.userIds} onChange={userIds => onChange({ ...value, userIds })} />
     </div>}
     {value.visibility === "group" && <label className="grid gap-1 text-sm font-semibold md:col-span-2">{t("Nhóm được xem")}

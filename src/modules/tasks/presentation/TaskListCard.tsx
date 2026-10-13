@@ -59,7 +59,7 @@ export function TaskListCard() {
     </div>
     {tags.length > 0 && <div role="group" aria-label={t("Lọc theo nhãn")} className="mt-2 flex flex-wrap gap-2">
       {tags.map(name => <button key={name} type="button" aria-pressed={tag === name} onClick={() => setTag(tag === name ? "" : name)}
-        className={`min-h-9 rounded-full px-3 text-sm font-semibold ${tag === name ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>#{name}</button>)}
+        className={`min-h-11 rounded-full px-3.5 text-sm font-semibold ${tag === name ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>#{name}</button>)}
     </div>}
     {problem && <div role="alert" className="mt-3 text-[var(--danger)]">{problem} <Button variant="ghost" disabled={pending || list.isFetching} onClick={() => void list.refetch()}>{t("Thử tải lại")}</Button></div>}
     {undo && <div role="status" className="mt-3 flex items-center justify-between gap-2">{t("Đã hoàn thành việc.")}<Button variant="ghost" disabled={pending}
@@ -93,7 +93,7 @@ export function TaskListCard() {
           </div>
         </article>)}
       </section>)}
-      {!loading && !problem && visible.length === 0 && <p className="py-4 text-sm text-[var(--muted)]">{t("Không có công việc phù hợp bộ lọc.")}</p>}
+      {!loading && !problem && visible.length === 0 && <p className="py-4 text-sm text-[var(--muted)]">{all.length ? t("Không có công việc phù hợp bộ lọc.") : t("Chưa có việc nào. Viết việc đầu tiên vào ô phía trên rồi bấm dấu cộng.")}</p>}
     </div>
   </Card>;
 }

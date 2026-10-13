@@ -17,7 +17,7 @@ export function HabitStatsCard({ days }: { days: number }) {
   const all = list.data ?? [];
   const kept = all.map(habit => habit.kept(days));
   const done = kept.reduce((sum, item) => sum + item.done, 0), of = kept.reduce((sum, item) => sum + item.of, 0);
-  return <Card title={t("Thói quen")} action={<Link to="/habits" className="text-sm font-semibold underline">{t("Mở thói quen")}</Link>}>
+  return <Card title={t("Thói quen")} action={<Link to="/habits" className="card-link">{t("Mở thói quen")}</Link>}>
     {list.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(list.error, t("Không tải được thói quen."))}</p> : <>
       <div className="grid grid-cols-3 gap-2">
         <StatTile value={all.length} label={t("thói quen")} />

@@ -20,9 +20,9 @@ export function UpcomingCard() {
     },
   });
   return (
-    <Card title={t("Sắp tới")} action={<Link className="text-sm font-semibold underline" to="/calendar">{t("Mở lịch")}</Link>}>
+    <Card title={t("Sắp tới")} action={<Link className="card-link" to="/calendar">{t("Mở lịch")}</Link>}>
       {upcoming.data?.length ? upcoming.data.map(entry => <Link key={entry.id} to={entry.to} className="mb-2 block rounded-2xl bg-[var(--soft)] p-4 hover:underline">
-        <b>{entry.title}</b>{entry.kind && <span className="ml-2 rounded-full bg-[var(--lime)] px-2 py-0.5 text-xs font-bold text-[#1d230e]">{entry.kind}</span>}
+        <b>{entry.title}</b>{entry.kind && <span className="ml-2 rounded-full bg-[var(--lime)] px-2 py-0.5 text-xs font-bold text-[var(--ink)]">{entry.kind}</span>}
         <p className="text-sm text-[var(--muted)]">{entry.when}</p>
       </Link>)
         : <div className="py-10 text-center text-[var(--muted)]"><CalendarClock className="mx-auto mb-2" />{upcoming.isPending ? t("Đang tải lịch…") : upcoming.isError ? t("Chưa tải được lịch.") : t("Chưa có sự kiện trong 30 ngày tới")}</div>}

@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Temporal } from "temporal-polyfill";
 import type { CalendarEventRow, CalendarExceptionRow, CalendarOccurrence, CalendarVisibility, CreateCalendarEventInput, EventAudience, SharedCalendarOccurrence } from "../domain/Occurrence";
 import { expand } from "../domain/recurrence";
+import type { IcsEvent } from "../domain/ics";
+import type { GrantedOccurrence, ScheduleAnswer, ScheduleGrant, ScheduleRequest } from "../domain/ScheduleSharing";
 import { classTimes, firstClassDate, type ClassDraft, type ClassEntry } from "../domain/timetable";
 import { t } from "../../../kernel/i18n";
 
@@ -104,6 +106,22 @@ export class SupabaseCalendarRepository {
   }
 
   /**
+   * Stores the events read from a calendar file in one request, all of them private. An event the
+   * calendar already has from an earlier import is left as it is. `asClasses` puts the weekly series
+   * on the timetable.
+   */
+  async importEvents(events: readonly IcsEvent[], asClasses: boolean): Promise<{ added: number; alreadyThere: number }> {
+    const { data, error } = await this.db.rpc("import_calendar_events", { p_events: events.map(event => ({
+      uid: event.uid, title: event.title, place: event.place, kind: event.kind, start: event.start, end: event.end, timezone: event.timezone,
+      rule: event.repeat?.rule ?? null, until: event.repeat?.until ?? null,
+      category: asClasses && event.kind === "timed" && event.repeat?.rule === "weekly" ? "class" : "event",
+      exceptions: event.repeat?.exceptions ?? [],
+    })) });
+    if (error) throw error;
+    return { added: data?.added ?? 0, alreadyThere: data?.already_there ?? 0 };
+  }
+
+  /**
    * When a person is busy, as untitled occurrences. Fails with "availability not shared"
    * unless that person shares their busy times with the signed-in user.
    */
@@ -114,6 +132,21 @@ export class SupabaseCalendarRepository {
       ...raw, title: t("Bận"), visibility: "only_me",
       calendar_event_exceptions: Array.isArray(raw.exceptions) ? raw.exceptions : [],
     }, rangeStart, rangeEnd)).sort((a: CalendarOccurrence, b: CalendarOccurrence) => a.start.localeCompare(b.start));
+  }
+
+  /**
+   * When a friend is busy in the range, from whichever permission tells it: the busy times they share
+   * themselves, or a permission they gave on request, if it covers every day of the range. A
+   * permission for fewer days is not used: the other days would look free. Fails when neither tells.
+   */
+  async knownBusy(ownerId: string, rangeStart: Date, rangeEnd: Date): Promise<Pick<CalendarOccurrence, "allDay" | "start" | "end">[]> {
+    try { return await this.busyFor(ownerId, rangeStart, rangeEnd); }
+    catch (notShared) {
+      const day = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const grant = (await this.scheduleGrants().catch(() => [])).find(item => item.direction === "received" && item.userId === ownerId);
+      if (!grant || grant.startsOn > day(rangeStart) || grant.endsOn < day(rangeEnd)) throw notShared;
+      return this.grantedSchedule(ownerId, rangeStart, rangeEnd);
+    }
   }
 
   /** The weekly classes of the timetable. */
@@ -360,5 +393,62 @@ export class SupabaseCalendarRepository {
   async deleteWholeEvent(eventId: string): Promise<void> {
     const { error } = await this.db.from("calendar_events").delete().eq("id", eventId);
     if (error) throw error;
+  }
+
+  private async call(name: string, args: Record<string, unknown> = {}): Promise<any> {
+    const { data, error } = await this.db.rpc(name, args);
+    if (error) throw error;
+    return data;
+  }
+
+  /** Asks a friend to see their schedule. Nothing is readable until they say yes. */
+  async requestSchedule(ownerId: string, message: string): Promise<void> {
+    await this.call("request_schedule", { p_owner_id: ownerId, p_message: message.trim() });
+  }
+
+  async cancelScheduleRequest(requestId: string): Promise<void> {
+    await this.call("cancel_schedule_request", { p_request_id: requestId });
+  }
+
+  /** The owner's answer. `answer` is what a yes allows; without it the answer is no. */
+  async answerScheduleRequest(requestId: string, answer: ScheduleAnswer | null): Promise<void> {
+    await this.call("respond_schedule_request", answer
+      ? { p_request_id: requestId, p_accept: true, p_detail: answer.detail, p_starts_on: answer.startsOn, p_ends_on: answer.endsOn, p_expires_in_days: answer.expiresInDays }
+      : { p_request_id: requestId, p_accept: false });
+  }
+
+  /** Takes back the permission given to a friend. Their next read is refused. */
+  async revokeScheduleGrant(viewerId: string): Promise<void> {
+    await this.call("revoke_schedule_grant", { p_viewer_id: viewerId });
+  }
+
+  /** The questions the user asked and was asked lately, newest first. */
+  async scheduleRequests(): Promise<ScheduleRequest[]> {
+    return ((await this.call("list_schedule_requests")) ?? []).map((row: any) => ({
+      id: row.id, direction: row.direction, userId: row.user_id, name: row.display_name || row.username || t("Người dùng"), avatarUrl: row.avatar_url,
+      status: row.status, message: row.message ?? "", createdAt: row.created_at,
+    }));
+  }
+
+  /** The permissions that hold now, given and received. */
+  async scheduleGrants(): Promise<ScheduleGrant[]> {
+    return ((await this.call("list_schedule_grants")) ?? []).map((row: any) => ({
+      direction: row.direction, userId: row.user_id, name: row.display_name || row.username || t("Người dùng"), avatarUrl: row.avatar_url,
+      detail: row.detail, startsOn: row.starts_on, endsOn: row.ends_on, expiresAt: row.expires_at,
+    }));
+  }
+
+  /**
+   * What a permission lets the user see of a friend's schedule in the range: the server has already
+   * counted out repeating events and cut everything to the days that were granted. Fails with
+   * "schedule not shared" without a permission.
+   */
+  async grantedSchedule(ownerId: string, rangeStart: Date, rangeEnd: Date): Promise<GrantedOccurrence[]> {
+    const rows = await this.call("list_granted_schedule", { p_owner_id: ownerId, p_from: rangeStart.toISOString(), p_to: rangeEnd.toISOString() });
+    return (rows ?? []).map((row: any) => ({
+      eventId: row.event_id, occurrenceDate: row.occurrence_date, title: row.title ?? null, allDay: row.all_day,
+      start: row.all_day ? row.first_day : row.starts_at, end: row.all_day ? row.end_day_exclusive : row.ends_at,
+      category: row.category === "class" ? "class" : "event",
+    }));
   }
 }

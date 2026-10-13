@@ -4,10 +4,25 @@
  */
 export type ActivityMode = string;
 
+export type CustomModeIcon =
+  | "sparkles" | "coffee" | "book" | "briefcase" | "game" | "smile" | "camera" | "food"
+  | "heart" | "star" | "music" | "leaf" | "sun" | "moon" | "paw" | "bike"
+  | "car" | "plane" | "home" | "laptop" | "palette" | "pizza" | "gift" | "dumbbell";
+export interface CustomActivityMode {
+  mode: ActivityMode;
+  label: string;
+  icon: CustomModeIcon;
+  color: string;
+}
+
 /** What someone says they are doing until `expiresAt`. People choose it themselves; it is never derived from GPS. */
 export interface ActiveMode {
   userId: string;
   mode: ActivityMode;
+  /** Present for an active custom mode; built-in names come from the local catalog. */
+  modeLabel?: string | null;
+  modeIcon?: CustomModeIcon | null;
+  modeColor?: string | null;
   /** When the mode was set, and when it ends by itself. */
   startedAt: string;
   expiresAt: string;
@@ -22,6 +37,9 @@ export function remainingShare(mode: ActiveMode, now: number): number {
 export interface PresenceRepository {
   /** The running modes of the signed-in user and of their friends. */
   list(): Promise<ActiveMode[]>;
+  /** The signed-in person's reusable custom mode catalog. */
+  customModes(): Promise<CustomActivityMode[]>;
+  createCustomMode(mode: Omit<CustomActivityMode, "mode">): Promise<CustomActivityMode>;
   /** Sets the signed-in user's mode for `minutes`, or clears it with `null`. */
   set(mode: ActivityMode | null, minutes: number): Promise<void>;
 }

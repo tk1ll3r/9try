@@ -1,4 +1,4 @@
-import type { OwnedLocationSession } from "../domain/Location";
+import { distanceMeters, isPermanentLocation, type OwnedLocationSession } from "../domain/Location";
 import { locale, t } from "../../../kernel/i18n";
 
 export interface LocationState {
@@ -10,7 +10,7 @@ export interface LocationState {
 }
 interface Dependencies {
   list: () => Promise<OwnedLocationSession[]>;
-  start: (duration: number, recipients: string[], approximate: boolean) => Promise<string>;
+  start: (duration: number | null, recipients: string[], approximate: boolean) => Promise<string>;
   stop: (id: string) => Promise<unknown>;
   publish: (id: string, position: GeolocationPosition, approximate: boolean) => Promise<unknown>;
   gps: Pick<Geolocation, "watchPosition" | "clearWatch"> | undefined;
@@ -58,7 +58,7 @@ export class LocationController {
     if (this.watch !== null) this.deps.gps?.clearWatch(this.watch);
     this.watch = null; this.watchedId = null; this.lastSent = null;
   }
-  async start(duration: number, recipients: string[], approximate: boolean) {
+  async start(duration: number | null, recipients: string[], approximate: boolean) {
     if (this.disposed || this.state.pending || this.state.loading || this.state.sessions.length) return;
     if (!this.deps.gps) { this.update({ error: t("Trình duyệt không hỗ trợ định vị.") }); return; }
     this.update({ pending: true, error: "" });
@@ -68,18 +68,21 @@ export class LocationController {
       const id = await this.deps.start(duration, recipients, approximate);
       createdId = id;
       if (this.disposed) { await this.deps.stop(id); return; }
-      this.update({ sessions: [...this.state.sessions, { id, approximate, expires_at: new Date(Date.now() + duration * 60_000).toISOString() }], status: t("Đang yêu cầu quyền vị trí…") });
+      this.update({ sessions: [...this.state.sessions, {
+        id, approximate, permanent: duration === null,
+        expires_at: duration === null ? "infinity" : new Date(Date.now() + duration * 60_000).toISOString(),
+      }], status: t("Đang yêu cầu quyền vị trí…") });
       this.watchedId = id;
       const generation = ++this.generation;
       this.watch = this.deps.gps.watchPosition(position => {
         if (this.disposed || generation !== this.generation) return;
         const session = this.state.sessions.find(s => s.id === id);
-        if (!session || Date.parse(session.expires_at) <= Date.now()) { this.clearWatcher(); void this.refresh(); return; }
+        if (!session || (!isPermanentLocation(session) && Date.parse(session.expires_at) <= Date.now())) { this.clearWatcher(); void this.refresh(); return; }
         const now = Date.now();
         this.update({ status: t("GPS nhận lúc {0} · ±{1} m", new Date(position.timestamp).toLocaleTimeString(locale), Math.round(position.coords.accuracy)) });
         const previous = this.lastSent;
         // At most one position every 5 s while moving, and one every 30 s while standing still.
-        if (previous && (now - previous.at < 5_000 || (distanceMeters(previous.lat, previous.lon, position.coords.latitude, position.coords.longitude) < 10 && now - previous.at < 30_000))) return;
+        if (previous && (now - previous.at < 5_000 || (distanceMeters({ latitude: previous.lat, longitude: previous.lon }, position.coords) < 10 && now - previous.at < 30_000))) return;
         this.lastSent = { at: now, lat: position.coords.latitude, lon: position.coords.longitude };
         void this.deps.publish(id, position, approximate).catch(e => {
           if (!this.disposed && generation === this.generation) this.update({ error: message(e, t("Không cập nhật được vị trí.")) });
@@ -116,9 +119,3 @@ export class LocationController {
   dispose() { this.disposed = true; ++this.refreshVersion; this.clearWatcher(); }
 }
 function message(error: unknown, fallback: string) { return error instanceof Error ? error.message : fallback; }
-function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const toRad = (value: number) => value * Math.PI / 180;
-  const a = Math.sin(toRad(lat2 - lat1) / 2) ** 2
-    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(toRad(lon2 - lon1) / 2) ** 2;
-  return 6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}

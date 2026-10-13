@@ -16,7 +16,7 @@ export function FriendsPrivacy() {
   const { run, pending, error } = useAction(friendsKey);
   const seeing = accepted.filter(friend => shares.data?.has(friend.userId));
 
-  return <Card title={t("Lịch bận/rảnh")} action={<Link to="/me/friends" className="text-sm font-semibold underline">{t("Mở Bạn bè")}</Link>}>
+  return <Card title={t("Lịch bận/rảnh")} action={<Link to="/me/friends" className="card-link">{t("Mở Bạn bè")}</Link>}>
     {seeing.length ? <>
       <p className="mb-3 text-sm leading-6">{t("Những người bạn này thấy lúc nào bạn bận. Họ không thấy bạn bận việc gì.")}</p>
       <ul className="space-y-2">{seeing.map(friend => <li key={friend.userId} className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--soft)] p-3">

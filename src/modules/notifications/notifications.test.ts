@@ -42,8 +42,9 @@ describe("notifications", () => {
     expect(mock.query.is).toHaveBeenCalledWith("read_at", null);
   });
   it("only follows action paths that the app recognizes", () => {
-    const safePath = (path: string) => ["/", "/meetups"].includes(path) ? path : "/";
+    const safePath = (path: string) => ["/", "/meetups", "/moments/owner/photo"].includes(path) ? path : "/";
     expect(notificationTarget("/meetups", safePath)).toBe("/meetups");
+    expect(notificationTarget("/moments/owner/photo", safePath)).toBe("/moments/owner/photo");
     expect(notificationTarget("/", safePath)).toBe("/");
     for (const path of [null, "https://evil.example", "//evil.example", "/unrecognized"]) expect(notificationTarget(path, safePath)).toBeNull();
   });

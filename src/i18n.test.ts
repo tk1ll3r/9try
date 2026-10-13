@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "./kernel/i18n";
 import { en } from "./kernel/locales/en";
-import { serverTexts } from "./modules/notifications/domain/serverTexts";
 
 // The app is written in Vietnamese and every text goes through t("…"), which a dictionary translates.
 // These checks keep that whole: nothing a person reads may be missing from a dictionary or bypass t().
@@ -12,7 +11,7 @@ const places = (text: string) => new Set([...text.matchAll(/\{(\d+)\}/g)].map(ma
 
 // The code of the app: no tests, no dictionaries, and not the language module, which names the languages in their own words.
 const app = Object.entries(sources).filter(([path]) => !/\.test\.|\/kernel\/locales\/|\/kernel\/i18n\.ts$/.test(path));
-const used = new Set([...serverTexts, ...app.flatMap(([, code]) => [...code.matchAll(call)].map(match => JSON.parse(`"${match[1]}"`) as string))]);
+const used = new Set(app.flatMap(([, code]) => [...code.matchAll(call)].map(match => JSON.parse(`"${match[1]}"`) as string)));
 
 describe("English", () => {
   it("has every text of the app", () => {
@@ -35,8 +34,10 @@ describe("English", () => {
 describe("text in the code", () => {
   it("is Vietnamese only inside t(…), so that no screen keeps a text another language cannot replace", () => {
     // Three files hold Vietnamese that is not shown as it stands: the letter that search treats as "d",
-    // what a typed timetable may say, and what the database writes.
-    const exempt = /\/kernel\/text\.ts$|\/calendar\/domain\/timetable\.ts$|\/notifications\/domain\/serverTexts\.ts$/;
+    // what a typed timetable may say, and what a typed amount may say ("nghìn", "triệu"). What the
+    // database writes into notifications has its own table, outside this folder:
+    // supabase/functions/_shared/notificationTexts.ts.
+    const exempt = /\/kernel\/text\.ts$|\/calendar\/domain\/timetable\.ts$|\/expenses\/domain\/money\.ts$/;
     const left = app.filter(([path]) => !exempt.test(path)).flatMap(([path, code]) => code
       .replace(call, 't("')
       .replace(/\/\*[\s\S]*?\*\//g, comment => comment.replace(/[^\n]/g, ""))

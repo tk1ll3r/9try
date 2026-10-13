@@ -3,7 +3,9 @@ import { useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../kernel/auth";
 import { installOffer } from "../../../kernel/install";
-import type { NavContribution } from "../../../kernel/module";
+import { warmHandlers, type NavContribution } from "../../../kernel/module";
+import { useRegistry } from "../../../kernel/session";
+import { Avatar } from "../../../kernel/ui/Avatar";
 import { LanguageSwitch } from "../../../kernel/ui/LanguageSwitch";
 import { menuRows, Popover } from "../../../kernel/ui/MoreMenu";
 import { ThemeSwitch } from "../../../kernel/ui/ThemeSwitch";
@@ -17,13 +19,14 @@ import { t } from "../../../kernel/i18n";
  */
 export function AccountMenu({ items, active }: { items: readonly NavContribution[]; active: boolean }) {
   const auth = useAuth();
+  const { routes } = useRegistry();
   const profile = useProfile();
   const installable = useSyncExternalStore(installOffer.subscribe, installOffer.available);
   const email = auth.user?.email ?? "";
   // Before the profile has a name: the one the account came with, then the part of the email before "@".
   const given = auth.user?.user_metadata?.full_name;
   const name = profile.data?.displayName || (typeof given === "string" && given.trim()) || email.split("@")[0] || t("Bạn");
-  const initial = <span className="grid size-full place-items-center rounded-full bg-[var(--lime)] font-black text-[#1d230e]">{name.slice(0, 1).toUpperCase()}</span>;
+  const initial = <Avatar name={name} src={profile.data?.avatarUrl} className="size-full bg-[var(--lime)] font-black text-[var(--ink)]" />;
 
   return <Popover label={t("Tài khoản và cài đặt")} trigger={initial} panelClassName="w-72 max-w-[calc(100vw-2rem)]"
     triggerClassName={`block size-11 rounded-full ${active ? "ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--paper)]" : ""}`}>
@@ -33,7 +36,7 @@ export function AccountMenu({ items, active }: { items: readonly NavContribution
         <span className="block truncate text-xs text-[var(--muted)]">{profile.data?.username ? `@${profile.data.username}` : email}</span></p>
     </div>
     <nav aria-label={t("Tài khoản")} className={`${menuRows} mt-1 border-t border-[var(--border)] pt-1.5`}>
-      {items.map(item => <Link key={item.to} to={item.to}><item.icon size={18} /> {item.label}</Link>)}
+      {items.map(item => <Link key={item.to} to={item.to} {...warmHandlers(routes, item.to)}><item.icon size={18} /> {item.label}</Link>)}
     </nav>
     {/* Trying the looks one after the other should not close the menu. */}
     <div onClick={event => event.stopPropagation()} className="mt-1.5 border-t border-[var(--border)] px-1.5 py-2.5">

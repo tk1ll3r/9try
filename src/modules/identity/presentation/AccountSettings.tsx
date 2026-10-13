@@ -7,6 +7,7 @@ import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Card } from "../../../kernel/ui/Card";
 import { useConfirm } from "../../../kernel/ui/Confirm";
+import { OwnedBooksWarning } from "../../expenses";
 import { identityModule } from "../identity.module";
 import { profileKey } from "./useProfile";
 import { t } from "../../../kernel/i18n";
@@ -65,6 +66,7 @@ export function AccountSettings() {
       <div className="mt-5 border-t border-[var(--border)] pt-5">
         <p className="font-bold text-[var(--danger)]">{t("Xóa tài khoản")}</p>
         <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{t("Dữ liệu cá nhân của bạn sẽ bị xóa và không khôi phục được. Nếu bạn là chủ của nhóm có thành viên khác, hãy chuyển quyền chủ nhóm trước.")}</p>
+        <OwnedBooksWarning />
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input className="field min-w-0 flex-1" aria-label={t("Xác nhận xóa tài khoản")} value={typed} onChange={event => setTyped(event.target.value)} placeholder={t("Nhập \"XÓA\" để mở nút xóa")} />
           <Button variant="danger" disabled={typed !== t("XÓA") || pending} onClick={() => void deleteAccount()}><Trash2 size={17} /> {t("Xóa tài khoản")}</Button>

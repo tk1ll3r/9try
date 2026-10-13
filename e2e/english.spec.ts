@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { signIn, user } from "./signedIn";
+import { bareMap, signIn, user } from "./signedIn";
 
 const vietnamese = /[À-ÖØ-öø-ÿĂăĐđĨĩŨũƠơƯưẠ-ỹ]/;
 const english = (page: Page) => page.addInitScript(() => localStorage.setItem("gnouht-language", "en"));
@@ -12,7 +12,8 @@ const texts = (page: Page) => page.evaluate(() => [
 
 test("the language is chosen on the sign-in screen and in the account menu, and kept on the device", async ({ page }) => {
   await page.route("**/auth/v1/**", route => route.fulfill({ json: {} }));
-  await page.goto("/");
+  // The front door now says what the app is (e2e/landing.spec.ts); sign-in has its own address.
+  await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Chào bạn." })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "vi");
 
@@ -31,7 +32,7 @@ test("the language is chosen on the sign-in screen and in the account menu, and 
   await page.goto("/today");
   await expect(page.getByRole("heading", { name: "What is on today?" })).toBeVisible();
   await expect(page.getByRole("complementary").getByRole("navigation").getByRole("link"))
-    .toHaveText(["Mode", "Today", "Calendar", "Tasks", "Chat", "Friends", "Groups", "Meetups", "Location", "Stats"]);
+    .toHaveText(["Mode", "Calendar", "Chat", "Map", "Today", "Tasks", "Friends", "Groups", "Meetups", "Stats", "Menu"]);
   await page.getByLabel("Account and settings").click();
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link")).toHaveText(["Profile", "Privacy", "Settings"]);
   await page.getByRole("group", { name: "Language" }).getByRole("button", { name: "Tiếng Việt" }).click();
@@ -40,17 +41,17 @@ test("the language is chosen on the sign-in screen and in the account menu, and 
 });
 
 test("in English no screen keeps Vietnamese text of its own, and dates are written the English way", async ({ page }) => {
-  test.slow(); // eighteen screens, each loaded from the start
+  test.slow(); // every screen, each loaded from the start
   await page.clock.setFixedTime(new Date(2026, 9, 8, 10, 0));
   await english(page);
   await signIn(page);
   // An account with nothing in it: whatever Vietnamese is on a screen then is the app's own text.
   await page.route("**/rest/v1/**", route => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/profiles")
     ? { id: user.id, display_name: "Vy", username: "vy", bio: "", timezone: "Asia/Ho_Chi_Minh", birthday: null } : [] }));
-  await page.route("https://tiles.openfreemap.org/**", route => route.fulfill({ json: { version: 8, sources: {}, layers: [] } }));
+  await bareMap(page);
 
   const left: string[] = [];
-  for (const path of ["/", "/today", "/calendar", "/timetable", "/free-time", "/me/organizer", "/habits", "/notes", "/chat", "/me/friends", "/groups", "/meetups", "/me/location", "/stats", "/notifications", "/me", "/me/privacy", "/me/settings"]) {
+  for (const path of ["/", "/today", "/calendar", "/timetable", "/calendar/requests", "/free-time", "/me/organizer", "/habits", "/notes", "/chat", "/me/friends", "/groups", "/meetups", "/me/location", "/stats", "/notifications", "/me", "/me/privacy", "/me/settings", "/menu"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     // Until its data is there a screen says so; wait for that to end.
