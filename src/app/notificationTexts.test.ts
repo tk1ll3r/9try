@@ -19,6 +19,8 @@ describe("notification texts", () => {
     expect(localize("mode:coffee", "vi")).toBe("Cà phê");
     expect(localize("mode:coffee", "en")).toBe("Coffee");
     expect(localize("mode:something_newer", "en")).toBe("Doing something else");
+    expect(localize("mode:custom_47492c3a50994119859f77e20ec4d039", "vi")).toBe("Đang làm việc khác");
+    expect(localize("mode:custom_47492c3a50994119859f77e20ec4d039", "en")).toBe("Doing something else");
   });
   it("puts names and times into the English sentence, and leaves what a person wrote alone", () => {
     expect(localize("Tin nhắn mới · Nhóm đồ án", "en")).toBe("New message · Nhóm đồ án");

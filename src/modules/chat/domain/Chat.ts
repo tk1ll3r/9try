@@ -1,5 +1,6 @@
 import type { FriendSignal } from "../../../kernel/module";
 import { t } from "../../../kernel/i18n";
+import { activityNames } from "../../../../supabase/functions/_shared/notificationTexts";
 
 export interface Conversation {
   id: string;
@@ -60,8 +61,16 @@ export interface RoomMember {
   isOwner: boolean;
 }
 
+export const cleanChatTitle = (title: string): string => {
+  if (title.startsWith("mode:")) {
+    const key = title.slice(5);
+    return activityNames[key]?.[0] ?? t("Đang làm việc khác");
+  }
+  return title;
+};
+
 /** Keep a mode room's title short; the owner's name is shown on its secondary line. */
-export const roomTitle = (room: Pick<Room, "title">) => room.title;
+export const roomTitle = (room: Pick<Room, "title">) => cleanChatTitle(room.title);
 
 /** The screen that shows what a room is about. */
 export function roomSourcePath(room: Pick<Room, "source" | "ownerId">, userId: string): string {

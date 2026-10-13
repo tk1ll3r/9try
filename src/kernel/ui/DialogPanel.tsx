@@ -17,10 +17,10 @@ export function DialogPanel({ open, onOpenChange, title, description, children, 
         const trigger = returnFocusId ? document.getElementById(returnFocusId) : null;
         if (trigger) { event.preventDefault(); trigger.focus(); }
       }} className={`dialog-content fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${size === "sm" ? "max-w-lg" : "max-w-3xl"} -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 text-[var(--ink)] shadow-2xl sm:p-6`}>
-        <div className="mb-2 flex items-start justify-between gap-4"><Dialog.Title className="text-2xl font-bold tracking-tight">{title}</Dialog.Title>
+        <div className="mb-2 flex items-start justify-between gap-4"><Dialog.Title className="break-words text-2xl font-bold tracking-tight">{title}</Dialog.Title>
           <Dialog.Close disabled={busy} aria-label={t("Đóng hộp thoại")} className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-[var(--soft)] disabled:opacity-50"><X size={20} /></Dialog.Close>
         </div>
-        <Dialog.Description className="mb-5 text-sm leading-6 text-[var(--muted)]">{description}</Dialog.Description>
+        <Dialog.Description className="mb-5 break-words text-sm leading-6 text-[var(--muted)]">{description}</Dialog.Description>
         {children}
       </Dialog.Content>
     </Dialog.Portal>

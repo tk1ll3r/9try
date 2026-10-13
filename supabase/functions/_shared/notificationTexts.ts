@@ -91,7 +91,7 @@ const otherActivity = ["Đang làm việc khác", "Doing something else"] as con
 
 /** A notification's title or text in `language`. */
 export function localize(text: string, language: Language): string {
-  const mode = /^mode:([a-z_]+)$/.exec(text);
+  const mode = /^mode:([a-z0-9_]+)$/.exec(text);
   if (mode) return (activityNames[mode[1]] ?? otherActivity)[language === "en" ? 1 : 0];
   if (language === "vi") return text;
   if (text in fixedTexts) return fixedTexts[text];

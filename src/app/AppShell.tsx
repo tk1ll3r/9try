@@ -149,7 +149,7 @@ export function AppShell() {
       {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
       <nav aria-label={t("Điều hướng chính")} style={{ gridTemplateColumns: `repeat(${primary.length}, minmax(0, 1fr))` }}
-        className="app-mobile-nav fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/10">
+        className="app-mobile-nav fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/10 touch-none overscroll-contain">
         {/* One dark pill slides under the current tab. */}
         <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-200 ease-[var(--ease-out)]"
           style={{ width: `calc((100% - 0.75rem) / ${primary.length})`, transform: `translateX(${Math.max(litIndex, 0) * 100}%)`, opacity: litIndex < 0 ? 0 : 1 }} />
