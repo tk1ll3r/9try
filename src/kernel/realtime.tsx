@@ -4,6 +4,9 @@ import { supabase } from "./supabase";
 
 const realtimeRoots = new Set(["calendar", "chat", "expenses", "features", "friends", "groups", "location", "moments", "notes", "notifications", "presence"]);
 
+/** How often a screen asks again after realtime missed an event. A change still arrives at once. */
+export const missedEventMs = 900_000;
+
 export interface RealtimeRefresh { queryKey: readonly unknown[]; exact?: boolean }
 
 /**

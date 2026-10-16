@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { warmHandlers } from "../../../kernel/module";
+import { missedEventMs } from "../../../kernel/realtime";
 import { useFriendSignals, useModule, useRegistry, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { useFlip } from "../../../kernel/useFlip";
@@ -61,8 +62,8 @@ export function ModePage() {
   const customModes = useCustomModes();
   const loadSignals = useFriendSignals();
   // Realtime reloads these when they change. The timers only cover an event that was missed.
-  const list = useQuery({ queryKey: presenceKey, queryFn: () => presence.list(), refetchInterval: 120_000, staleTime: 60_000 });
-  const signals = useQuery({ queryKey: [...presenceKey, "signals"], queryFn: loadSignals, refetchInterval: 180_000, staleTime: 60_000 });
+  const list = useQuery({ queryKey: presenceKey, queryFn: () => presence.list(), refetchInterval: missedEventMs, staleTime: missedEventMs });
+  const signals = useQuery({ queryKey: [...presenceKey, "signals"], queryFn: loadSignals, refetchInterval: missedEventMs, staleTime: missedEventMs });
   const { run, pending, error } = useAction(presenceKey);
   const [minutes, setMinutes] = useState(rememberedMinutes);
   const [recent, setRecent] = useState(rememberedRecent);

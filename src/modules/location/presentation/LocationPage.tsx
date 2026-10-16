@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState, useSyncExter
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
+import { missedEventMs } from "../../../kernel/realtime";
 import { useModule } from "../../../kernel/session";
 import { matchesSearch } from "../../../kernel/text";
 import { useAction } from "../../../kernel/useAction";
@@ -43,9 +44,9 @@ export function LocationPage() {
   const state = useSyncExternalStore(sharing.subscribe, sharing.getState);
   const friends = useAcceptedFriends();
   const modes = useFriendModes();
-  // The realtime "location" event reloads this at once. The timer covers a missed event; with nobody
-  // on the map there is nothing to keep fresh, and it slows down.
-  const visible = useQuery({ queryKey: [...locationKey, "visible"], queryFn: loadVisible, refetchInterval: query => query.state.data?.length ? 30_000 : 60_000 });
+  // The realtime "location" event reloads this at once, including each new position. The timer only
+  // covers a missed event; with nobody on the map there is nothing to keep fresh, and it slows down.
+  const visible = useQuery({ queryKey: [...locationKey, "visible"], queryFn: loadVisible, staleTime: 120_000, refetchInterval: query => query.state.data?.length ? 120_000 : missedEventMs });
   const nearbyPreference = useQuery({ queryKey: [...locationKey, "nearby"], queryFn: () => locations.nearbyPreference(), staleTime: 60_000 });
   const asking = useAction(locationKey);
   const savingNearby = useAction([...locationKey, "nearby"]);

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { dayTitle, localDateKey } from "../../../kernel/dates";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
+import { missedEventMs } from "../../../kernel/realtime";
 import { warmImages } from "../../../kernel/warmImages";
 import { useAction } from "../../../kernel/useAction";
 import { Avatar } from "../../../kernel/ui/Avatar";
@@ -63,16 +64,17 @@ export function Thread({ conversationId, showNames, closed = "", unread, moderat
     initialPageParam: undefined as string | undefined,
     getNextPageParam: last => last.length === messagePageSize ? last[last.length - 1].createdAt : undefined,
     // The realtime "chat" event reloads this at once. The timer only covers an event that was missed.
-    refetchInterval: 60_000,
+    refetchInterval: missedEventMs,
+    staleTime: missedEventMs,
   });
   const messages = (pages.data?.pages.flat() ?? []).slice().reverse();
   const newest = messages[messages.length - 1];
   // A server that does not know who read what simply shows no "Đã xem".
-  const reads = useQuery({ queryKey: [...chatKey, "reads", conversationId], queryFn: () => chat.reads(conversationId).catch(() => []), refetchInterval: 120_000, staleTime: 60_000 });
+  const reads = useQuery({ queryKey: [...chatKey, "reads", conversationId], queryFn: () => chat.reads(conversationId).catch(() => []), refetchInterval: missedEventMs, staleTime: missedEventMs });
   const paths = messages.flatMap(message => message.photos.map(photo => photo.path));
   const addresses = useQuery({
     queryKey: [...chatKey, "photos", conversationId, paths.join()], queryFn: () => chat.photoAddresses(paths), enabled: paths.length > 0,
-    staleTime: 40 * 60_000, placeholderData: keepPreviousData,
+    staleTime: 6 * 60 * 60_000, placeholderData: keepPreviousData,
   }).data ?? noPhotos;
   // The newest photos are the ones on screen when a chat opens. Start those files before the scroll settles.
   const recentPhotos = paths.slice(-6).map(path => addresses.get(path) ?? "").join("\n");

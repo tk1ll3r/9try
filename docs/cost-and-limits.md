@@ -8,7 +8,7 @@ The public request total runs the Cloudflare Worker before each app-host request
 
 ## Stored files
 
-The app keeps files in Supabase Storage. Check the current project's Storage quota and usage in its dashboard; plan limits and prices change.
+The app keeps files in Supabase Storage. Check the current project's Storage quota and usage in its dashboard; plan limits and prices change. Each device also keeps files it has already opened: the service worker caches Storage responses (`gnouht-photos-v1`, CacheFirst, ignoreSearch) for up to 180 days, and the app keeps the signed address in localStorage until a few minutes before it stops working.
 
 | Bucket | A file is at most | A person holds at most | Deleted |
 |---|---|---|---|
@@ -17,8 +17,9 @@ The app keeps files in Supabase Storage. Check the current project's Storage quo
 
 Both chat photos and archived moments accumulate over time. Track Storage and egress in Supabase. The archive is deliberately durable, so expected growth and retention costs must be reviewed before inviting a much larger audience. There is no automatic archive cleanup rule.
 
-A photo is read through a signed address that works for an hour, so each viewing is egress from Supabase. The Mode frame signs only the photo currently on screen; the archive signs a visible page in one request.
+A photo is read through a signed address that works for a week. The first view of a file on a device is egress from Supabase; a later view on that same device is served from the service worker and does not download the file again. The Mode frame signs only the photo currently on screen; the archive signs a visible page in one request.
 
 ## Map
 
 The tiles, fonts and sprites come from OpenFreeMap's public server, which asks for no key and gives no guarantee. The two styles are files of the app itself. If the tile server proves unreliable, the tile address in `scripts/map/positron.json` is the one thing to change before `npm run build:map`.
+

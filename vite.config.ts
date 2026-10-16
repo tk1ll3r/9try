@@ -50,6 +50,17 @@ export default defineConfig({
               expiration: { maxEntries: 80, maxAgeSeconds: 604800 },
             },
           },
+          // Private photos. The query string is the signed token; ignoreSearch keeps one entry per file.
+          {
+            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") && url.pathname.includes("/storage/v1/object/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "gnouht-photos-v1",
+              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+              matchOptions: { ignoreSearch: true },
+            },
+          },
         ],
       },
     }),

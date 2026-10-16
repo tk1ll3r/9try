@@ -1,5 +1,7 @@
 # Gnouht Together
 
+Live app: https://9try.gnouht.space
+
 Vietnamese-first social planning and personal organization web app for trusted friends and families.
 
 ## Current implementation

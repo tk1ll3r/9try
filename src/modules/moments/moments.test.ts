@@ -117,7 +117,20 @@ describe("the photo repository", () => {
     expect([...await photos.addresses(["kha/a.jpg", "kha/b.jpg"])]).toEqual([["kha/a.jpg", "https://files.example/kha/a.jpg?token=t"], ["kha/b.jpg", "https://files.example/kha/b.jpg?token=t"]]);
     await photos.addresses(["kha/a.jpg", "kha/b.jpg", "lan/c.jpg"]);
     expect(bucket.createSignedUrls.mock.calls.map(call => call[0])).toEqual([["kha/a.jpg", "kha/b.jpg"], ["lan/c.jpg"]]);
-    expect(bucket.createSignedUrls.mock.calls[0][1]).toBe(3600);
+    expect(bucket.createSignedUrls.mock.calls[0][1]).toBe(7 * 24 * 3600);
+  });
+  it("keeps a signed address on this device, so the next visit does not sign that file again", async () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => { store.set(key, value); }, removeItem: (key: string) => { store.delete(key); } });
+    try {
+      await repository().addresses(["kha/a.jpg"]);
+      await repository().addresses(["kha/a.jpg"]);
+      expect(bucket.createSignedUrls).toHaveBeenCalledTimes(1);
+      rpc.mockResolvedValueOnce({ data: "kha/a.jpg", error: null });
+      await repository().remove("a");
+      await repository().addresses(["kha/a.jpg"]);
+      expect(bucket.createSignedUrls).toHaveBeenCalledTimes(2);
+    } finally { vi.unstubAllGlobals(); }
   });
   it("reads a photo as the screen needs it: whose it is, whether it was looked at, and the owner's counts", async () => {
     rpc.mockResolvedValueOnce({ data: [

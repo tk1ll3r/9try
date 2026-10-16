@@ -1,6 +1,7 @@
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useModule } from "../../../kernel/session";
+import { missedEventMs } from "../../../kernel/realtime";
 import { warmImages } from "../../../kernel/warmImages";
 import { byPerson, openingMoment, type Moment, type MomentArchiveCursor } from "../domain/Moment";
 import { momentsModule } from "../moments.module";
@@ -13,13 +14,13 @@ const noStreaks = new Map<string, number>();
 /** The photos the person may see. The realtime "moments" event reloads them at once; the timer covers a missed event. */
 export function useMoments() {
   const repository = useModule(momentsModule);
-  return useQuery({ queryKey: momentsKey, queryFn: () => repository.list(), refetchInterval: 180_000, staleTime: 60_000 });
+  return useQuery({ queryKey: momentsKey, queryFn: () => repository.list(), refetchInterval: missedEventMs, staleTime: missedEventMs });
 }
 
 /** The current flame badges for the caller and friends. A streak expires after a missed local day. */
 export function useMomentStreaks(enabled = true): Map<string, number> {
   const repository = useModule(momentsModule);
-  return useQuery({ queryKey: momentStreakKey, queryFn: () => repository.streakBadges(), enabled, refetchInterval: 180_000, staleTime: 60_000 }).data ?? noStreaks;
+  return useQuery({ queryKey: momentStreakKey, queryFn: () => repository.streakBadges(), enabled, refetchInterval: missedEventMs, staleTime: missedEventMs }).data ?? noStreaks;
 }
 
 /** Archived photos load in small cursor pages so an account's history never expands the live feed query. */
@@ -30,7 +31,7 @@ export function useMomentArchive() {
     queryFn: ({ pageParam }) => repository.archive(pageParam),
     initialPageParam: undefined as MomentArchiveCursor | undefined,
     getNextPageParam: page => page.next ?? undefined,
-    staleTime: 30_000,
+    staleTime: missedEventMs,
   });
 }
 
@@ -40,8 +41,8 @@ export function usePhotoAddresses(paths: readonly string[]): Map<string, string>
   const key = [...paths].sort().join();
   return useQuery({
     queryKey: [...momentsKey, "addresses", key], queryFn: () => repository.addresses(paths), enabled: paths.length > 0,
-    // An address works for an hour; the repository signs again only what is about to stop working.
-    staleTime: 40 * 60_000, placeholderData: keepPreviousData,
+    // An address works for a week; the repository signs again only what is about to stop working.
+    staleTime: 6 * 60 * 60_000, placeholderData: keepPreviousData,
   }).data ?? none;
 }
 
