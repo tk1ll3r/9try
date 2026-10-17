@@ -63,6 +63,61 @@ export function AppShell() {
     };
   }, []);
 
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  // Restore scroll to top whenever navigating between screens
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+
+  // Keep the mobile navigation bar firmly docked and hide it when virtual keyboard is active
+  useEffect(() => {
+    const viewport = window.visualViewport;
+
+    const onResize = () => {
+      if (!viewport) return;
+      const isKeyboard = window.innerHeight - viewport.height > 120;
+      setKeyboardOpen(isKeyboard);
+      if (!isKeyboard && window.scrollY !== 0 && !document.querySelector("input:focus, textarea:focus, [contenteditable]:focus")) {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        if (window.innerWidth < 1024) setKeyboardOpen(true);
+      }
+    };
+
+    const onFocusOut = () => {
+      window.setTimeout(() => {
+        if (!document.querySelector("input:focus, textarea:focus, [contenteditable]:focus")) {
+          setKeyboardOpen(false);
+          if (window.scrollY !== 0) {
+            window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+          }
+        }
+      }, 100);
+    };
+
+    if (viewport) {
+      viewport.addEventListener("resize", onResize);
+      viewport.addEventListener("scroll", onResize);
+    }
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+
+    return () => {
+      if (viewport) {
+        viewport.removeEventListener("resize", onResize);
+        viewport.removeEventListener("scroll", onResize);
+      }
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+
   // The current screen is the one whose path is the longest prefix of the address.
   const current = navigation.filter(item => isAt(pathname, item.to)).sort((a, b) => b.to.length - a.to.length)[0];
   // A screen with a `parent` is a tab on that parent's screen, in a strip above the page.
@@ -115,7 +170,7 @@ export function AppShell() {
         </nav>
       </aside>
 
-      <main className="app-main relative z-[1] mx-auto min-h-dvh max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:ml-64 lg:px-8 lg:pb-10 lg:pt-8">
+      <main className="app-main relative z-[1] mx-auto min-h-dvh max-w-6xl lg:ml-64">
         {/* One bar for every screen size. A phone has search, the bell and the account on its first row and
             the tabs of the current screen under it. A desktop has those tabs on the left. */}
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-4">
@@ -149,9 +204,10 @@ export function AppShell() {
       {searching && <Suspense fallback={null}><SearchDialog open onOpenChange={setSearching} /></Suspense>}
 
       <nav aria-label={t("Điều hướng chính")} style={{ gridTemplateColumns: `repeat(${primary.length}, minmax(0, 1fr))` }}
-        className="app-mobile-nav fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/10 touch-none overscroll-contain">
+        data-hidden={keyboardOpen || undefined}
+        className="app-mobile-nav z-40 grid rounded-[26px] border border-black/8 bg-[var(--surface)] p-1.5 shadow-2xl lg:hidden dark:border-white/10 touch-none overscroll-contain">
         {/* One dark pill slides under the current tab. */}
-        <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-200 ease-[var(--ease-out)]"
+        <span aria-hidden className="pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 rounded-2xl bg-[var(--ink)] shadow-lg transition-[transform,opacity] duration-200 ease-[var(--ease-out)] will-change-transform"
           style={{ width: `calc((100% - 0.75rem) / ${primary.length})`, transform: `translateX(${Math.max(litIndex, 0) * 100}%)`, opacity: litIndex < 0 ? 0 : 1 }} />
         {primary.map(item => {
           const active = item === lit;
