@@ -4,6 +4,9 @@ const hour = 3_600_000;
 const week = 7 * 24 * hour;
 const renewBefore = 5 * 60_000;
 
+/** The app's own origin, where the Cloudflare Worker serves media from R2. */
+const appOrigin = import.meta.env.VITE_APP_ORIGIN as string | undefined;
+
 function storageKey(bucket: string, path: string) {
   return `gnouht-file:${bucket}:${path}`;
 }
@@ -30,10 +33,26 @@ function dropAddress(bucket: string, path: string) {
 }
 
 /**
+ * Routes a file through the app's own R2 media proxy. The Supabase signed URL
+ * goes along as a query parameter so that the Worker can fetch the original on
+ * a cache miss; on a hit the parameter is ignored and the file comes straight
+ * from R2 at no Supabase egress cost. Falls back to the signed URL itself when
+ * the app origin is not configured (local development against Supabase directly).
+ */
+function mediaAddress(bucket: string, path: string, signedUrl: string): string {
+  // In production builds, route through the same-origin Cloudflare Worker media proxy for R2 caching.
+  // In test and development environments, load directly from Supabase.
+  if (!import.meta.env.PROD) return signedUrl;
+  return `/media/${bucket}/${path}?origin=${encodeURIComponent(signedUrl)}`;
+}
+
+/**
  * The files of one private bucket. A file there is loaded through an address the server signs for a
- * week, for a person its rule lets read the file. The same address is kept on the device, so the
- * browser and the service worker can reuse the bytes instead of downloading the file again. It is
- * signed again a few minutes before it stops, so a picture on screen never loses its file.
+ * week, for a person its rule lets read the file. In production the signed address is routed through
+ * the app's own Cloudflare Worker, which caches the file in R2 so that the second reader and every
+ * following one pay no Supabase egress. The same address is kept on the device, so the browser and
+ * the service worker can reuse the bytes instead of downloading the file again. It is signed again a
+ * few minutes before it stops, so a picture on screen never loses its file.
  */
 export class SignedFiles {
   private readonly known = new Map<string, { address: string; until: number }>();
@@ -53,7 +72,8 @@ export class SignedFiles {
       const { data, error } = await this.db.storage.from(this.bucket).createSignedUrls(wanted, week / 1000);
       if (error) throw error;
       for (const item of data ?? []) if (item.path && item.signedUrl) {
-        const kept = { address: item.signedUrl, until: now + week };
+        const address = mediaAddress(this.bucket, item.path, item.signedUrl);
+        const kept = { address, until: now + week };
         this.known.set(item.path, kept);
         keepAddress(this.bucket, item.path, kept.address, kept.until);
       }
@@ -61,9 +81,10 @@ export class SignedFiles {
     return new Map(paths.flatMap(path => { const hit = this.known.get(path); return hit ? [[path, hit.address] as const] : []; }));
   }
 
-  /** Puts a JPEG into the bucket under `path`. */
+  /** Puts a file into the bucket under `path`. */
   async put(path: string, blob: Blob, cacheSeconds: number): Promise<void> {
-    const { error } = await this.db.storage.from(this.bucket).upload(path, blob, { contentType: "image/jpeg", cacheControl: String(cacheSeconds) });
+    const type = blob.type === "image/webp" ? "image/webp" : "image/jpeg";
+    const { error } = await this.db.storage.from(this.bucket).upload(path, blob, { contentType: type, cacheControl: String(cacheSeconds) });
     if (error) throw error;
   }
 

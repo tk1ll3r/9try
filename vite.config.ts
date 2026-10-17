@@ -43,11 +43,24 @@ export default defineConfig({
           {
             urlPattern: ({ request, url }) => url.origin === self.location.origin
               && !url.pathname.startsWith("/auth/") && !url.pathname.startsWith("/rest/")
+              && !url.pathname.startsWith("/media/")
               && ["style", "script", "font", "image"].includes(request.destination),
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "gnouht-static-v1",
               expiration: { maxEntries: 80, maxAgeSeconds: 604800 },
+            },
+          },
+          // Photos served through the R2 media proxy on the same origin. The query string carries
+          // the Supabase signed URL for cache misses; ignoreSearch keeps one cache entry per file.
+          {
+            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith("/media/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "gnouht-photos-v2",
+              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+              matchOptions: { ignoreSearch: true },
             },
           },
           // Private photos. The query string is the signed token; ignoreSearch keeps one entry per file.

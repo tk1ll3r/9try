@@ -12,6 +12,10 @@
     // The app routes in the browser, so an address such as /calendar is answered with index.html.
     "not_found_handling": "single-page-application"
   },
+  // Photos will be cached in R2 once R2 is enabled in Cloudflare Dashboard.
+  // "r2_buckets": [
+  //   { "binding": "MEDIA", "bucket_name": "gnouht-media" }
+  // ],
   "durable_objects": {
     "bindings": [{ "name": "PUBLIC_REQUESTS", "class_name": "PublicRequestCounter" }]
   },

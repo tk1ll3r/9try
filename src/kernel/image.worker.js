@@ -12,7 +12,7 @@ self.onmessage = async event => {
     context.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
     for (const quality of [0.85, 0.72, 0.6, 0.45, 0.3]) {
-      const blob = await canvas.convertToBlob({ type: "image/jpeg", quality });
+      const blob = await canvas.convertToBlob({ type: "image/webp", quality });
       if (blob.size <= maxBytes) {
         self.postMessage({ id, blob, width, height });
         return;

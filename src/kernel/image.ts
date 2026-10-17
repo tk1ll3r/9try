@@ -65,13 +65,13 @@ async function encodeMain(source: CanvasImageSource, width: number, height: numb
   context.drawImage(source, 0, 0, targetWidth, targetHeight);
   // A detailed image comes out lighter on each try until it fits the upload limit.
   for (const quality of [0.85, 0.72, 0.6, 0.45, 0.3]) {
-    const blob = await new Promise<Blob | null>(done => canvas.toBlob(done, "image/jpeg", quality));
+    const blob = await new Promise<Blob | null>(done => canvas.toBlob(done, "image/webp", quality));
     if (blob && blob.size <= limits.maxBytes) return { blob, width: targetWidth, height: targetHeight };
   }
   throw new Error(t("Ảnh này quá nặng. Hãy chọn ảnh khác."));
 }
 
-/** A picture redrawn as a small JPEG with metadata stripped, using a worker when the browser supports it. */
+/** A picture redrawn as a small WebP with metadata stripped, using a worker when the browser supports it. Falls back to JPEG on browsers without WebP encode. */
 export async function toJpeg(file: Blob, limits: Limits): Promise<PreparedImage> {
   if (typeof createImageBitmap === "function") {
     try {
