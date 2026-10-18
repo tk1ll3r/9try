@@ -160,7 +160,7 @@ export const messagePageSize = 50;
 /** A message can be changed for this long after it was sent. The server holds the same limit. */
 export const editWindowMs = 15 * 60_000;
 /** A photo is redrawn to this before it leaves the device. */
-export const chatPhotoLimits = { maxSide: 1280, maxBytes: 250_000 } as const;
+export const chatPhotoLimits = { maxSide: 1280, maxBytes: 300_000 } as const;
 export const maxPhotos = 6;
 
 /** One's own text, not taken back, not older than the 15 minutes. A message of photos or a card is sent again instead. */

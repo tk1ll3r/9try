@@ -52,9 +52,9 @@ async function encodeBitmap(bitmap: ImageBitmap, limits: Limits): Promise<Prepar
 }
 
 async function encodeMain(source: CanvasImageSource, width: number, height: number, limits: Limits): Promise<PreparedImage> {
-  const scale = Math.min(1, limits.maxSide / Math.max(width, height));
-  const targetWidth = Math.max(1, Math.round(width * scale));
-  const targetHeight = Math.max(1, Math.round(height * scale));
+  const initialScale = Math.min(1, limits.maxSide / Math.max(width, height));
+  let targetWidth = Math.max(1, Math.round(width * initialScale));
+  let targetHeight = Math.max(1, Math.round(height * initialScale));
   const canvas = document.createElement("canvas");
   canvas.width = targetWidth;
   canvas.height = targetHeight;
@@ -63,10 +63,46 @@ async function encodeMain(source: CanvasImageSource, width: number, height: numb
   context.fillStyle = "#fff";
   context.fillRect(0, 0, targetWidth, targetHeight);
   context.drawImage(source, 0, 0, targetWidth, targetHeight);
-  // A detailed image comes out lighter on each try until it fits the upload limit.
-  for (const quality of [0.85, 0.72, 0.6, 0.45, 0.3]) {
-    const blob = await new Promise<Blob | null>(done => canvas.toBlob(done, "image/webp", quality));
-    if (blob && blob.size <= limits.maxBytes) return { blob, width: targetWidth, height: targetHeight };
+
+  let format = "image/webp";
+  const qualities = [0.85, 0.72, 0.6, 0.45, 0.3];
+
+  async function tryEncode(type: string, quality: number): Promise<Blob | null> {
+    try {
+      const blob = await new Promise<Blob | null>(done => canvas.toBlob(done, type, quality));
+      if (blob && blob.type === type) return blob;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  let lastBlob: Blob | null = null;
+  while (true) {
+    for (const quality of qualities) {
+      let blob = await tryEncode(format, quality);
+      if (!blob && format === "image/webp") {
+        format = "image/jpeg";
+        blob = await tryEncode(format, quality);
+      }
+      if (blob) {
+        lastBlob = blob;
+        if (blob.size <= limits.maxBytes) return { blob, width: targetWidth, height: targetHeight };
+      }
+    }
+
+    if (Math.max(targetWidth, targetHeight) > 320) {
+      const factor = lastBlob ? Math.min(0.8, Math.max(0.4, Math.sqrt(limits.maxBytes / lastBlob.size) * 0.92)) : 0.75;
+      targetWidth = Math.max(1, Math.round(targetWidth * factor));
+      targetHeight = Math.max(1, Math.round(targetHeight * factor));
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, targetWidth, targetHeight);
+      context.drawImage(source, 0, 0, targetWidth, targetHeight);
+    } else {
+      break;
+    }
   }
   throw new Error(t("Ảnh này quá nặng. Hãy chọn ảnh khác."));
 }
