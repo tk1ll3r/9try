@@ -13,10 +13,8 @@ Plan your day and stay close to the friends you choose.
 ## Screens
 
 <table>
-<tr><th>Mode</th><th>Calendar</th></tr>
-<tr><td><img src="docs/screenshots/hero.png" alt="Mode screen" width="180" height="390" /></td><td><img src="docs/screenshots/calendar.png" alt="Calendar screen" width="180" height="390" /></td></tr>
-<tr><th>Chat</th><th>Relationships</th></tr>
-<tr><td><img src="docs/screenshots/chat.png" alt="Chat screen" width="180" height="390" /></td><td><img src="docs/screenshots/relationships.png" alt="Relationships screen" width="180" height="390" /></td></tr>
+<tr><th>Mode</th><th>Calendar</th><th>Chat</th><th>Relationships</th></tr>
+<tr><td><img src="docs/screenshots/hero.png" alt="Mode screen" width="180" height="390" /></td><td><img src="docs/screenshots/calendar.png" alt="Calendar screen" width="180" height="390" /></td><td><img src="docs/screenshots/chat.png" alt="Chat screen" width="180" height="390" /></td><td><img src="docs/screenshots/relationships.png" alt="Relationships screen" width="180" height="390" /></td></tr>
 </table>
 
 ## Usage snapshot
