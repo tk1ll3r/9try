@@ -50,7 +50,7 @@ export default function LandingPage() {
     { name: "Mode", text: t("Ai đang làm gì, ngay lúc này. Story mất sau 24 giờ, ảnh vẫn được lưu vào kho.") },
     { name: t("Lịch"), text: t("Sự kiện, thời khóa biểu và nhập file .ics.") },
     { name: t("Trò chuyện"), text: t("Nhắn riêng, nhắn nhóm và gửi ảnh.") },
-    { name: t("Bản đồ"), text: t("Thấy những người bạn đang chia sẻ vị trí với bạn, trong thời hạn họ chọn.") },
+    { name: t("Quan hệ"), text: t("Quản lý bạn bè, lời mời và vị trí được chia sẻ.") },
     { name: "Menu", text: t("Lịch, thói quen, ghi chú, nhóm và bạn bè.") },
   ];
   const circles = [

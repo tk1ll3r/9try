@@ -13,6 +13,10 @@
 7. Add the module to the list in `src/app/modules.ts`. This is the only edit outside the module folder.
 8. `index.ts`: export what other modules may use. Leave the file out when nothing is shared.
 
+## Keys and secrets
+
+Keep real keys, tokens and passwords out of source files, guides and screenshots. Use local environment files or the deployment secret store. `VITE_*` values ship to the browser, so only public values belong there.
+
 ## Optional contributions
 
 | To do this | Add this to the module |

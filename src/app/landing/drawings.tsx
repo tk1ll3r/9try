@@ -1,4 +1,4 @@
-import { CalendarCheck2, CalendarDays, Camera, Clock, Coffee, Gamepad2, BookOpen, Heart, LayoutGrid, MapPin, MessageCircle, Radio, Smile } from "lucide-react";
+import { CalendarCheck2, CalendarDays, Camera, Clock, Coffee, Gamepad2, BookOpen, Heart, LayoutGrid, MessageCircle, Network, Radio, Smile } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { t } from "../../kernel/i18n";
 
@@ -107,7 +107,7 @@ export const MeetDrawing = () => <div aria-hidden className={`${tile} relative`}
 
 /** The bar at the bottom of the app, with a number on each of its five screens. */
 export function BarDrawing() {
-  const tabs = [Radio, CalendarDays, MessageCircle, MapPin, LayoutGrid];
+  const tabs = [Radio, CalendarDays, MessageCircle, Network, LayoutGrid];
   return <div aria-hidden className="glass mx-auto flex max-w-md justify-between rounded-[1.6rem] border border-[var(--border)] px-3 py-2 shadow-lg">
     {tabs.map((Icon, index) => <span key={index} className={`relative grid size-12 place-items-center rounded-2xl ${index === 0 ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--muted)]"}`}>
       <Icon size={20} />
@@ -140,18 +140,17 @@ export const screenDrawings: ReactNode[] = [
       <span className="block h-6 w-16 rounded-2xl rounded-bl-md bg-[var(--surface)]" />
     </div>
   </div>,
-  // Map: roads, water, two friends.
-  <div key="map" aria-hidden className={`${tile} relative`}>
-    <svg viewBox="0 0 200 112" className="absolute inset-0 size-full">
-      <path d="M150-10c-30 30 10 60-20 90s20 40 80 40V-10z" className="fill-[color-mix(in_srgb,var(--tone-class)_22%,var(--soft))]" />
-      <path d="M-10 40c60 10 80 40 140 30" fill="none" className="stroke-[var(--surface)]" strokeWidth="10" strokeLinecap="round" />
-      <path d="M40-10c0 50 30 70 20 130" fill="none" className="stroke-[var(--surface)]" strokeWidth="7" strokeLinecap="round" />
-      <circle cx="26" cy="86" r="16" className="fill-[color-mix(in_srgb,var(--lime)_45%,var(--soft))]" />
+  // Relationships: a person connected to friends, drawn with plain lines and initials.
+  <div key="relationships" aria-hidden className={`${tile} px-4`}>
+    <svg viewBox="0 0 200 112" className="w-full max-w-52">
+      <path d="M62 56h38M100 56l38-30M100 56l38 30" fill="none" className="stroke-[var(--border)]" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="52" cy="56" r="24" className="fill-[var(--ink)]" />
+      <text x="52" y="61" textAnchor="middle" className="fill-[var(--paper)] text-[14px] font-bold">V</text>
+      <circle cx="152" cy="24" r="21" className="fill-[var(--surface)] stroke-[var(--border)]" strokeWidth="2" />
+      <text x="152" y="29" textAnchor="middle" className="fill-[var(--ink)] text-[13px] font-bold">K</text>
+      <circle cx="152" cy="88" r="21" className="fill-[var(--surface)] stroke-[var(--border)]" strokeWidth="2" />
+      <text x="152" y="93" textAnchor="middle" className="fill-[var(--ink)] text-[13px] font-bold">L</text>
     </svg>
-    <span className="relative flex items-end gap-10">
-      <span className="marker-live relative grid size-9 place-items-center rounded-full border-2 border-white bg-[#24151f] text-xs font-black text-white shadow-lg">L</span>
-      <span className="grid size-9 place-items-center rounded-full border-2 border-dashed border-white bg-gray-500 text-xs font-black text-white shadow-lg">T</span>
-    </span>
   </div>,
   // Menu: everything else.
   <div key="menu" aria-hidden className={tile}>
