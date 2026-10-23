@@ -2,6 +2,7 @@ import { ModuleRegistry } from "../kernel/module";
 import { calendarModule } from "../modules/calendar/calendar.module";
 import { chatModule } from "../modules/chat/chat.module";
 import { expensesModule } from "../modules/expenses/expenses.module";
+import { feedbackModule } from "../modules/feedback/feedback.module";
 import { friendsModule } from "../modules/friends/friends.module";
 import { groupsModule } from "../modules/groups/groups.module";
 import { habitsModule } from "../modules/habits/habits.module";
@@ -18,7 +19,7 @@ import { tasksModule } from "../modules/tasks/tasks.module";
 import { todayModule } from "../modules/today/today.module";
 
 /** Every feature of the app. Adding a feature means adding its module to this list. */
-const modules = [todayModule, calendarModule, tasksModule, habitsModule, notesModule, notificationsModule, chatModule, friendsModule, groupsModule, meetupsModule, presenceModule, momentsModule, locationModule, statsModule, expensesModule, identityModule, menuModule];
+const modules = [todayModule, calendarModule, tasksModule, habitsModule, notesModule, notificationsModule, chatModule, friendsModule, groupsModule, meetupsModule, presenceModule, momentsModule, locationModule, statsModule, expensesModule, feedbackModule, identityModule, menuModule];
 
 // Keep existing routes and data available for notifications and old links, while removing these
 // screens from the Menu/navigation and global-search entry points.

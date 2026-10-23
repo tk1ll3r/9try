@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { Network, Users } from "lucide-react";
 import { lazyRoute } from "../../kernel/lazyRoute";
 import type { FeatureModule } from "../../kernel/module";
 import { requireSupabase } from "../../kernel/supabase";
@@ -15,9 +15,13 @@ export const friendsModule: FeatureModule<FriendRepository> = {
   today: { order: 5, card: FriendRequestsCard },
   searchItems: async friends => (await friends.list()).filter(friend => friend.status === "accepted")
     .map(friend => ({ title: friend.displayName, kind: t("Bạn bè"), to: "/me/friends", keywords: friend.username ?? "" })),
-  navigation: [{ tab: "together", to: "/me/friends", label: t("Bạn bè"), icon: Users, order: 10 }],
+  navigation: [
+    { tab: "together", to: "/me/relationships", label: t("Quan hệ"), icon: Network, order: 10, primary: 4 },
+    { tab: "together", to: "/me/friends", label: t("Bạn bè"), icon: Users, order: 11, parent: "/me/relationships" },
+  ],
   routes: [
     { path: "me/friends", ...lazyRoute(() => import("./presentation/FriendsPage").then(m => ({ default: m.FriendsPage }))) },
+    { path: "me/relationships", ...lazyRoute(() => import("./presentation/RelationshipsPage").then(m => ({ default: m.RelationshipsPage }))) },
     { path: "invite/friend/:token", ...lazyRoute(() => import("./presentation/FriendInvitePage").then(m => ({ default: m.FriendInvitePage }))) },
   ],
 };

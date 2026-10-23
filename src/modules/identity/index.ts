@@ -2,3 +2,4 @@
 export { ProfileReminder } from "./presentation/ProfileReminder";
 export { AccountMenu } from "./presentation/AccountMenu";
 export { ProfileCardDialog } from "./presentation/ProfileCardDialog";
+export { useProfile } from "./presentation/useProfile";

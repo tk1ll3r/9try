@@ -259,17 +259,19 @@ test("expenses: an account without the capability finds no trace of the ledger",
   expect(book.requests.filter(request => /open_expense_book|expense_books|list_book|expense_participants|save_expense/.test(request))).toEqual([]);
 });
 
-test("expenses: the account that has the capability finds the ledger in the sidebar, the Menu and the search", async ({ page }) => {
+test("expenses stay out of product navigation even for an account with the dormant capability", async ({ page }) => {
   await signIn(page);
-  await ledgerServer(page, true);
+  const book = await ledgerServer(page, true);
   await page.goto("/");
   const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Điều hướng chính" });
-  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Bản đồ", "Hôm nay", "Việc", "Bạn bè", "Nhóm", "Hoạt động", "Thống kê", "Chi tiêu", "Menu"]);
+  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Quan hệ", "Thói quen", "Ghi chú", "Nhóm", "Góp ý admin", "Menu"]);
   await page.goto("/menu");
-  await expect(page.getByRole("region", { name: "Của bạn" }).getByRole("link")).toHaveText(["Thống kê", "Chi tiêu"]);
-  await page.keyboard.press("Control+k");
+  await expect(page.getByRole("region", { name: "Của bạn" })).toHaveCount(0);
+  await expect(page.getByText("Chi tiêu", { exact: true })).toHaveCount(0);
+  await page.getByRole("complementary").getByRole("button", { name: "Tìm kiếm" }).click();
   await page.getByLabel("Từ khóa").fill("chi tieu");
-  await expect(page.getByRole("list", { name: "Kết quả" }).getByRole("button").first()).toContainText("Chi tiêu");
+  await expect(page.getByText("Không thấy gì khớp.")).toBeVisible();
+  expect(book.requests.filter(request => /open_expense_book|expense_books|list_book|expense_participants|save_expense/.test(request))).toEqual([]);
 });
 
 const friend = (id: string, name: string): Row => ({ user_id: id, display_name: name, username: name.toLowerCase(), avatar_url: null, status: "accepted", direction: "incoming", created_at: "2026-01-01T00:00:00Z" });

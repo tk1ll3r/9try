@@ -1,8 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-const NEW_URL = "https://jqmkfgmfisjmqizqyyct.supabase.co";
-const NEW_PUB_KEY = "sb_publishable_kG62H810JpLb0eTHpm532A_ijGOPRgF";
-const NEW_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxbWtmZ21maXNqbXFpenF5eWN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA2MTM4NCwiZXhwIjoyMTA3NjM3Mzg0fQ.-YxJz_TVUGE1Z6ryC0mry7mS0MospScb1IdAR_r7mEM";
+function required(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Set ${name} in the environment before running this verification.`);
+  return value;
+}
+
+const NEW_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? required("SUPABASE_URL");
+const NEW_PUB_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? required("SUPABASE_PUBLISHABLE_KEY");
+const NEW_SERVICE_KEY = required("SUPABASE_SERVICE_ROLE_KEY");
 
 const anonClient = createClient(NEW_URL, NEW_PUB_KEY);
 const adminClient = createClient(NEW_URL, NEW_SERVICE_KEY);

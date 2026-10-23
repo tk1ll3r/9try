@@ -16,6 +16,9 @@ describe("realtime refresh", () => {
   it("reloads notes when a friendship or a group changes, and ignores an unknown event", () => {
     expect(queriesForRealtimeEvent("friends").map(item => item.queryKey[0])).toEqual(["friends", "notes"]);
     expect(queriesForRealtimeEvent("groups").map(item => item.queryKey[0])).toEqual(["groups", "notes"]);
+    expect(queriesForRealtimeEvent("relationship-streaks")).toEqual([
+      { queryKey: ["friends", "shared-relationships"], exact: true },
+    ]);
     expect(queriesForRealtimeEvent("typing")).toEqual([]);
   });
 });

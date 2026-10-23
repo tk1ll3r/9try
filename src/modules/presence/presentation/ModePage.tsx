@@ -171,7 +171,7 @@ export function ModePage() {
 
     {friends.length > 0 && filters.length > 1 && <div role="group" aria-label={t("Lọc bạn bè")} className="-mx-4 flex min-w-0 gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 lg:col-start-1">
       {filters.map(item => <button key={item.id} type="button" aria-pressed={shown === item.id} onClick={() => setFilter(item.id)}
-        className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${shown === item.id ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
+        className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${shown === item.id ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>
         {item.Icon && <item.Icon size={15} style={shown === item.id ? undefined : { color: item.color }} />}
         {item.label}{item.id !== "all" && ` · ${item.count}`}
       </button>)}

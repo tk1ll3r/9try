@@ -137,7 +137,7 @@ export function NotificationSettings() {
               : device.lastError ? t("Lần gửi gần nhất bị từ chối ({0}), lúc {1}", device.lastError, moment(device.lastFailureAt ?? device.createdAt))
               : device.lastSuccessAt ? t("Gửi được lần gần nhất lúc {0}", moment(device.lastSuccessAt))
               : t("Đăng ký lúc {0}, chưa có thông báo nào được gửi", moment(device.createdAt))}</span></p>
-          <Button variant="ghost" className="min-h-9 px-3 py-1.5" disabled={busy} aria-label={t("Gỡ thiết bị {0}", device.label)}
+          <Button variant="ghost" className="min-h-11 px-3 py-1.5" disabled={busy} aria-label={t("Gỡ thiết bị {0}", device.label)}
             onClick={() => act(async () => { if (device.current) await push.disable(); else await push.removeDevice(device.id); return t("Đã gỡ thiết bị. Nó sẽ không nhận thông báo đẩy nữa."); })}><Trash2 size={16} /> {t("Gỡ")}</Button>
         </li>;
       })}</ul> : <p className="mt-2 text-sm text-[var(--muted)]">{t("Chưa có thiết bị nào. Bật thông báo đẩy trên từng điện thoại, máy tính bạn muốn nhận.")}</p>}

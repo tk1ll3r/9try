@@ -21,7 +21,7 @@ function firstView(): View {
   return window.matchMedia("(max-width: 767px)").matches ? "agenda" : "month";
 }
 
-const round = "pressable grid size-10 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--soft)]";
+const round = "pressable grid size-11 shrink-0 place-items-center rounded-full text-[var(--muted)] hover:bg-[var(--soft)]";
 
 /**
  * The calendar itself: a week or a month of days with the chosen day's entries listed beside it, or a
@@ -66,12 +66,12 @@ export function CalendarBoard({ entries, day, onDay, onRange, onOpen, onAdd }: {
         <button type="button" aria-label={before} onClick={() => move(-1)} className={round}><ChevronLeft size={20} /></button>
         <button type="button" aria-label={after} onClick={() => move(1)} className={round}><ChevronRight size={20} /></button>
       </div>
-      <div className="flex w-full items-center gap-2 sm:w-auto">
-        <div role="group" aria-label={t("Cách xem lịch")} className="flex flex-1 gap-1 rounded-2xl bg-[var(--soft)] p-1">
+      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+        <div role="group" aria-label={t("Cách xem lịch")} className="flex min-w-0 flex-1 gap-1 rounded-2xl bg-[var(--soft)] p-1">
           {views.map(([name, label]) => <button key={name} type="button" aria-pressed={view === name} onClick={() => choose(name)}
-            className={`min-h-9 flex-1 whitespace-nowrap rounded-xl px-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:px-3.5 ${view === name ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>{label}</button>)}
+            className={`min-h-11 min-w-0 flex-1 whitespace-nowrap rounded-xl px-2.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 sm:px-3.5 max-[359px]:px-1.5 max-[359px]:text-xs ${view === name ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>{label}</button>)}
         </div>
-        <button type="button" onClick={() => onDay(today)} className="pressable min-h-10 whitespace-nowrap rounded-full border border-[var(--border)] px-3.5 text-sm font-semibold">{t("Hôm nay")}</button>
+        <button type="button" onClick={() => onDay(today)} className="pressable min-h-11 shrink-0 whitespace-nowrap rounded-full border border-[var(--border)] px-3.5 text-sm font-semibold max-[359px]:px-2.5 max-[359px]:text-xs">{t("Hôm nay")}</button>
       </div>
     </div>
 
@@ -129,7 +129,7 @@ function DayAgenda({ day, today, now, entries, onOpen, onAdd, className }: {
     <div className="mb-3 flex min-h-10 items-center justify-between gap-3">
       <h3 className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-bold">{near && <span className="rounded-full bg-[var(--lime)] px-2.5 py-1 text-xs text-[var(--ink)]">{near}</span>}<span>{dayTitle(day)}</span></h3>
       {onAdd && <button type="button" aria-label={t("Thêm sự kiện vào {0}", dayTitle(day))} onClick={() => onAdd(day)}
-        className="pressable grid size-10 shrink-0 place-items-center rounded-full bg-[var(--lime)] text-[var(--ink)]"><Plus size={19} /></button>}
+        className="pressable grid size-11 shrink-0 place-items-center rounded-full bg-[var(--lime)] text-[var(--ink)]"><Plus size={19} /></button>}
     </div>
     {entries.length ? <ul className="space-y-2">
       {entries.map(entry => {

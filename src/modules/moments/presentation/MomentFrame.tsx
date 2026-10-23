@@ -12,8 +12,8 @@ import { t } from "../../../kernel/i18n";
 const MomentComposer = lazy(() => import("./MomentComposer").then(m => ({ default: m.MomentComposer })));
 
 /**
- * The frame on the Mode screen: the photos friends posted in the last 24 hours, one at a time, what
- * the person has not looked at first. The edges turn to the next and the previous photo, the middle
+ * The frame on the Mode screen: photos posted in the last 24 hours, newest first. The edges turn
+ * to the next and the previous photo, the middle
  * opens that friend's photos, and the plus posts one. `mode` is the activity the person has on,
  * `onSetMode` turns one on.
  */
@@ -23,25 +23,28 @@ export function MomentFrame({ mode, modeMinutes = 120, captureRequest = 0, class
   const userId = useUserId();
   const now = useNow();
   const [at, setAt] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const swipe = useRef<{ from: number; moved: boolean } | null>(null);
 
   useEffect(() => { if (captureRequest > 0) setPosting(true); }, [captureRequest]);
 
   const alive = live(moments.data ?? [], now);
-  // The order is fixed while the same photos are there, so looking at one does not reshuffle the frame under the finger.
+  // Keep the current sequence stable as seen flags change. A newly posted ID rebuilds it by timestamp.
   const set = alive.map(moment => moment.id).sort().join();
   const order = useMemo(() => frameOrder(alive, now).map(moment => moment.id), [set]);
   const byId = new Map(alive.map(moment => [moment.id, moment]));
   const shown = order.flatMap(id => { const moment = byId.get(id); return moment ? [moment] : []; });
-  const index = Math.min(at, Math.max(0, shown.length - 1));
+  const selectedIndex = selectedId ? shown.findIndex(moment => moment.id === selectedId) : -1;
+  const index = selectedIndex >= 0 ? selectedIndex : Math.min(at, Math.max(0, shown.length - 1));
   const current = shown[index];
+  useEffect(() => { if (current && current.id !== selectedId) setSelectedId(current.id); }, [current?.id, selectedId]);
   // The photo on screen, two ahead, and the photo each next person opens on. One sign request,
   // then the files start. The rest of a long day waits until the run reaches it.
   const openings = useMemo(() => byPerson(alive, now).map(person => openingMoment(person).path), [set]);
   const addresses = useWarmedAddresses(homeWarmPaths(shown.map(moment => moment.path), index, openings));
   useSeen(current);
-  const composer = posting && <Suspense fallback={null}><MomentComposer open onOpenChange={setPosting} mode={mode} modeMinutes={modeMinutes} /></Suspense>;
+  const composer = posting && <Suspense fallback={null}><MomentComposer open onOpenChange={setPosting} onPosted={() => { setAt(0); setSelectedId(null); }} mode={mode} modeMinutes={modeMinutes} /></Suspense>;
 
   // A server that has no photos yet: the Mode screen is as it was.
   if (moments.isError) return composer ?? null;
@@ -55,7 +58,11 @@ export function MomentFrame({ mode, modeMinutes = 120, captureRequest = 0, class
     {composer}
   </section>;
 
-  const turn = (step: number) => setAt(Math.min(shown.length - 1, Math.max(0, index + step)));
+  const turn = (step: number) => {
+    const next = Math.min(shown.length - 1, Math.max(0, index + step));
+    setAt(next);
+    setSelectedId(shown[next]?.id ?? null);
+  };
   // A drag across the frame turns the page; a tap goes through to what is under the finger.
   const down = (event: PointerEvent) => { swipe.current = { from: event.clientX, moved: false }; };
   const up = (event: PointerEvent) => {
@@ -91,12 +98,13 @@ export function MomentFrame({ mode, modeMinutes = 120, captureRequest = 0, class
           </span>
           <ModeChip mode={current.mode} label={current.modeLabel} icon={current.modeIcon} color={current.modeColor} />
         </div>
+        {current.relationshipTag && <p className="mt-1 truncate text-[11px] font-semibold text-pink-100">💞 {t("{0} · {1}", current.relationshipTag.relationship, current.relationshipTag.name)}</p>}
         {current.caption && <p className="mt-1.5 line-clamp-2 break-words text-sm leading-5">{current.caption}</p>}
       </div>
     </div>
     <div className="mt-2 flex items-center justify-between gap-2 text-xs text-[var(--muted)]">
       <p>{t("Ảnh {0}/{1} trong story 24 giờ.", index + 1, shown.length)}</p>
-      <Link to="/moments/archive" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-2 font-semibold hover:bg-[var(--soft)]"><Images size={15} /> {t("Kho ảnh")}</Link>
+      <Link to="/moments/archive" className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-2 font-semibold hover:bg-[var(--soft)]"><Images size={15} /> {t("Kho ảnh")}</Link>
     </div>
     {(streaks.get(userId) ?? 0) >= 3 && <p role="status" className="mt-1 inline-flex rounded-full bg-[var(--lime)] px-3 py-1 text-xs font-bold text-[var(--ink)]">🔥 {t("Chuỗi đăng tin {0} ngày", streaks.get(userId)!)}</p>}
     {composer}

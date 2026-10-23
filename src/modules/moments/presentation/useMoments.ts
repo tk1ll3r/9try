@@ -24,15 +24,21 @@ export function useMomentStreaks(enabled = true): Map<string, number> {
 }
 
 /** Archived photos load in small cursor pages so an account's history never expands the live feed query. */
-export function useMomentArchive() {
+export function useMomentArchive(ownerId?: string | null) {
   const repository = useModule(momentsModule);
   return useInfiniteQuery({
-    queryKey: [...momentsKey, "archive"],
-    queryFn: ({ pageParam }) => repository.archive(pageParam),
+    queryKey: [...momentsKey, "archive", ownerId ?? "all"],
+    queryFn: ({ pageParam }) => repository.archive(pageParam, ownerId ?? undefined),
     initialPageParam: undefined as MomentArchiveCursor | undefined,
     getNextPageParam: page => page.next ?? undefined,
     staleTime: missedEventMs,
   });
+}
+
+/** All photographers in the archive, including people whose older photos are beyond the first page. */
+export function useMomentArchivePeople() {
+  const repository = useModule(momentsModule);
+  return useQuery({ queryKey: [...momentsKey, "archive", "people"], queryFn: () => repository.archivePeople(), staleTime: missedEventMs });
 }
 
 /** Where to load these photos from, by the name of the file. Empty until the server has answered. */

@@ -22,6 +22,18 @@ export function useAcceptedFriends(): FriendConnection[] {
 
 const nobody: ReadonlySet<string> = new Set();
 const pinsKey = [...friendsKey, "pins"] as const;
+export const relationshipInvitesKey = [...friendsKey, "relationship-invites"] as const;
+export const sharedRelationshipsKey = [...friendsKey, "shared-relationships"] as const;
+
+export function useRelationshipInvites() {
+  const friends = useModule(friendsModule);
+  return useQuery({ queryKey: relationshipInvitesKey, queryFn: () => friends.relationshipInvites(), staleTime: 20_000 });
+}
+
+export function useSharedRelationships() {
+  const friends = useModule(friendsModule);
+  return useQuery({ queryKey: sharedRelationshipsKey, queryFn: () => friends.sharedRelationships(), staleTime: 60_000 });
+}
 
 /** The friends the user pinned, and a way to pin or unpin one. `available` is false on a database without pins. */
 export function useFriendPins() {

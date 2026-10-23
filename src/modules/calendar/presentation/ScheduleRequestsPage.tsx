@@ -91,7 +91,7 @@ export function ScheduleRequestsPage() {
       </form>
       {asked.length > 0 && <ul aria-label={t("Những câu bạn đã hỏi")} className="mt-4 space-y-2 border-t border-[var(--border)] pt-4">{asked.map(item => <li key={item.id} className="flex flex-wrap items-center gap-3 text-sm">
         <span className="min-w-0 flex-1 truncate"><b>{item.name}</b> <span className="text-[var(--muted)]">· {when(item.createdAt)} · {statusNames[item.status]}</span></span>
-        {item.status === "pending" && <Button variant="ghost" className="min-h-9 px-3 py-1.5" disabled={pending} onClick={() => act(() => calendar.cancelScheduleRequest(item.id), t("Đã rút lại câu hỏi."))}>{t("Rút lại")}</Button>}
+        {item.status === "pending" && <Button variant="ghost" className="min-h-11 px-3 py-1.5" disabled={pending} onClick={() => act(() => calendar.cancelScheduleRequest(item.id), t("Đã rút lại câu hỏi."))}>{t("Rút lại")}</Button>}
         {item.status === "accepted" && received.some(grant => grant.userId === item.userId) && <Link to={`/calendar/shared/${item.userId}`} className="font-semibold underline">{t("Xem lịch")}</Link>}
       </li>)}</ul>}
     </Card>

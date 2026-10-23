@@ -1,11 +1,12 @@
 import { Camera, ImagePlus, Plus, Send } from "lucide-react";
 import { useEffect, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import { toJpeg } from "../../../kernel/image";
 import { useModule } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { DialogPanel } from "../../../kernel/ui/DialogPanel";
-import { PeoplePicker, useAcceptedFriends } from "../../friends";
+import { PeoplePicker, useAcceptedFriends, useSharedRelationships } from "../../friends";
 import { choices, quickDefaults, choiceOf, useCustomModes, CustomModeDialog, type CustomActivityMode } from "../../presence";
 import { captionLength, photoLimits } from "../domain/Moment";
 import { momentsModule } from "../moments.module";
@@ -25,7 +26,7 @@ interface Prepared { blob: Blob; width: number; height: number; preview: string 
  * The photo is redrawn smaller on this device before anything is sent, which also drops the place
  * and the device a camera writes into the file.
  */
-export function MomentComposer({ open, onOpenChange, mode, modeMinutes = 120 }: { open: boolean; onOpenChange(open: boolean): void; mode?: string; modeMinutes?: number }) {
+export function MomentComposer({ open, onOpenChange, onPosted, mode, modeMinutes = 120 }: { open: boolean; onOpenChange(open: boolean): void; onPosted?(): void; mode?: string; modeMinutes?: number }) {
   const repository = useModule(momentsModule);
   const { run, pending, error } = useAction(momentsKey);
   const [photo, setPhoto] = useState<Prepared | null>(null);
@@ -37,14 +38,16 @@ export function MomentComposer({ open, onOpenChange, mode, modeMinutes = 120 }: 
   const customModes = useCustomModes();
   const [viewerIds, setViewerIds] = useState(rememberedViewers);
   const [chosenOnly, setChosenOnly] = useState(() => rememberedViewers().length > 0);
+  const [relationshipUserId, setRelationshipUserId] = useState("");
+  const sharedRelationships = useSharedRelationships();
   // Someone chosen last time may no longer be a friend. They are not in the list to untick, and the server refuses a photo for them.
   const friends = useAcceptedFriends();
   const chosen = viewerIds.filter(id => friends.some(friend => friend.userId === id));
 
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.preview); }, [photo]);
   useEffect(() => {
-    if (open) setAttached(mode ?? null);
-    else { setPhoto(null); setCaption(""); setProblem(""); }
+    if (open) { setAttached(mode ?? null); setRelationshipUserId(""); }
+    else { setPhoto(null); setCaption(""); setProblem(""); setRelationshipUserId(""); }
   }, [open, mode]);
 
   async function pick(event: ChangeEvent<HTMLInputElement>) {
@@ -62,9 +65,14 @@ export function MomentComposer({ open, onOpenChange, mode, modeMinutes = 120 }: 
   function post() {
     if (!photo) return;
     const viewers = chosenOnly ? chosen : null;
-    run(() => repository.post({ blob: photo.blob, width: photo.width, height: photo.height, mode: attached, caption: caption.trim(), viewerIds: viewers, activateMode: !!attached && attached !== mode, modeMinutes }), () => {
+    if (relationshipUserId && chosenOnly && !chosen.includes(relationshipUserId)) {
+      setProblem(t("Hãy thêm người có quan hệ được gắn vào danh sách người xem, hoặc bỏ nhãn quan hệ này."));
+      return;
+    }
+    run(() => repository.post({ blob: photo.blob, width: photo.width, height: photo.height, mode: attached, caption: caption.trim(), viewerIds: viewers, relationshipUserId: relationshipUserId || null, activateMode: !!attached && attached !== mode, modeMinutes }), () => {
       try { localStorage.setItem(viewersKey, JSON.stringify(viewers ?? [])); } catch { /* The choice then lasts for this photo only. */ }
       onOpenChange(false);
+      onPosted?.();
     });
   }
 
@@ -104,16 +112,25 @@ export function MomentComposer({ open, onOpenChange, mode, modeMinutes = 120 }: 
             <choice.Icon size={16} /> {choice.label}
           </button>)}
         </div>
-        <button type="button" onClick={() => setCreatingMode(true)} className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--soft)]"><Plus size={15}/>{t("Tạo mode riêng")}</button>
+        <button type="button" onClick={() => setCreatingMode(true)} className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--soft)]"><Plus size={15}/>{t("Tạo mode riêng")}</button>
         {attached && attached !== mode && <p className="mt-1 text-xs text-[var(--muted)]">{t("Mode này sẽ được bật cho bạn khi đăng ảnh.")}</p>}
+      </fieldset>
+      <fieldset>
+        <legend className="text-sm font-semibold">{t("Hiện quan hệ trên ảnh (không bắt buộc)")}</legend>
+        <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{t("Bạn bè được chọn xem ảnh sẽ thấy nhãn quan hệ này.")}</p>
+        {sharedRelationships.isPending ? <div role="status" className="skeleton mt-2 h-11 rounded-full" /> : sharedRelationships.isError ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{t("Chưa tải được danh sách quan hệ.")}</p> : sharedRelationships.data?.length ? <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" aria-pressed={!relationshipUserId} onClick={() => setRelationshipUserId("")} className={`${chip} ${!relationshipUserId ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)]"}`}>{t("Không gắn nhãn")}</button>
+          {sharedRelationships.data.map(item => <button key={item.friendId} type="button" aria-pressed={relationshipUserId === item.friendId} onClick={() => { const next = relationshipUserId === item.friendId ? "" : item.friendId; setRelationshipUserId(next); if (next && chosenOnly) setViewerIds([...new Set([...viewerIds, next])]); setProblem(""); }}
+            className={`${chip} ${relationshipUserId === item.friendId ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)]"}`}>{item.relationship} · {item.friendName}</button>)}
+        </div> : <Link to="/me/relationships" className="mt-2 inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-[var(--lime-strong)] hover:bg-[var(--soft)]">{t("Chưa có quan hệ chung · Mở Quan hệ")}</Link>}
       </fieldset>
       <fieldset>
         <legend className="text-sm font-semibold">{t("Ai thấy ảnh này")}</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           <button type="button" aria-pressed={!chosenOnly} onClick={() => setChosenOnly(false)} className={`${chip} ${chosenOnly ? "bg-[var(--soft)]" : "bg-[var(--ink)] text-[var(--paper)]"}`}>{t("Mọi bạn bè")}</button>
-          <button type="button" aria-pressed={chosenOnly} onClick={() => setChosenOnly(true)} className={`${chip} ${chosenOnly ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)]"}`}>{t("Chỉ những người tôi chọn")}</button>
+          <button type="button" aria-pressed={chosenOnly} onClick={() => { setChosenOnly(true); if (relationshipUserId) setViewerIds([...new Set([...chosen, relationshipUserId])]); }} className={`${chip} ${chosenOnly ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)]"}`}>{t("Chỉ những người tôi chọn")}</button>
         </div>
-        {chosenOnly && <div className="mt-2"><PeoplePicker legend={t("Gửi cho")} value={chosen} onChange={setViewerIds} /></div>}
+        {chosenOnly && <div className="mt-2"><PeoplePicker legend={t("Gửi cho")} value={chosen} onChange={ids => setViewerIds(relationshipUserId ? [...new Set([...ids, relationshipUserId])] : ids)} />{relationshipUserId && <p className="mt-1 text-xs text-[var(--muted)]">{t("Người có nhãn quan hệ sẽ tự nằm trong danh sách người xem.")}</p>}</div>}
       </fieldset>
       {error && <p role="alert" className="text-sm text-[var(--danger)]">{error}</p>}
       <Button className="w-full" disabled={pending || (chosenOnly && !chosen.length)} onClick={post}><Send size={17} /> {pending ? t("Đang đăng…") : t("Đăng")}</Button>

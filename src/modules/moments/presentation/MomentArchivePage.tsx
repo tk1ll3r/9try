@@ -11,20 +11,24 @@ import { DialogPanel } from "../../../kernel/ui/DialogPanel";
 import { useConfirm } from "../../../kernel/ui/Confirm";
 import type { ArchivedMoment } from "../domain/Moment";
 import { momentsModule } from "../moments.module";
-import { momentsKey, useMomentArchive, usePhotoAddresses } from "./useMoments";
+import { momentsKey, useMomentArchive, useMomentArchivePeople, usePhotoAddresses } from "./useMoments";
 import { locale, t } from "../../../kernel/i18n";
 
 /** Photos that remain after their 24-hour stories finish, with the same audience and photographer attribution. */
 export function MomentArchivePage() {
   const repository = useModule(momentsModule);
   const confirm = useConfirm();
-  const archive = useMomentArchive();
+  const [photographer, setPhotographer] = useState<string | null>(null);
+  const people = useMomentArchivePeople();
+  const archive = useMomentArchive(photographer);
   const { run, pending, error } = useAction(momentsKey);
   const [selected, setSelected] = useState<ArchivedMoment | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState("");
   const pages = archive.data?.pages ?? [];
   const photos = pages.flatMap(page => page.items);
+  const selectedPerson = people.data?.find(person => person.ownerId === photographer);
+  const totalPhotos = people.data?.reduce((total, person) => total + person.photoCount, 0) ?? 0;
   const addresses = usePhotoAddresses(photos.map(photo => photo.path));
 
   async function remove(photo: ArchivedMoment) {
@@ -60,13 +64,30 @@ export function MomentArchivePage() {
       <Images className="hidden text-[var(--lime-strong)] sm:block" size={25} />
     </header>
 
+    {(totalPhotos > 0 || people.isPending) && <section aria-label={t("Ảnh theo từng người")} className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div><h2 className="font-bold">{t("Album theo người")}</h2><p className="text-sm text-[var(--muted)]">{t("Chọn một người để xem riêng ảnh của họ.")}</p></div>
+        {selectedPerson && <span className="text-sm text-[var(--muted)]">{t("{0} ảnh", selectedPerson.photoCount)}</span>}
+      </div>
+      {people.isPending ? <div role="status" aria-label={t("Đang tải danh sách người chụp")} className="skeleton h-12 rounded-2xl" /> : <div role="group" aria-label={t("Lọc ảnh theo người")} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <button type="button" aria-pressed={photographer === null} onClick={() => setPhotographer(null)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${photographer === null ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--paper)]" : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--soft)]"}`}>
+          {t("Tất cả ảnh")} <span className="opacity-75">{totalPhotos}</span>
+        </button>
+        {(people.data ?? []).map(person => <button key={person.ownerId} type="button" aria-pressed={photographer === person.ownerId} onClick={() => setPhotographer(person.ownerId)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border py-1 pl-1 pr-4 text-sm font-semibold transition-colors ${photographer === person.ownerId ? "border-[var(--ink)] bg-[var(--ink)] text-[var(--paper)]" : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--soft)]"}`}>
+          <Avatar name={person.ownerName} src={person.ownerAvatarUrl} className="size-9 shrink-0 bg-[var(--soft)] text-xs font-black" />
+          <span>{person.ownerName}{person.mine ? ` · ${t("Bạn")}` : ""}</span>
+          <span className="opacity-75">{person.photoCount}</span>
+        </button>)}
+      </div>}
+    </section>}
+
     {(archive.isError || error) && <p role="alert" className="rounded-2xl bg-[var(--soft)] p-4 text-sm text-[var(--danger)]">{error || errorMessage(archive.error, t("Chưa tải được kho ảnh."))} <Button variant="ghost" disabled={archive.isFetching} onClick={() => void archive.refetch()}>{t("Thử tải lại")}</Button></p>}
     {archive.isPending && <div role="status" aria-label={t("Đang tải ảnh")} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <div key={index} className="skeleton aspect-[4/5]" />)}</div>}
 
     {archive.isSuccess && !photos.length && <div className="rounded-3xl border border-dashed border-[var(--border)] p-8 text-center">
       <Images size={30} className="mx-auto text-[var(--muted)]" />
-      <p className="mt-3 font-bold">{t("Kho ảnh đang trống")}</p>
-      <p className="mt-1 text-sm text-[var(--muted)]">{t("Ảnh bạn đăng sẽ được lưu tại đây ngay, kể cả khi story vẫn đang hiện trong 24 giờ.")}</p>
+      <p className="mt-3 font-bold">{selectedPerson ? t("Chưa có ảnh của {0}", selectedPerson.ownerName) : t("Kho ảnh đang trống")}</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">{selectedPerson ? t("Ảnh của người này sẽ hiện trong album khi được lưu.") : t("Ảnh bạn đăng sẽ được lưu tại đây ngay, kể cả khi story vẫn đang hiện trong 24 giờ.")}</p>
     </div>}
 
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -80,8 +101,9 @@ export function MomentArchivePage() {
           <div className="min-w-0 flex-1">
             <b className="block truncate text-sm">{photo.ownerName}{photo.mine ? ` · ${t("Bạn")}` : ""}</b>
             <time className="block truncate text-xs text-[var(--muted)]" dateTime={photo.createdAt}>{new Date(photo.createdAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}</time>
+            {photo.relationshipTag && <span className="block truncate text-[11px] font-semibold text-[var(--lime-strong)]">💞 {photo.relationshipTag.relationship} · {photo.relationshipTag.name}</span>}
           </div>
-          {photo.mine && <button type="button" aria-label={t("Xóa ảnh của {0}", photo.ownerName)} disabled={pending} onClick={() => void remove(photo)} className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--soft)] hover:text-[var(--danger)]"><Trash2 size={17} /></button>}
+          {photo.mine && <button type="button" aria-label={t("Xóa ảnh của {0}", photo.ownerName)} disabled={pending} onClick={() => void remove(photo)} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--soft)] hover:text-[var(--danger)]"><Trash2 size={17} /></button>}
         </div>
       </article>)}
     </div>
@@ -93,6 +115,7 @@ export function MomentArchivePage() {
         <div className="flex items-center gap-3"><Avatar name={selected.ownerName} src={selected.ownerAvatarUrl} className="size-11 shrink-0 bg-[var(--soft)] font-black" /><div><b>{selected.ownerName}{selected.mine ? ` · ${t("Bạn")}` : ""}</b><p className="text-xs text-[var(--muted)]">{selected.audience === "friends" ? t("Đã chia sẻ với bạn bè") : t("Đã chia sẻ với những người được chọn")}</p></div></div>
         {addresses.get(selected.path) ? <img src={addresses.get(selected.path)} alt={selected.caption || t("Ảnh của {0}", selected.ownerName)} className="mx-auto max-h-[62dvh] w-auto max-w-full rounded-2xl object-contain" /> : <div role="status" aria-label={t("Đang tải ảnh")} className="skeleton mx-auto aspect-[4/5] max-h-[62dvh]" />}
         {selected.caption && <p className="whitespace-pre-wrap break-words leading-6">{selected.caption}</p>}
+        {selected.relationshipTag && <p className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 py-1.5 text-sm font-semibold text-[var(--lime-strong)]">💞 <span className="truncate">{selected.relationshipTag.relationship} · {selected.relationshipTag.name}</span></p>}
         {downloadError && <p role="alert" className="text-sm text-[var(--danger)]">{downloadError}</p>}
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" disabled={pending || downloadingId !== null} onClick={() => void download(selected)}>

@@ -65,7 +65,7 @@ export function AppShell() {
 
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
-  // Restore scroll to top whenever navigating between screens
+  // Start a new screen at the top, without changing the scroll position while that screen is open.
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
@@ -74,13 +74,11 @@ export function AppShell() {
   useEffect(() => {
     const viewport = window.visualViewport;
 
-    const onResize = () => {
+    const onViewportResize = () => {
       if (!viewport) return;
       const isKeyboard = window.innerHeight - viewport.height > 120;
       setKeyboardOpen(isKeyboard);
-      if (!isKeyboard && window.scrollY !== 0 && !document.querySelector("input:focus, textarea:focus, [contenteditable]:focus")) {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-      }
+      document.documentElement.style.setProperty("--visual-viewport-height", `${viewport.height}px`);
     };
 
     const onFocusIn = (e: FocusEvent) => {
@@ -94,24 +92,20 @@ export function AppShell() {
       window.setTimeout(() => {
         if (!document.querySelector("input:focus, textarea:focus, [contenteditable]:focus")) {
           setKeyboardOpen(false);
-          if (window.scrollY !== 0) {
-            window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-          }
         }
       }, 100);
     };
 
     if (viewport) {
-      viewport.addEventListener("resize", onResize);
-      viewport.addEventListener("scroll", onResize);
+      document.documentElement.style.setProperty("--visual-viewport-height", `${viewport.height}px`);
+      viewport.addEventListener("resize", onViewportResize);
     }
     window.addEventListener("focusin", onFocusIn);
     window.addEventListener("focusout", onFocusOut);
 
     return () => {
       if (viewport) {
-        viewport.removeEventListener("resize", onResize);
-        viewport.removeEventListener("scroll", onResize);
+        viewport.removeEventListener("resize", onViewportResize);
       }
       window.removeEventListener("focusin", onFocusIn);
       window.removeEventListener("focusout", onFocusOut);
@@ -170,10 +164,10 @@ export function AppShell() {
         </nav>
       </aside>
 
-      <main className="app-main relative z-[1] mx-auto min-h-dvh max-w-6xl lg:ml-64">
+      <main data-keyboard={keyboardOpen ? "true" : undefined} className="app-main relative z-[1] mx-auto min-h-dvh max-w-6xl lg:ml-64">
         {/* One bar for every screen size. A phone has search, the bell and the account on its first row and
             the tabs of the current screen under it. A desktop has those tabs on the left. */}
-        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-4">
+        <div className={`mb-4 flex flex-wrap items-center gap-x-2 gap-y-4 ${keyboardOpen ? "hidden lg:flex" : ""}`}>
           <button type="button" onClick={() => setSearching(true)} className="glass pressable order-1 flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 px-4 text-sm text-[var(--muted)] lg:hidden dark:border-white/8"><Search size={17} /> {t("Tìm kiếm")}</button>
           <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3 lg:ml-auto">
             {bell && (

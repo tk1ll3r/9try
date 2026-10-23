@@ -3,7 +3,7 @@
 -- e = d05 a friend who is then blocked, s = d06 a stranger.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(56);
+select plan(62);
 
 insert into auth.users(id, instance_id, aud, role, email)
 select ('00000000-0000-4000-8000-000000000d0' || n)::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'moment-' || n || '@example.invalid'
@@ -38,6 +38,7 @@ select throws_ok($$select public.post_moment('00000000-0000-4000-8000-0000000000
 select lives_ok($$select public.post_moment('00000000-0000-4000-8000-0000000000f1', 1080, 1350, 'coffee', '  Sáng nay  ')$$, 'a photo whose file is there is posted, for every friend');
 select lives_ok($$select public.post_moment('00000000-0000-4000-8000-0000000000f1', 1080, 1350, 'coffee', 'lần hai')$$, 'posting it again after a lost answer is no error');
 select is((select count(*) || ' ' || max(caption) || ' ' || max(mode) || ' ' || bool_and(seen)::text from public.list_moments()), '1 Sáng nay coffee true', 'and makes no second photo; the owner sees it, trimmed, with its mode');
+select is((select owner_name || ' ' || photo_count from public.list_moment_archive_people()), 'An 1', 'the archive groups the owner''s photos with a count');
 select lives_ok($$insert into storage.objects(bucket_id, name, owner_id) values ('moments', '00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f2.jpg', '00000000-0000-4000-8000-000000000d01')$$,
   'a person writes a file under their own id');
 select throws_ok($$insert into storage.objects(bucket_id, name, owner_id) values ('moments', '00000000-0000-4000-8000-000000000d02/x.jpg', '00000000-0000-4000-8000-000000000d01')$$,
@@ -56,6 +57,7 @@ select throws_ok($$select * from public.moments$$, '42501', null, 'nobody reads 
 select pg_temp.as('00000000-0000-4000-8000-000000000d02');
 select is((select count(*) || ' ' || bool_or(seen)::text || ' ' || coalesce(max(views)::text, '-') || ' ' || max(owner_name) from public.list_moments()), '1 false - An',
   'a friend sees the photo for all friends, not yet looked at, without the owner''s counts');
+select is((select owner_name || ' ' || photo_count from public.list_moment_archive_people()), 'An 1', 'a friend sees the archive album they may access');
 select is(pg_temp.readable('00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f1.jpg'), 1::bigint, 'and reads its file');
 select is(pg_temp.readable('00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f2.jpg'), 0::bigint, 'the file of the photo for someone else is not theirs to read');
 select throws_ok($$select public.see_moment('00000000-0000-4000-8000-0000000000f2')$$, 'P0001', 'photo not found', 'nor can they mark it as looked at');
@@ -74,6 +76,8 @@ select throws_ok($$select public.delete_moment('00000000-0000-4000-8000-00000000
 -- The chosen friend sees both.
 select pg_temp.as('00000000-0000-4000-8000-000000000d03');
 select is((select count(*) from public.list_moments()), 2::bigint, 'the chosen friend sees both photos');
+select is((select photo_count from public.list_moment_archive_people() where owner_id='00000000-0000-4000-8000-000000000d01'), 2::bigint, 'the album count includes the owner''s older photo');
+select is((select count(*) from public.list_moment_archive_for_owner('00000000-0000-4000-8000-000000000d01')), 2::bigint, 'the per-person archive endpoint returns that full album');
 select is((select mode_label || ' ' || mode_icon || ' ' || mode_color from public.list_moments() where id = '00000000-0000-4000-8000-0000000000f2'), 'Đi dạo camera #22c55e', 'a friend sees the custom mode while viewing its photo');
 select is((select count(*) from public.notifications where category = 'moment' and user_id = '00000000-0000-4000-8000-000000000d03' and action_path = '/moments/00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f2'), 1::bigint, 'each photo has its own exact notification target');
 select is(pg_temp.readable('00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f2.jpg'), 1::bigint, 'and reads the file posted for them');
@@ -93,6 +97,7 @@ select is((select count(*) from realtime.messages where topic = 'user:00000000-0
 set local role authenticated;
 select pg_temp.as('00000000-0000-4000-8000-000000000d06');
 select is((select count(*) from public.list_moments()) + pg_temp.readable('00000000-0000-4000-8000-000000000d01/00000000-0000-4000-8000-0000000000f1.jpg'), 0::bigint, 'a stranger sees no photo and reads no file');
+select is((select count(*) from public.list_moment_archive_for_owner('00000000-0000-4000-8000-000000000d01')), 0::bigint, 'a person cannot filter the archive to bypass its audience');
 select pg_temp.as('00000000-0000-4000-8000-000000000d04');
 select is((select count(*) from public.list_moments()), 1::bigint, 'a friend sees the photo while they are friends');
 select pg_temp.as('00000000-0000-4000-8000-000000000d01');
@@ -154,6 +159,7 @@ reset role;
 
 set local role anon;
 select throws_ok($$select public.list_moments()$$, '42501', null, 'an anonymous visitor cannot call any of it');
+select throws_ok($$select * from public.list_moment_archive_people()$$, '42501', null, 'an anonymous visitor cannot list archive albums');
 reset role;
 select * from finish();
 rollback;

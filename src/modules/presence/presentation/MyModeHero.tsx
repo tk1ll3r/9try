@@ -36,16 +36,16 @@ export function MyModeHero({ mine, now, minutes, quick, pending, onSet, onPick }
         <p role="status" className="truncate text-2xl font-black tracking-tight">{choice.label}</p>
         <p className="truncate text-sm text-[var(--muted)]">{t("{0} · bạn bè đang thấy", timeLeft(mine.expiresAt, now))}</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Button variant="secondary" className="min-h-9 px-3 py-1.5" disabled={pending} onClick={onPick}>{t("Đổi mode")}</Button>
-          <Button variant="ghost" className="min-h-9 px-3 py-1.5" disabled={pending} aria-label={t("Tắt mode")} onClick={() => onSet(null)}><X size={16} /> {t("Tắt")}</Button>
+          <Button variant="secondary" className="min-h-11 px-3 py-1.5" disabled={pending} onClick={onPick}>{t("Đổi mode")}</Button>
+          <Button variant="ghost" className="min-h-11 px-3 py-1.5" disabled={pending} aria-label={t("Tắt mode")} onClick={() => onSet(null)}><X size={16} /> {t("Tắt")}</Button>
           {/* What a person is doing now, as a plan on the calendar: the new event opens with the activity's name. */}
           {/* A chat with the friends who see this mode. It closes when the mode ends. */}
           <DiscussionButton key={mine.startedAt} source={{ kind: "mode", id: mine.userId }} canOpen />
-          <Link to={`/calendar?new=${encodeURIComponent(choice.label)}`} aria-label={t("Lên lịch: {0}", choice.label)} className="pressable inline-flex min-h-9 items-center gap-2 rounded-2xl px-3 py-1.5 text-sm font-semibold hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]"><CalendarPlus size={16} /> {t("Lên lịch")}</Link>
+          <Link to={`/calendar?new=${encodeURIComponent(choice.label)}`} aria-label={t("Lên lịch: {0}", choice.label)} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl px-3 py-1.5 text-sm font-semibold hover:bg-[color-mix(in_srgb,var(--ink)_7%,transparent)]"><CalendarPlus size={16} /> {t("Lên lịch")}</Link>
         </div>
         {quick.filter(item => item.id !== mine.mode).slice(0, 3).length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label={t("Đổi mode nhanh")}>
           {quick.filter(item => item.id !== mine.mode).slice(0, 3).map(item => <button key={item.id} type="button" disabled={pending} onClick={() => onSet(item.id)}
-            className="pressable inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 text-xs font-semibold disabled:opacity-60"><item.Icon size={15} style={{ color: item.color }}/>{item.label}</button>)}
+            className="pressable inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 text-xs font-semibold disabled:opacity-60"><item.Icon size={15} style={{ color: item.color }}/>{item.label}</button>)}
         </div>}
       </div>
     </div> : <div className="relative">

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Push to Git"
+  short_description: "Review selected changes, then commit and push the branch."
+  default_prompt: "Use $push-to-git to review my intended changes, commit, and push them."

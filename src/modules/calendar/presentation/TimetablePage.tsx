@@ -115,7 +115,10 @@ export function TimetablePage() {
             </section>;
           })}
         </div>
-        <p className="mt-4 text-xs leading-5 text-[var(--muted)]">{t("Nghỉ hoặc dời một buổi: mở")} <Link className="font-semibold underline" to="/calendar">{t("Lịch")}</Link>{t(", bấm vào buổi đó rồi chọn “Bỏ buổi này” hoặc sửa giờ. Bạn bè được bạn chia sẻ bận/rảnh sẽ thấy giờ học là lúc bận, không thấy tên môn.")}</p>
+        <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-[var(--surface)] p-3 sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 text-xs leading-5 text-[var(--muted)]">{t("Nghỉ hoặc dời một buổi? Trong lịch, chạm buổi đó rồi chọn “Bỏ buổi này” hoặc sửa giờ. Bạn bè được bạn chia sẻ bận/rảnh sẽ thấy giờ học là lúc bận, không thấy tên môn.")}</p>
+          <Link className="pressable inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--soft)] px-3 text-sm font-semibold" to="/calendar">{t("Mở lịch")}</Link>
+        </div>
       </Card>
     </div>
   );

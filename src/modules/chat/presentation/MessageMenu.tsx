@@ -34,15 +34,15 @@ export function MessageMenu({ mine, myReaction, actions, handle }: { mine: boole
   function place(box: HTMLDetailsElement) {
     if (!box.open) return;
     const around = (box.closest("[data-thread]") ?? document.body).getBoundingClientRect();
-    setUp(box.getBoundingClientRect().top - around.top > 270);
+    setUp(box.getBoundingClientRect().top - around.top > 300);
   }
   return <details ref={handle} className="shrink-0 self-center" onToggle={event => place(event.currentTarget)}>
-    <summary aria-label={t("Thao tác với tin nhắn")} className="grid size-9 cursor-pointer list-none place-items-center rounded-full text-[var(--muted)] opacity-0 transition-opacity hover:bg-[var(--soft)] focus-visible:opacity-100 group-hover:opacity-100 [&::-webkit-details-marker]:hidden [details[open]>&]:opacity-100"><MoreHorizontal size={17} /></summary>
+    <summary aria-label={t("Thao tác với tin nhắn")} className="message-actions-trigger grid cursor-pointer list-none place-items-center rounded-full text-[var(--muted)] transition-opacity hover:bg-[var(--soft)] [&::-webkit-details-marker]:hidden"><MoreHorizontal size={17} /></summary>
     <div onClick={() => handle.current?.removeAttribute("open")}
-      className={`animate-pop absolute z-30 w-60 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--ink)] shadow-2xl ${up ? "bottom-full mb-1" : "top-full mt-1"} ${mine ? "right-0" : "left-0"}`}>
-      <div role="group" aria-label={t("Thả cảm xúc")} className="flex justify-between px-0.5 pb-1">
+      className={`animate-pop absolute z-50 max-h-[calc(100dvh-2rem)] w-60 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--ink)] shadow-2xl ${up ? "bottom-full mb-1" : "top-full mt-1"} ${mine ? "right-0" : "left-0"}`}>
+      <div role="group" aria-label={t("Thả cảm xúc")} className="grid grid-cols-3 justify-items-center gap-1 px-0.5 pb-1 md:grid-cols-6">
         {messageReactions.map(([key, sign]) => <button key={key} type="button" aria-label={reactionNames[key]} aria-pressed={myReaction === key} onClick={() => actions.react(myReaction === key ? null : key)}
-          className={`grid size-9 place-items-center rounded-full text-lg transition-transform duration-200 ease-[var(--ease-spring)] hover:scale-125 ${myReaction === key ? "bg-[var(--soft)]" : ""}`}>{sign}</button>)}
+          className={`grid size-11 place-items-center rounded-full text-lg transition-transform duration-200 ease-[var(--ease-spring)] hover:scale-125 ${myReaction === key ? "bg-[var(--soft)]" : ""}`}>{sign}</button>)}
       </div>
       <div className={menuRows}>
         <button type="button" onClick={actions.reply}><CornerUpLeft size={16} /> {t("Trả lời")}</button>

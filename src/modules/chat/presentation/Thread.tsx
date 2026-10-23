@@ -210,7 +210,7 @@ export function Thread({ conversationId, showNames, closed = "", unread, moderat
         {writing.length > 0 && <p role="status" className="mt-2 px-2 text-xs italic text-[var(--muted)]">{writing.length === 1 ? t("{0} đang nhập…", writing[0]) : t("{0} người đang nhập…", writing.length)}</p>}
       </div>
       {(far || away > 0) && <button type="button" onClick={toEnd} aria-label={away ? t("{0} tin mới, tới tin mới nhất", away) : t("Tới tin mới nhất")}
-        className="animate-pop absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 text-sm font-semibold text-[var(--paper)] shadow-lg">
+        className="animate-pop absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 text-sm font-semibold text-[var(--paper)] shadow-lg">
         <ArrowDown size={16} />{away > 0 && away}
       </button>}
     </div>

@@ -130,7 +130,7 @@ export function ProfilePage() {
               </label>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
                 <label className="flex items-center gap-2">{t("Ai thấy phần giới thiệu?")}
-                  <select className="field min-h-9 py-1 text-xs" value={value.bioAudience} onChange={event => set({ bioAudience: event.target.value as FieldAudience })}>
+                  <select className="field min-h-11 py-1 text-xs" value={value.bioAudience} onChange={event => set({ bioAudience: event.target.value as FieldAudience })}>
                     <option value="friends">{t("Bạn bè")}</option><option value="private">{t("Chỉ mình tôi")}</option>
                   </select>
                 </label>
@@ -142,14 +142,17 @@ export function ProfilePage() {
                 {!zones.includes(value.timezone) && <option value={value.timezone}>{value.timezone}</option>}
                 {zones.map(zone => <option key={zone} value={zone}>{zone}</option>)}
               </select>
-              {value.timezone !== deviceZone && <span className="text-xs font-normal text-[var(--muted)]">{t("Thiết bị này đang ở múi giờ")} {deviceZone}. <button type="button" className="underline" onClick={() => set({ timezone: deviceZone })}>{t("Dùng múi giờ này")}</button></span>}
+              {value.timezone !== deviceZone && <span className="text-xs font-normal text-[var(--muted)]">
+                <span className="block">{t("Thiết bị này đang ở múi giờ")} {deviceZone}.</span>
+                <button type="button" className="pressable mt-1 inline-flex min-h-11 items-center rounded-xl bg-[var(--soft)] px-3 font-semibold text-[var(--ink)]" onClick={() => set({ timezone: deviceZone })}>{t("Dùng múi giờ này")}</button>
+              </span>}
             </label>
             <div className="grid content-start gap-1">
               <label className="grid gap-1 text-sm font-semibold">{t("Ngày sinh (tùy chọn)")}
                 <input className="field" type="date" value={value.birthday} onChange={event => set({ birthday: event.target.value })} />
               </label>
               <label className="flex items-center gap-2 text-xs text-[var(--muted)]">{t("Ai thấy ngày sinh?")}
-                <select className="field min-h-9 py-1 text-xs" value={value.birthdayAudience} onChange={event => set({ birthdayAudience: event.target.value as FieldAudience })}>
+                <select className="field min-h-11 py-1 text-xs" value={value.birthdayAudience} onChange={event => set({ birthdayAudience: event.target.value as FieldAudience })}>
                   <option value="private">{t("Chỉ mình tôi")}</option><option value="friends">{t("Bạn bè (ngày và tháng)")}</option>
                 </select>
               </label>

@@ -25,7 +25,7 @@ export function DiscussionButton({ source, canOpen }: { source: RoomSource; canO
   const [asking, setAsking] = useState(false);
   const [message, setMessage] = useState("");
   const room = found.data;
-  const look = "pressable inline-flex min-h-9 items-center gap-2 rounded-2xl bg-[var(--soft)] px-3 py-1.5 text-sm font-semibold";
+  const look = "pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--soft)] px-3 py-1.5 text-sm font-semibold";
 
   function open(event: FormEvent) {
     event.preventDefault();

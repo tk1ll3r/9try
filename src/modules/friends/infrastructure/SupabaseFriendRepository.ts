@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { BlockedUser, FriendConnection, FriendRepository } from "../domain/Friend";
+import type { BlockedUser, FriendConnection, FriendRepository, RelationshipInvite, SharedRelationship } from "../domain/Friend";
 import { t } from "../../../kernel/i18n";
 
 /** Friend connections through SQL functions, which act as the signed-in user. */
@@ -56,6 +56,34 @@ export class SupabaseFriendRepository implements FriendRepository {
   }
 
   setPinned(otherId: string, pinned: boolean) { return this.call("set_friend_pin", { p_friend_id: otherId, p_pinned: pinned }); }
+
+  async relationshipInvites(): Promise<RelationshipInvite[]> {
+    const { data, error } = await this.db.rpc("list_friend_relationship_invites");
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      id: row.id, otherUserId: row.other_user_id, otherName: row.other_name || t("Người dùng"),
+      otherAvatarUrl: row.other_avatar_url ?? null, direction: row.direction,
+      relationship: row.relationship, createdAt: row.created_at,
+    }));
+  }
+
+  async sharedRelationships(): Promise<SharedRelationship[]> {
+    const { data, error } = await this.db.rpc("list_my_friend_relationships");
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({
+      friendId: row.friend_id, friendName: row.friend_name || t("Người dùng"), friendAvatarUrl: row.friend_avatar_url ?? null,
+      relationship: row.relationship, createdAt: row.created_at, currentStreak: row.current_streak ?? 0, lastMessageAt: row.last_message_at ?? null,
+    }));
+  }
+
+  async sendRelationshipInvite(friendId: string, relationship: string): Promise<string> {
+    const { data, error } = await this.db.rpc("send_friend_relationship_invite", { p_friend_id: friendId, p_relationship: relationship.trim() });
+    if (error) throw error;
+    return data as string;
+  }
+
+  respondRelationshipInvite(inviteId: string, accept: boolean) { return this.call("respond_friend_relationship_invite", { p_invite_id: inviteId, p_accept: accept }); }
+  cancelRelationshipInvite(inviteId: string) { return this.call("cancel_friend_relationship_invite", { p_invite_id: inviteId }); }
 
   private async call(name: string, args: Record<string, unknown>): Promise<void> {
     const { error } = await this.db.rpc(name, args);

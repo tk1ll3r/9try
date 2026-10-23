@@ -16,15 +16,37 @@ const photo = (id: string, owner: string, name: string, minutesAgo: number, extr
 
 /** A server that keeps photos the way the database and the bucket would, and records what the app asks of them. */
 async function photoServer(page: Page, start: Row[]) {
-  const state = { moments: start, calls: [] as { name: string; body: Row }[], uploads: [] as string[], removed: [] as string[], signed: 0, signedPaths: [] as string[][], modes: [] as Row[], customModes: [] as Row[] };
+  const state = { moments: start, calls: [] as { name: string; body: Row }[], uploads: [] as string[], removed: [] as string[], signed: 0, signedPaths: [] as string[][], modes: [] as Row[], customModes: [] as Row[], relationships: [] as Row[] };
   await page.route("**/rest/v1/**", route => {
     const request = route.request(); const path = new URL(request.url()).pathname.replace(/^.*\/rest\/v1/, "");
     if (path === "/rpc/list_friend_connections") return route.fulfill({ json: [friend(kha, "Kha"), friend(lan, "Lan")] });
+    if (path === "/rpc/list_my_friend_relationships") return route.fulfill({ json: state.relationships });
     if (path === "/rpc/list_visible_activity_modes") return route.fulfill({ json: [{ user_id: kha, mode: "coffee", updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + 3_600_000).toISOString() }, ...state.modes] });
     if (path === "/custom_activity_modes") return route.fulfill({ json: state.customModes });
     if (path === "/rpc/list_moments") return route.fulfill({ json: [...state.moments].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))) });
     if (!path.startsWith("/rpc/") || request.method() !== "POST") return route.fulfill({ json: [] });
     const body = (request.postDataJSON() ?? {}) as Row; const name = path.slice(5);
+    if (name === "list_moment_relationship_tags") {
+      const ids = new Set((body.p_moment_ids as string[] | undefined) ?? []);
+      return route.fulfill({ json: state.moments.filter(moment => ids.has(String(moment.id)) && moment.relationship_user_id).map(moment => {
+        const relationship = state.relationships.find(item => item.friend_id === moment.relationship_user_id);
+        return { moment_id: moment.id, partner_id: moment.relationship_user_id, partner_name: relationship?.friend_name ?? "Kha", relationship: relationship?.relationship ?? moment.relationship_label };
+      }) });
+    }
+    if (name === "list_moment_archive_people") {
+      const byOwner = new Map<string, Row>();
+      for (const item of state.moments) {
+        const ownerId = String(item.owner_id);
+        const person = byOwner.get(ownerId) ?? { owner_id: ownerId, owner_name: item.owner_name, owner_avatar_url: item.owner_avatar_url, photo_count: 0 };
+        person.photo_count = Number(person.photo_count) + 1;
+        byOwner.set(ownerId, person);
+      }
+      return route.fulfill({ json: [...byOwner.values()] });
+    }
+    if (name === "list_moment_archive" || name === "list_moment_archive_for_owner") {
+      const filtered = state.moments.filter(item => !body.p_owner_id || item.owner_id === body.p_owner_id);
+      return route.fulfill({ json: filtered.slice(0, Number(body.p_limit ?? 30)) });
+    }
     if (["post_moment", "see_moment", "react_to_moment", "delete_moment", "set_my_activity_mode", "create_my_custom_activity_mode"].includes(name)) state.calls.push({ name, body });
     if (name === "create_my_custom_activity_mode") {
       const mode = `custom_${String(body.p_id).replaceAll("-", "")}`;
@@ -34,7 +56,8 @@ async function photoServer(page: Page, start: Row[]) {
     }
     const target = state.moments.find(moment => moment.id === body.p_id);
     if (name === "post_moment") {
-      state.moments.push(photo(String(body.p_id), user.id, "Vy", 0, { mode: body.p_mode, caption: body.p_caption, width: body.p_width, height: body.p_height, audience: body.p_viewer_ids ? "selected" : "friends" }));
+      const relationship = state.relationships.find(item => item.friend_id === body.p_relationship_user_id);
+      state.moments.push(photo(String(body.p_id), user.id, "Vy", 0, { mode: body.p_mode, caption: body.p_caption, width: body.p_width, height: body.p_height, audience: body.p_viewer_ids ? "selected" : "friends", relationship_user_id: body.p_relationship_user_id, relationship_label: relationship?.relationship }));
       if (body.p_activate_mode) {
         const custom = state.customModes.find(item => item.mode === body.p_mode);
         state.modes = [{ user_id: user.id, mode: body.p_mode, mode_label: custom?.label ?? null, mode_icon: custom?.icon ?? null, mode_color: custom?.color ?? null, updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + Number(body.p_mode_minutes ?? 120) * 60_000).toISOString() }];
@@ -202,6 +225,22 @@ test("one person's photos: a reaction, a reply that opens the chat with the phot
   expect(server.removed).toEqual([`${user.id}/p-mine.jpg`]);
 });
 
+test("the photo archive filters by photographer and loads a person's full album", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await photoServer(page, [photo("archive-kha", kha, "Kha", 800), photo("archive-mine", user.id, "Vy", 900)]);
+  await page.goto("/moments/archive");
+
+  const filters = page.getByRole("group", { name: "Lọc ảnh theo người" });
+  await expect(filters.getByRole("button", { name: /Kha/ })).toBeVisible();
+  await filters.getByRole("button", { name: /Kha/ }).click();
+  await expect(filters.getByRole("button", { name: /Kha/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article").getByText("Kha", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article").getByText("Vy", { exact: true })).toHaveCount(0);
+  await fits(page);
+});
+
 test("an exact photo link opens that photo, and an expired or unavailable target never falls back to the newest one", async ({ page }) => {
   await signIn(page);
   await photoServer(page, [photo("p-kha-old", kha, "Kha", 200, { seen: true, caption: "Ảnh cũ" }), photo("p-kha-new", kha, "Kha", 12, { caption: "Ảnh mới" })]);
@@ -243,6 +282,26 @@ test("custom modes can be created in Mode and activated while posting a photo", 
   const posted = server.calls.filter(call => call.name === "post_moment").at(-1)!.body;
   expect(posted).toMatchObject({ p_activate_mode: true, p_mode_minutes: 120 });
   expect(posted.p_mode).toMatch(/^custom_[0-9a-f]{32}$/);
+});
+
+test("a story can show an accepted relationship and includes that friend in a selected audience", async ({ page }) => {
+  await signIn(page);
+  const server = await photoServer(page, []);
+  server.relationships.push({ friend_id: kha, friend_name: "Kha", relationship: "Tình yêu", created_at: new Date().toISOString() });
+  await page.goto("/");
+  const frame = page.getByRole("region", { name: "Khoảnh khắc" });
+  await frame.getByRole("button", { name: "Đăng ảnh" }).click();
+  const dialog = page.getByRole("dialog", { name: "Đăng ảnh" });
+  await dialog.getByLabel("Chọn ảnh có sẵn").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: pixel });
+  await expect(dialog.getByRole("img", { name: "Ảnh sắp đăng" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Tình yêu · Kha" }).click();
+  await dialog.getByRole("button", { name: "Chỉ những người tôi chọn" }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Kha" })).toBeChecked();
+  await dialog.getByRole("button", { name: "Đăng", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const posted = server.calls.find(call => call.name === "post_moment")!.body;
+  expect(posted).toMatchObject({ p_relationship_user_id: kha, p_viewer_ids: [kha] });
+  await expect(frame.getByText("Tình yêu · Kha")).toBeVisible();
 });
 
 test("without photos the frame is one line with a camera, and the privacy screen says nothing is showing", async ({ page }) => {

@@ -12,6 +12,9 @@ export function PrivacyPage() {
       <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{t("Mọi thứ là riêng tư cho tới khi bạn chọn chia sẻ. Ở đây bạn thấy những gì người khác đang xem được và dừng từng thứ một.")}</p>
     </header>
     {modules.map(({ id, privacy: Section }) => Section && <Section key={id} />)}
-    <p className="text-sm text-[var(--muted)]">{t("Tải dữ liệu của bạn hoặc xóa tài khoản trong")} <Link to="/me/settings" className="font-semibold underline">{t("Cài đặt")}</Link>.</p>
+    <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+      <span>{t("Tải dữ liệu của bạn hoặc xóa tài khoản trong")}</span>
+      <Link to="/me/settings" className="pressable inline-flex min-h-11 items-center rounded-xl bg-[var(--soft)] px-3 font-semibold text-[var(--ink)]">{t("Cài đặt")}</Link>
+    </div>
   </div>;
 }

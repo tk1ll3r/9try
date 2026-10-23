@@ -135,7 +135,7 @@ export function MessageBubble({ message, mine, showName, first, last, addresses,
     {counts.length > 0 && <div className="-mt-1.5 flex gap-1 px-2">
       {counts.map(([key, sign]) => <button key={key} type="button" disabled={!actions} aria-pressed={message.myReaction === key} aria-label={t("{0}: {1}", reactionNames[key], message.reactions[key])}
         onClick={() => actions?.react(message.myReaction === key ? null : key as MessageReaction)}
-        className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2 text-xs font-semibold shadow-sm ${message.myReaction === key ? "border-[var(--lime-strong)] bg-[var(--lime)] text-[var(--ink)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+        className={`inline-flex min-h-11 items-center gap-1 rounded-full border px-2 text-xs font-semibold shadow-sm ${message.myReaction === key ? "border-[var(--lime-strong)] bg-[var(--lime)] text-[var(--ink)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
         <span aria-hidden>{sign}</span>{message.reactions[key]}
       </button>)}
     </div>}

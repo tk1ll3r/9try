@@ -110,7 +110,7 @@ export function Composer({ conversationId, replying, onCancelReply, editing, onC
   }
 
   const bar = "mb-2 flex items-center gap-2 rounded-2xl bg-[var(--soft)] py-1.5 pl-3 pr-1 text-sm";
-  const close = "grid size-9 shrink-0 place-items-center rounded-full hover:bg-[color-mix(in_srgb,var(--ink)_9%,transparent)]";
+  const close = "grid size-11 shrink-0 place-items-center rounded-full hover:bg-[color-mix(in_srgb,var(--ink)_9%,transparent)]";
   return <form onSubmit={submit}>
     {editing && <div className={bar}><Pencil size={15} className="shrink-0 text-[var(--muted)]" /><span className="min-w-0 flex-1 truncate font-semibold">{t("Đang sửa tin nhắn")}</span>
       <button type="button" aria-label={t("Thôi sửa")} className={close} onClick={onCancelEdit}><X size={16} /></button></div>}
@@ -123,7 +123,7 @@ export function Composer({ conversationId, replying, onCancelReply, editing, onC
     {!editing && photos.length > 0 && <ul aria-label={t("Ảnh sắp gửi")} className="mb-2 flex gap-2 overflow-x-auto pb-1">
       {photos.map((photo, index) => <li key={photo.preview} className="relative shrink-0">
         <img src={photo.preview} alt={t("Ảnh {0}/{1}", index + 1, photos.length)} className="size-16 rounded-xl object-cover" />
-        <button type="button" aria-label={t("Bỏ ảnh {0}", index + 1)} onClick={() => drop(photo)} className="absolute -right-1.5 -top-1.5 grid size-6 place-items-center rounded-full bg-[var(--ink)] text-[var(--paper)] shadow"><X size={13} /></button>
+        <button type="button" aria-label={t("Bỏ ảnh {0}", index + 1)} onClick={() => drop(photo)} className="absolute -right-2 -top-2 grid size-11 place-items-center rounded-full bg-[var(--ink)] text-[var(--paper)] shadow"><X size={16} /></button>
       </li>)}
     </ul>}
     {preparing && <p role="status" className="mb-2 text-xs text-[var(--muted)]">{t("Đang chuẩn bị ảnh…")}</p>}
@@ -134,7 +134,7 @@ export function Composer({ conversationId, replying, onCancelReply, editing, onC
         <input type="file" accept="image/*" multiple className="sr-only" disabled={preparing || photos.length >= maxPhotos} onChange={event => void pick(event)} />
       </label>}
       <label className="sr-only" htmlFor="chat-message">{t("Tin nhắn")}</label>
-      <textarea id="chat-message" ref={box} className="field max-h-32 min-w-0 flex-1 resize-none" rows={1} maxLength={4000} value={text} onChange={event => write(event.target.value)} onKeyDown={onKeyDown} placeholder={t("Viết tin nhắn…")} />
+      <textarea id="chat-message" ref={box} className="field max-h-32 min-w-0 flex-1 resize-none" rows={1} maxLength={4000} value={text} onChange={event => write(event.target.value)} onKeyDown={onKeyDown} onFocus={() => { window.setTimeout(() => box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 250); }} placeholder={t("Viết tin nhắn…")} />
       <Button type="submit" disabled={busy || preparing || (editing ? !text.trim() : !text.trim() && !photos.length && !card)} aria-label={editing ? t("Lưu thay đổi") : t("Gửi tin nhắn")}><Send size={17} /></Button>
     </div>
   </form>;

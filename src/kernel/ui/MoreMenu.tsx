@@ -22,7 +22,7 @@ export function Popover({ label, trigger, triggerClassName, panelClassName = "",
   }, []);
   return <details ref={box} className="relative">
     <summary aria-label={label} className={`pressable cursor-pointer list-none [&::-webkit-details-marker]:hidden ${triggerClassName}`}>{trigger}</summary>
-    <div onClick={() => box.current?.removeAttribute("open")} className={`animate-pop absolute right-0 z-30 mt-1 min-w-56 origin-top-right rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-2xl ${panelClassName}`}>
+    <div onClick={() => box.current?.removeAttribute("open")} className={`animate-pop absolute right-0 z-50 mt-1 min-w-56 origin-top-right rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-2xl ${panelClassName}`}>
       {children}
     </div>
   </details>;

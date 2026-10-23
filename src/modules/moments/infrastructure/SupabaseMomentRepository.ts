@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SignedFiles } from "../../../kernel/files";
-import type { ArchivedMoment, Moment, MomentArchiveCursor, MomentArchivePage, MomentDraft, MomentRepository, MomentViewer, Reaction } from "../domain/Moment";
+import type { ArchivedMoment, Moment, MomentArchiveCursor, MomentArchivePage, MomentArchivePerson, MomentDraft, MomentRepository, MomentViewer, Reaction } from "../domain/Moment";
 
 /**
  * Photos in Supabase: the rows through SQL functions that ask on every call who may see what, the
@@ -19,30 +19,50 @@ export class SupabaseMomentRepository implements MomentRepository {
     return data;
   }
 
+  private async relationshipTags(ids: readonly string[]): Promise<Map<string, { userId: string; name: string; relationship: string }>> {
+    if (!ids.length) return new Map();
+    const rows = await this.call("list_moment_relationship_tags", { p_moment_ids: ids });
+    return new Map((rows ?? []).map((row: any) => [row.moment_id, {
+      userId: row.partner_id, name: row.partner_name, relationship: row.relationship,
+    }]));
+  }
+
   async list(): Promise<Moment[]> {
-    return ((await this.call("list_moments")) ?? []).map((row: any): Moment => ({
+    const rows = (await this.call("list_moments")) ?? [];
+    const tags = await this.relationshipTags(rows.map((row: any) => row.id));
+    return rows.map((row: any): Moment => ({
       id: row.id, ownerId: row.owner_id, ownerName: row.owner_name, ownerAvatarUrl: row.owner_avatar_url ?? null, path: row.path, mode: row.mode ?? null,
       modeLabel: row.mode_label ?? null, modeIcon: row.mode_icon ?? null, modeColor: row.mode_color ?? null,
       caption: row.caption ?? "", width: row.width, height: row.height, createdAt: row.created_at, expiresAt: row.expires_at, audience: row.audience,
+      relationshipTag: tags.get(row.id) ?? null,
       mine: row.owner_id === this.userId, seen: row.seen, myReaction: row.my_reaction ?? null, views: row.views ?? 0, reactions: row.reactions ?? {},
     }));
   }
 
-  async archive(before?: MomentArchiveCursor): Promise<MomentArchivePage> {
+  async archive(before?: MomentArchiveCursor, ownerId?: string): Promise<MomentArchivePage> {
     const limit = 30;
-    const rows = (await this.call("list_moment_archive", {
+    const rows = (await this.call(ownerId ? "list_moment_archive_for_owner" : "list_moment_archive", {
       p_before_created_at: before?.createdAt ?? null,
       p_before_id: before?.id ?? null,
       p_limit: limit,
+      ...(ownerId ? { p_owner_id: ownerId } : {}),
     })) ?? [];
+    const tags = await this.relationshipTags(rows.map((row: any) => row.id));
     const items: ArchivedMoment[] = rows.map((row: any): ArchivedMoment => ({
       id: row.id, ownerId: row.owner_id, ownerName: row.owner_name, ownerAvatarUrl: row.owner_avatar_url ?? null,
       path: row.path, mode: row.mode ?? null, modeLabel: row.mode_label ?? null, modeIcon: row.mode_icon ?? null,
       modeColor: row.mode_color ?? null, caption: row.caption ?? "", width: row.width, height: row.height,
-      createdAt: row.created_at, audience: row.audience, mine: row.owner_id === this.userId,
+      createdAt: row.created_at, audience: row.audience, relationshipTag: tags.get(row.id) ?? null, mine: row.owner_id === this.userId,
     }));
     const last = items.at(-1);
     return { items, next: items.length === limit && last ? { createdAt: last.createdAt, id: last.id } : null };
+  }
+
+  async archivePeople(): Promise<MomentArchivePerson[]> {
+    return ((await this.call("list_moment_archive_people")) ?? []).map((row: any): MomentArchivePerson => ({
+      ownerId: row.owner_id, ownerName: row.owner_name, ownerAvatarUrl: row.owner_avatar_url ?? null,
+      photoCount: Number(row.photo_count), mine: row.owner_id === this.userId,
+    }));
   }
 
   addresses(paths: readonly string[]): Promise<Map<string, string>> { return this.files.addresses(paths); }
@@ -61,6 +81,7 @@ export class SupabaseMomentRepository implements MomentRepository {
       await this.call("post_moment", {
         p_id: id, p_width: draft.width, p_height: draft.height, p_mode: draft.mode, p_caption: draft.caption,
         p_viewer_ids: draft.viewerIds, p_activate_mode: draft.activateMode, p_mode_minutes: draft.modeMinutes,
+        p_relationship_user_id: draft.relationshipUserId,
       });
     } catch (cause) {
       // The server refused the photo: its file, which nobody else can read, is taken back at once.

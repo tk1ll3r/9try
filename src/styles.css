@@ -13,9 +13,15 @@
   --ink: #311726;
   --muted: #765b69;
   --lime: #f7bdd7;
-  --lime-strong: #cf3e80;
+  --lime-strong: #a62b62;
   --focus: #a62b62;
   --border: #ead2dc;
+  --relationship-love: #a1265c;
+  --relationship-family: #60408d;
+  --relationship-friendship: #11656a;
+  --relationship-work: #80500b;
+  --relationship-custom: #505b81;
+  --relationship-pending: #765b69;
   --danger: #b91c1c;
   --success: #166534;
   --warning: #92400e;
@@ -27,6 +33,7 @@
   --tone-busy: #8b8e83;
   /* Water on the map. The other colors of the map are the tokens above; scripts/build-map-style.mjs reads them from this file. */
   --map-water: #e6cad7;
+  --visual-viewport-height: 100dvh;
 }
 
 :root[data-theme="dark"] {
@@ -40,6 +47,12 @@
   --lime-strong: #ff75ba;
   --focus: #ff9aca;
   --border: #503746;
+  --relationship-love: #ff89bd;
+  --relationship-family: #c4a5ff;
+  --relationship-friendship: #71d5ce;
+  --relationship-work: #ffc078;
+  --relationship-custom: #afbaff;
+  --relationship-pending: #c6aab7;
   --danger: #fca5a5;
   --success: #86efac;
   --warning: #fcd34d;
@@ -59,11 +72,42 @@
   a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 }
 
+/* Ensure text on --lime background maintains high contrast (WCAG AA) in dark mode */
+[class*="bg-[var(--lime)]"] {
+  --ink: #160f14;
+  color: #160f14;
+}
+:root[data-theme="dark"] [class*="bg-[var(--lime)]"] {
+  color: #160f14 !important;
+}
+:root[data-theme="dark"] [class*="bg-[var(--lime)]"] * {
+  --ink: #160f14;
+}
+
 /* In a layer so that utilities such as `pl-10` can override it. */
 @layer components {
+  .app-button:not(:disabled) { cursor: pointer; }
+  @media (hover: hover) and (pointer: fine) {
+    .app-button:not(:disabled):hover { transform: translateY(-2px); }
+    .app-button[data-variant="primary"]:not(:disabled):hover,
+    .app-button[data-variant="danger"]:not(:disabled):hover,
+    .app-button[data-variant="white"]:not(:disabled):hover { box-shadow: 0 10px 26px -14px color-mix(in srgb, var(--ink) 62%, transparent); }
+    .app-button[data-variant="secondary"]:not(:disabled):hover { box-shadow: 0 10px 28px -14px var(--lime-strong); }
+    .app-button[data-variant="ghost"]:not(:disabled):hover { background-color: color-mix(in srgb, var(--ink) 7%, transparent); }
+    .relationship-primary-link:hover { transform: translateY(-2px); box-shadow: 0 10px 26px -14px color-mix(in srgb, var(--ink) 62%, transparent); }
+    .relationship-inline-link:hover { background-color: var(--surface); }
+    .relationship-chat-link:hover { background-color: var(--lime); }
+    .relationship-kind-option:not([aria-pressed="true"]):hover { background-color: var(--soft); }
+  }
+
   /* Keep the phone map and its sheet above the fixed navigation, including the iPhone home-indicator area. */
   .map-phone-frame {
     height: max(9rem, calc(100svh - 17rem - env(safe-area-inset-bottom) - max(0px, env(safe-area-inset-top) - 1.25rem)));
+  }
+
+  .relationship-map-node { cursor: pointer; touch-action: manipulation; transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  @media (hover: hover) and (pointer: fine) {
+    .relationship-map-node:hover { background-color: color-mix(in srgb, var(--surface) 86%, var(--lime)); box-shadow: 0 8px 22px -12px color-mix(in srgb, var(--ink) 42%, transparent); }
   }
 
   /* The link in a card's heading ("Mở lịch", "Tất cả việc"): tall enough for a finger, without making the heading taller. */
@@ -194,6 +238,13 @@
   padding-bottom: calc(7rem + env(safe-area-inset-bottom));
   padding-left: max(1rem, env(safe-area-inset-left));
 }
+.app-main[data-keyboard="true"] {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+.app-main[data-keyboard="true"] .chat-viewport {
+  height: calc(var(--visual-viewport-height, 100dvh) - 1.25rem) !important;
+}
 .app-mobile-nav {
   position: fixed;
   bottom: max(.75rem, env(safe-area-inset-bottom, 0px));
@@ -230,6 +281,13 @@
   opacity: 0;
   pointer-events: none;
 }
+.message-actions-trigger { width: 2.75rem; height: 2.75rem; opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .message-actions-trigger { width: 2.25rem; height: 2.25rem; opacity: 0; }
+  .group:hover .message-actions-trigger,
+  .message-actions-trigger:focus-visible,
+  details[open] > .message-actions-trigger { opacity: 1; }
+}
 .map-skin .maplibregl-ctrl-group { overflow: hidden; border-radius: 1rem; background: color-mix(in srgb, var(--surface) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 8px 24px -12px rgb(0 0 0 / .45), 0 0 0 1px color-mix(in srgb, var(--ink) 10%, transparent); }
 .map-skin .maplibregl-ctrl-group button { width: 2.75rem; height: 2.75rem; }
 .map-skin .maplibregl-ctrl-group button + button { border-top: 1px solid var(--border); }
@@ -237,7 +295,8 @@
 .map-skin .maplibregl-ctrl-group button:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
 :root[data-theme="dark"] .map-skin .maplibregl-ctrl-icon { filter: invert(1); }
 .map-skin .maplibregl-ctrl.maplibregl-ctrl-attrib { border-radius: .75rem; background: color-mix(in srgb, var(--surface) 84%, transparent); color: var(--muted); font-size: .6875rem; }
-.map-skin .maplibregl-ctrl-attrib a { color: var(--ink); }
+.map-skin .maplibregl-ctrl-attrib-button { width: 2.75rem; height: 2.75rem; }
+.map-skin .maplibregl-ctrl-attrib a { display: inline-flex; min-height: 2.75rem; align-items: center; padding-inline: .375rem; color: var(--ink); }
 :root[data-theme="dark"] .map-skin .maplibregl-ctrl-attrib-button { filter: invert(1); }
 .map-skin .maplibregl-popup-content { border-radius: 1.25rem; background: var(--surface); color: var(--ink); padding: .875rem; font: inherit; box-shadow: 0 18px 40px -16px rgb(0 0 0 / .5), 0 0 0 1px color-mix(in srgb, var(--ink) 9%, transparent); }
 .map-skin .maplibregl-popup-tip { display: none; }

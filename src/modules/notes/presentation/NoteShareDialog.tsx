@@ -83,7 +83,7 @@ export function NoteShareDialog({ note, open, onOpenChange }: { note: Note | nul
         <ul className="space-y-2">{shares.data?.map(share => <li key={share.id} className="flex min-h-12 items-center gap-3 rounded-2xl bg-[var(--soft)] p-2">
           {share.targetKind === "person" ? <Avatar name={share.targetName} src={share.avatarUrl} className="size-9 shrink-0 bg-[var(--surface)] text-xs font-black" /> : <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--surface)]"><UsersRound size={17} /></span>}
           <span className="min-w-0 flex-1"><b className="block truncate text-sm">{share.targetName}</b><span className="block text-xs text-[var(--muted)]">{share.permission === "edit" ? t("Có thể sửa") : t("Chỉ xem")} · {share.targetKind === "person" ? t("Bạn bè") : t("Nhóm")}</span></span>
-          <button type="button" aria-label={t("Thu hồi quyền của {0}", share.targetName)} disabled={pending} onClick={() => run(() => notes.revokeShare(share.id))} className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"><Trash2 size={16} /></button>
+          <button type="button" aria-label={t("Thu hồi quyền của {0}", share.targetName)} disabled={pending} onClick={() => run(() => notes.revokeShare(share.id))} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"><Trash2 size={16} /></button>
         </li>)}</ul>
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">{t("Chia sẻ với nhóm tự cập nhật theo thành viên hiện tại của nhóm.")}</p>
       </section>

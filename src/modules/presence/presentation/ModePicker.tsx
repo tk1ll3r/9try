@@ -15,7 +15,7 @@ export function ModePicker({ open, onOpenChange, mine, minutes, customModes, onM
     <div role="group" aria-label={t("Tự tắt sau")} className="flex flex-wrap items-center gap-2 text-sm">
       <span className="font-semibold text-[var(--muted)]">{t("Tự tắt sau")}</span>
       {durations.map(([value, label]) => <button key={value} type="button" aria-pressed={minutes === value} onClick={() => onMinutes(value)}
-        className={`min-h-9 rounded-full px-3 font-semibold transition-colors duration-200 ${minutes === value ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>{label}</button>)}
+        className={`min-h-11 rounded-full px-3 font-semibold transition-colors duration-200 ${minutes === value ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`}>{label}</button>)}
     </div>
     {activityGroups.map(group => <section key={group.title} className="mt-4">
       <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{group.title}</h3>
@@ -33,7 +33,7 @@ export function ModePicker({ open, onOpenChange, mine, minutes, customModes, onM
     <section className="mt-4">
       <div className="mb-2 flex items-center justify-between gap-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{t("Mode riêng của bạn")}</h3>
-        <button type="button" onClick={() => setCreating(true)} className="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--soft)]"><Plus size={16}/>{t("Tạo mode")}</button>
+        <button type="button" onClick={() => setCreating(true)} className="inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-[var(--muted)] hover:bg-[var(--soft)]"><Plus size={16}/>{t("Tạo mode")}</button>
       </div>
       {customModes.length ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {customModes.map(mode => { const choice = choiceOf(mode.mode, mode)!; const on = mine?.mode === mode.mode;

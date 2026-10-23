@@ -11,6 +11,8 @@ export const signOf = (reaction: string | null | undefined) => reactionSigns.fin
 export const photoLimits = { maxSide: 1080, maxBytes: 300_000 } as const;
 export const captionLength = 80;
 
+export interface MomentRelationshipTag { userId: string; name: string; relationship: string }
+
 /** A photo someone posted for their friends. It is gone 24 hours after it was posted. */
 export interface Moment {
   id: string;
@@ -31,6 +33,8 @@ export interface Moment {
   createdAt: string;
   expiresAt: string;
   audience: "friends" | "selected";
+  /** Mutual relationship the owner chose to show on this photo. */
+  relationshipTag: MomentRelationshipTag | null;
   mine: boolean;
   /** The signed-in person has looked at it. Always true for their own. */
   seen: boolean;
@@ -64,11 +68,19 @@ export interface ArchivedMoment {
   height: number;
   createdAt: string;
   audience: "friends" | "selected";
+  relationshipTag: MomentRelationshipTag | null;
   mine: boolean;
 }
 
 export interface MomentArchiveCursor { createdAt: string; id: string }
 export interface MomentArchivePage { items: ArchivedMoment[]; next: MomentArchiveCursor | null }
+export interface MomentArchivePerson {
+  ownerId: string;
+  ownerName: string;
+  ownerAvatarUrl: string | null;
+  photoCount: number;
+  mine: boolean;
+}
 
 export interface MomentDraft {
   blob: Blob;
@@ -78,6 +90,8 @@ export interface MomentDraft {
   caption: string;
   /** The friends it is for, or null for every friend. A list is never widened: an empty one is for nobody. */
   viewerIds: string[] | null;
+  /** The accepted shared relationship to show on the photo, if the owner chooses one. */
+  relationshipUserId: string | null;
   /** Activate a newly attached activity in the same transaction as posting the photo. */
   activateMode: boolean;
   modeMinutes: number;
@@ -87,7 +101,9 @@ export interface MomentRepository {
   /** The photos the signed-in person may see right now, their own among them. */
   list(): Promise<Moment[]>;
   /** Cursor-paged archive, newest first. */
-  archive(before?: MomentArchiveCursor): Promise<MomentArchivePage>;
+  archive(before?: MomentArchiveCursor, ownerId?: string): Promise<MomentArchivePage>;
+  /** Every photographer whose archived photos the signed-in person may see, with the full count. */
+  archivePeople(): Promise<MomentArchivePerson[]>;
   /** Where the photos can be loaded from for the next hour, by the name of the file. */
   addresses(paths: readonly string[]): Promise<Map<string, string>>;
   /** Downloads a photo the signed-in person is allowed to see. */
@@ -107,9 +123,9 @@ export interface MomentRepository {
 /** The photos that are not over at `now`. The server stops showing a photo at the same moment. */
 export const live = (moments: readonly Moment[], now: number) => moments.filter(moment => Date.parse(moment.expiresAt) > now);
 
-/** The order of the frame on the Mode screen: what the person has not looked at first, newest first; then the rest, newest first. */
+/** Newest first, with an ID tie-break so equal server timestamps never shuffle between reads. */
 export function frameOrder(moments: readonly Moment[], now: number): Moment[] {
-  return live(moments, now).sort((a, b) => Number(a.seen) - Number(b.seen) || b.createdAt.localeCompare(a.createdAt));
+  return live(moments, now).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id.localeCompare(a.id));
 }
 
 export interface PersonMoments {
@@ -122,17 +138,19 @@ export interface PersonMoments {
   moments: Moment[];
 }
 
-/** Each person's photos. People with something new come first, then by their newest photo; the signed-in person's own come last. */
+/** Each person's photos oldest first; people are ordered by the time of their newest photo. */
 export function byPerson(moments: readonly Moment[], now: number): PersonMoments[] {
   const people = new Map<string, PersonMoments>();
-  for (const moment of live(moments, now).sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+  for (const moment of live(moments, now).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))) {
     const person = people.get(moment.ownerId) ?? { ownerId: moment.ownerId, ownerName: moment.ownerName, ownerAvatarUrl: moment.ownerAvatarUrl, mine: moment.mine, unseen: 0, moments: [] };
     person.moments.push(moment);
     if (!moment.seen) person.unseen++;
     people.set(moment.ownerId, person);
   }
-  const newest = (person: PersonMoments) => person.moments[person.moments.length - 1].createdAt;
-  return [...people.values()].sort((a, b) => Number(a.mine) - Number(b.mine) || Number(b.unseen > 0) - Number(a.unseen > 0) || newest(b).localeCompare(newest(a)));
+  const newest = (person: PersonMoments) => person.moments[person.moments.length - 1];
+  return [...people.values()].sort((a, b) => Date.parse(newest(b).createdAt) - Date.parse(newest(a).createdAt)
+    || newest(b).id.localeCompare(newest(a).id)
+    || a.ownerId.localeCompare(b.ownerId));
 }
 
 /** The reader opens at the oldest unseen photo, or the newest photo after all have been seen. */
@@ -192,7 +210,11 @@ export function ago(createdAt: string, now: number): string {
 
 /** A friend with a photo of the day moves up on the Mode screen. One taken within the hour counts in full. */
 export function momentSignals(moments: readonly Moment[], now: Date): FriendSignal[] {
-  return byPerson(moments, now.getTime()).filter(person => !person.mine).map(person => {
+  const people = byPerson(moments, now.getTime()).filter(person => !person.mine).sort((a, b) =>
+    Number(b.unseen > 0) - Number(a.unseen > 0)
+    || Date.parse(b.moments[b.moments.length - 1].createdAt) - Date.parse(a.moments[a.moments.length - 1].createdAt)
+    || a.ownerId.localeCompare(b.ownerId));
+  return people.map(person => {
     const target = openingMoment(person);
     const newest = person.moments[person.moments.length - 1];
     const fresh = now.getTime() - Date.parse(newest.createdAt) < 3_600_000;

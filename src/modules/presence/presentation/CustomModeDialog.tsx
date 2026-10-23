@@ -46,7 +46,7 @@ export function CustomModeDialog({ open, onOpenChange, onCreated }: {
         <legend className="text-sm font-semibold">{t("Màu sắc")}</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {customModeColors.map(option => <button key={option} type="button" aria-label={t("Chọn màu {0}", option)} aria-pressed={color === option}
-            onClick={() => setColor(option)} className={`grid size-10 place-items-center rounded-full ring-offset-2 ring-offset-[var(--surface)] ${color === option ? "ring-2 ring-[var(--ink)]" : ""}`} style={{ background: option }}>
+            onClick={() => setColor(option)} className={`grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-[var(--surface)] ${color === option ? "ring-2 ring-[var(--ink)]" : ""}`} style={{ background: option }}>
             {color === option && <Icon size={17} className="text-white"/>}
           </button>)}
         </div>

@@ -35,7 +35,7 @@ export function CalendarPrivacy() {
         <Button variant="ghost" disabled={revoking.pending} onClick={() => revoking.run(() => calendar.revokeScheduleGrant(grant.userId))}>{t("Thu hồi")}</Button>
       </li>)}</ul>
     </div>}
-    <p className="mt-3 text-sm text-[var(--muted)]"><Link to="/calendar/requests" className="font-semibold underline">{t("Mở Chia sẻ lịch")}</Link></p>
+    <div className="mt-3"><Link to="/calendar/requests" className="pressable inline-flex min-h-11 items-center rounded-xl bg-[var(--soft)] px-3 text-sm font-semibold text-[var(--ink)]">{t("Mở Chia sẻ lịch")}</Link></div>
     {(error || revoking.error) && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error || revoking.error}</p>}
   </Card>;
 }

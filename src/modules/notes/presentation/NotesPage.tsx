@@ -75,10 +75,10 @@ export function NotesPage() {
                 <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                   <div className="min-w-0"><h2 className="break-words font-bold">{name(note)}</h2><p className="text-xs text-[var(--muted)]">{note.permission === "owner" ? t("Ghi chú của bạn") : t("Chia sẻ bởi {0}", note.ownerName)} · {note.permission === "edit" ? t("Có thể sửa") : note.permission === "view" ? t("Chỉ xem") : t("Chỉ bạn")}</p></div>
                   <div className="flex shrink-0 gap-1">
-                    {note.permission === "owner" && <button type="button" disabled={pending} className="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-sm font-semibold hover:bg-[var(--surface)]" aria-label={t("Chia sẻ ghi chú {0}", name(note))} onClick={() => setSharing(note)}><Link2 size={16} /> {t("Chia sẻ")}</button>}
-                    {note.permission !== "view" && <button type="button" disabled={pending} className="min-h-10 rounded-xl px-2 text-sm font-semibold hover:bg-[var(--surface)]" aria-label={t("Sửa ghi chú {0}", name(note))}
+                    {note.permission === "owner" && <button type="button" disabled={pending} className="inline-flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-semibold hover:bg-[var(--surface)]" aria-label={t("Chia sẻ ghi chú {0}", name(note))} onClick={() => setSharing(note)}><Link2 size={16} /> {t("Chia sẻ")}</button>}
+                    {note.permission !== "view" && <button type="button" disabled={pending} className="min-h-11 rounded-xl px-2 text-sm font-semibold hover:bg-[var(--surface)]" aria-label={t("Sửa ghi chú {0}", name(note))}
                       onClick={() => { setEditing(note); setTitle(note.title); setBody(note.body); document.getElementById("note-title")?.focus(); }}>{t("Sửa")}</button>}
-                    {note.permission === "owner" && <button type="button" disabled={pending} className="grid size-10 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]" aria-label={t("Xóa ghi chú {0}", name(note))}
+                    {note.permission === "owner" && <button type="button" disabled={pending} className="grid size-11 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]" aria-label={t("Xóa ghi chú {0}", name(note))}
                       onClick={async () => { if (await confirm({ title: t("Xóa ghi chú?"), body: t("“{0}” sẽ bị xóa. Không thể hoàn tác.", name(note)), action: t("Xóa ghi chú") })) run(() => notes.remove(note.id), () => { if (editing?.id === note.id) clear(); }); }}><Trash2 size={16} /></button>}
                   </div>
                 </div>

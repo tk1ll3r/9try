@@ -1,12 +1,13 @@
-import { ArrowLeft, BellOff, Hourglass, MessageCircle, SlidersHorizontal, UsersRound } from "lucide-react";
+import { ArrowLeft, BellOff, Flame, HeartHandshake, Hourglass, MessageCircle, SlidersHorizontal, UsersRound } from "lucide-react";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
 import { useAction } from "../../../kernel/useAction";
 import { Button } from "../../../kernel/ui/Button";
 import { Avatar } from "../../../kernel/ui/Avatar";
-import { useAcceptedFriends } from "../../friends";
+import { RelationshipInviteDialog, useAcceptedFriends, useSharedRelationships } from "../../friends";
 import { useMyGroups } from "../../groups";
 import { chatModule } from "../chat.module";
 import { cleanChatTitle, roomTitle, type Room } from "../domain/Chat";
@@ -21,14 +22,19 @@ import { t } from "../../../kernel/i18n";
 export function ChatPage() {
   const { conversationId } = useParams();
   const me = useUserId();
+  const chat = useModule(chatModule);
+  const queries = useQueryClient();
   const friends = useAcceptedFriends();
+  const sharedRelationships = useSharedRelationships();
   const groups = useMyGroups();
   const [infoOpen, setInfoOpen] = useState(false);
+  const [relationshipInviteOpen, setRelationshipInviteOpen] = useState(false);
   const [jump, setJump] = useState<{ id: string; token: number } | null>(null);
   const conversations = useConversations();
   const rooms = useRooms();
   const open = conversations.data?.find(conversation => conversation.id === conversationId);
   const openFriend = open?.kind === "direct" ? friends.find(friend => friend.userId === open.otherUserId) : undefined;
+  const openRelationship = openFriend ? sharedRelationships.data?.find(item => item.friendId === openFriend.userId) : undefined;
   const roomOf = (id: string | undefined) => rooms.data?.find(room => room.id === id);
   const openRoom = roomOf(conversationId);
   // Open rooms the person may join and has not: an event's or a meetup's discussion, a friend's mode.
@@ -46,7 +52,7 @@ export function ChatPage() {
   const moderator = role === "owner" || role === "admin" || (open?.kind === "room" && open.ownerId === me);
 
   return (
-    <div className="grid h-[calc(100dvh-8.5rem)] gap-5 lg:h-[calc(100dvh-4.5rem)] lg:grid-cols-[20rem_1fr]">
+    <div className="chat-viewport grid h-[calc(100dvh-10.75rem)] gap-5 lg:h-[calc(100dvh-8rem)] lg:grid-cols-[20rem_1fr]">
       <section className={`min-h-0 flex-col ${conversationId ? "hidden lg:flex" : "flex"}`}>
         <header className="pr-14 lg:pr-0">
           <p className="text-sm font-semibold text-[var(--muted)]">{t("Với bạn bè và nhóm của bạn")}</p>
@@ -63,7 +69,11 @@ export function ChatPage() {
           </section>}
           {conversations.isPending && <p role="status">{t("Đang tải…")}</p>}
           {conversations.isError && <p role="alert" className="text-sm text-[var(--danger)]">{errorMessage(conversations.error, t("Không tải được các cuộc trò chuyện."))}</p>}
-          {conversations.data?.length === 0 && !joinable.length && <p className="rounded-2xl bg-[var(--soft)] p-4 text-sm leading-6 text-[var(--muted)]">{t("Chưa có cuộc trò chuyện nào. Mở")} <Link className="font-semibold underline" to="/me/friends">{t("Bạn bè")}</Link> {t("và bấm “Nhắn tin”, hoặc mở một nhóm và bấm “Trò chuyện nhóm”.")}</p>}
+          {conversations.data?.length === 0 && !joinable.length && <div className="rounded-2xl bg-[var(--soft)] p-4">
+            <p className="font-semibold">{t("Chưa có cuộc trò chuyện nào.")}</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{t("Mở danh sách bạn bè để nhắn tin, hoặc mở một nhóm để bắt đầu trò chuyện nhóm.")}</p>
+            <Link className="pressable mt-3 inline-flex min-h-11 items-center rounded-xl bg-[var(--surface)] px-3 text-sm font-semibold" to="/me/friends">{t("Mở danh sách bạn bè")}</Link>
+          </div>}
           {(conversations.data ?? []).map(conversation => {
             const room = roomOf(conversation.id);
             const friend = conversation.kind === "direct" ? friends.find(item => item.userId === conversation.otherUserId) : undefined;
@@ -90,8 +100,17 @@ export function ChatPage() {
             {openFriend && <Avatar name={openFriend.displayName} src={openFriend.avatarUrl} className="size-10 shrink-0 bg-[var(--ink)] font-bold text-[var(--paper)]" />}
             <span className="min-w-0 flex-1 overflow-hidden">
               <h2 className="truncate text-lg font-bold">{openRoom ? roomTitle(openRoom) : openFriend?.displayName ?? (open?.title ? cleanChatTitle(open.title) : undefined) ?? t("Cuộc trò chuyện")}</h2>
-              {openRoom?.source.kind === "mode" && <span className="block truncate text-sm text-[var(--muted)]">{t("Thảo luận mở bởi {0}", openRoom.ownerName)}</span>}
+              {openRelationship
+                ? <Link to="/me/relationships" className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]">
+                    <Flame size={13} className="shrink-0 text-orange-500" />
+                    <span className="truncate">{openRelationship.currentStreak > 0
+                      ? t("{0} · chuỗi {1} ngày", openRelationship.relationship, openRelationship.currentStreak)
+                      : t("{0} · nhắn tin để bắt đầu chuỗi", openRelationship.relationship)}</span>
+                  </Link>
+                : openRoom?.source.kind === "mode" && <span className="block truncate text-sm text-[var(--muted)]">{t("Thảo luận mở bởi {0}", openRoom.ownerName)}</span>}
             </span>
+            {openFriend && !openRelationship && sharedRelationships.isSuccess && <button type="button" aria-label={t("Đề nghị quan hệ với {0}", openFriend.displayName)} title={t("Đề nghị quan hệ")}
+              onClick={() => setRelationshipInviteOpen(true)} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--lime-strong)] hover:bg-[var(--soft)]"><HeartHandshake size={19} /></button>}
             {open && !atTheDoor && <button id="conversation-info" type="button" aria-label={t("Tùy chọn cuộc trò chuyện")} onClick={() => setInfoOpen(true)} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--soft)]">
               {open.muted ? <BellOff size={18} /> : <SlidersHorizontal size={18} />}
             </button>}
@@ -104,6 +123,13 @@ export function ChatPage() {
             </>}
         </> : <div className="m-auto text-center text-[var(--muted)]"><MessageCircle className="mx-auto mb-2" />{t("Chọn một cuộc trò chuyện.")}</div>}
       </section>
+      {openFriend && open && <RelationshipInviteDialog friendId={openFriend.userId} friendName={openFriend.displayName} open={relationshipInviteOpen} onOpenChange={setRelationshipInviteOpen}
+        onSent={async (_inviteId, relationship) => {
+          try {
+            await chat.post({ id: crypto.randomUUID(), conversationId: open.id, body: t("Mình gửi bạn lời mời quan hệ: {0}.", relationship), card: { path: "/me/relationships", title: t("Lời mời quan hệ · {0}", relationship) } });
+            void queries.invalidateQueries({ queryKey: chatKey });
+          } catch { /* The relationship notification still delivers the invitation if chat is unavailable. */ }
+        }} />}
     </div>
   );
 }
@@ -115,7 +141,7 @@ function RoomDoor({ room }: { room: Room | undefined }) {
   const { run, pending, error } = useAction(chatKey);
   if (!room || room.removed || room.closed) return <div className="m-auto max-w-sm space-y-3 p-4 text-center text-sm leading-6">
     <p className="text-[var(--muted)]">{room?.removed ? t("Người mở phòng đã mời bạn ra khỏi phòng này.") : room?.closed ? t("Phòng này đã đóng trước khi bạn tham gia.") : t("Không mở được cuộc trò chuyện này. Có thể nó đã hết hạn, hoặc không dành cho bạn.")}</p>
-    <Link to="/chat" className="font-semibold underline">{t("Về danh sách trò chuyện")}</Link>
+    <Link to="/chat" className="pressable inline-flex min-h-11 items-center rounded-xl bg-[var(--soft)] px-3 font-semibold">{t("Về danh sách trò chuyện")}</Link>
   </div>;
   return <div className="m-auto max-w-sm space-y-3 p-4 text-center">
     <p className="truncate text-lg font-bold">{roomTitle(room)}</p>

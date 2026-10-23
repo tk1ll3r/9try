@@ -1,10 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-const OLD_URL = "https://nyyqzldznzcmihjwhueb.supabase.co";
-const OLD_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55eXF6bGR6bnpjbWloandodWViIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTc5NzUyNywiZXhwIjoyMTA3MzczNTI3fQ.pZiUwTaOrmXxibTyGBWvTVKalMpslYyfdya9R0ug8pI";
+function required(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Set ${name} in the environment before running this migration.`);
+  return value;
+}
 
-const NEW_URL = "https://jqmkfgmfisjmqizqyyct.supabase.co";
-const NEW_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxbWtmZ21maXNqbXFpenF5eWN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA2MTM4NCwiZXhwIjoyMTA3NjM3Mzg0fQ.-YxJz_TVUGE1Z6ryC0mry7mS0MospScb1IdAR_r7mEM";
+const OLD_URL = required("OLD_SUPABASE_URL");
+const OLD_SERVICE_KEY = required("OLD_SUPABASE_SERVICE_ROLE_KEY");
+const NEW_URL = required("NEW_SUPABASE_URL");
+const NEW_SERVICE_KEY = required("NEW_SUPABASE_SERVICE_ROLE_KEY");
 
 const oldDb = createClient(OLD_URL, OLD_SERVICE_KEY, { auth: { persistSession: false } });
 const newDb = createClient(NEW_URL, NEW_SERVICE_KEY, { auth: { persistSession: false } });

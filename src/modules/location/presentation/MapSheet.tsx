@@ -62,7 +62,7 @@ export function MapSheet({ height, onHeight, head, children }: { height: SheetHe
     <div className="shrink-0 touch-none select-none xl:hidden" onPointerDown={down}
       onClickCapture={event => { if (dragged.current) { event.stopPropagation(); event.preventDefault(); } }}>
       <button type="button" aria-label={says[height]} aria-expanded={height !== "peek"} aria-controls="location-panel" onClick={() => onHeight(order[(order.indexOf(height) + 1) % order.length])}
-        className="grid h-7 w-full place-items-center rounded-t-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)]">
+        className="grid h-11 w-full place-items-center rounded-t-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)]">
         <i aria-hidden className="h-1.5 w-11 rounded-full bg-[var(--border)]" />
       </button>
       {head}

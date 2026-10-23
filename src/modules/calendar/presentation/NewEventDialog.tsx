@@ -17,7 +17,7 @@ import { locale, t } from "../../../kernel/i18n";
 
 /** How long a repeating event runs when nothing else is said, in months. */
 const usualRun: Record<RecurrenceRule, number> = { daily: 1, weekly: 4, monthly: 12 };
-const chip = (on: boolean) => `min-h-10 shrink-0 rounded-full px-3.5 text-sm font-semibold transition-colors duration-200 ${on ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`;
+const chip = (on: boolean) => `min-h-11 shrink-0 rounded-full px-3.5 text-sm font-semibold transition-colors duration-200 ${on ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--muted)]"}`;
 
 // The friends and places of the last events, kept on this device. They are offered first and never
 // chosen for the person: a new event is private until they say otherwise.

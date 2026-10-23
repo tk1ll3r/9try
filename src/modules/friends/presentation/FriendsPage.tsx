@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Ban, CalendarDays, Check, Copy, Link2, MessageCircle, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
+import { Ban, CalendarDays, Check, Copy, HeartHandshake, Link2, MessageCircle, Search, Share2, UserMinus, UserPlus, X } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
@@ -15,6 +15,7 @@ import { ProfileCardDialog } from "../../identity";
 import { onlineLabel, useFriendPresence } from "../../presence";
 import { friendsModule } from "../friends.module";
 import { friendsKey, useFriendConnections } from "./useFriends";
+import { RelationshipInviteDialog } from "./RelationshipInviteDialog";
 import { locale, t } from "../../../kernel/i18n";
 
 export function FriendsPage() {
@@ -32,6 +33,7 @@ export function FriendsPage() {
   // The friend whose card is open. It stays in the dialog while the dialog closes.
   const [card, setCard] = useState<{ userId: string; name: string } | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
+  const [relationshipTarget, setRelationshipTarget] = useState<{ userId: string; name: string } | null>(null);
 
   const items = connections.data ?? [];
   const accepted = items.filter(item => item.status === "accepted");
@@ -179,9 +181,11 @@ export function FriendsPage() {
       {card && <ProfileCardDialog userId={card.userId} name={card.name} open={cardOpen} onOpenChange={setCardOpen}>
         {/* Said in full on the card: a friend who does not share this, or has been away, is "status unavailable". */}
         <p className="w-full text-sm text-[var(--muted)]">{onlineLabel(online.get(card.userId), new Date())}</p>
+        <Button variant="secondary" onClick={() => { setCardOpen(false); setRelationshipTarget(card); }}><HeartHandshake size={17} /> {t("Đề nghị quan hệ")}</Button>
         <Link to={`/chat/with/${card.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--ink)] px-4 text-sm font-semibold text-[var(--paper)]"><MessageCircle size={16} /> {t("Nhắn tin")}</Link>
         <Link to={`/calendar/shared/${card.userId}`} className="pressable inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[var(--soft)] px-4 text-sm font-semibold"><CalendarDays size={16} /> {t("Xem lịch")}</Link>
       </ProfileCardDialog>}
+      {relationshipTarget && <RelationshipInviteDialog friendId={relationshipTarget.userId} friendName={relationshipTarget.name} open onOpenChange={open => { if (!open) setRelationshipTarget(null); }} />}
     </div>
   );
 }

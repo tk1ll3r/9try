@@ -156,11 +156,11 @@ export function LocationPage() {
     {/* Below the wide layout the map runs from here to the bar at the foot of the screen, and the rest is a sheet over it. Wide, the two stand side by side. */}
     <div className="relative -mb-6 map-phone-frame lg:mb-0 lg:h-[calc(100svh-12rem)] lg:min-h-[26rem] xl:grid xl:h-auto xl:min-h-0 xl:grid-cols-[1.6fr_1fr] xl:items-start xl:gap-4">
       <MapCanvas fill ownerKey="friends" points={points} focusRequest={focus} me={mine.position} onLocate={locateMe} onFailed={setMapFailed} onCard={setCard} />
-      <MapSheet height={sheet} onHeight={setSheet} head={<div className="flex min-h-[3.75rem] items-center gap-3 px-4 pb-2">
+      <MapSheet height={sheet} onHeight={setSheet} head={<div className="flex min-h-11 items-center gap-3 px-4">
         <p className="min-w-0 flex-1 truncate text-sm font-bold">{items.length ? t("{0} người đang chia sẻ", items.length) : t("Bạn bè và chia sẻ vị trí")}</p>
         <span className="flex shrink-0 items-center -space-x-2">{items.slice(0, 5).map(item => <button key={item.sessionId} type="button" disabled={item.latitude == null || item.longitude == null} onClick={() => show(item.sessionId)}
           aria-label={t("Xem {0} trên bản đồ", item.ownerDisplayName)} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-50">
-          <Avatar name={item.ownerDisplayName} src={faces.get(item.ownerId)} className="size-10 border-2 border-[var(--paper)] bg-[var(--ink)] text-sm font-black text-[var(--paper)]" />
+          <Avatar name={item.ownerDisplayName} src={faces.get(item.ownerId)} className="size-11 border-2 border-[var(--paper)] bg-[var(--ink)] text-sm font-black text-[var(--paper)]" />
         </button>)}</span>
         {items.length > 5 && <span className="shrink-0 text-xs font-bold text-[var(--muted)]">+{items.length - 5}</span>}
       </div>}>

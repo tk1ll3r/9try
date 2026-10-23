@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "./supabase";
 
-const realtimeRoots = new Set(["calendar", "chat", "expenses", "features", "friends", "groups", "location", "moments", "notes", "notifications", "presence"]);
+const realtimeRoots = new Set(["calendar", "chat", "expenses", "features", "friends", "groups", "location", "moments", "notes", "notifications", "presence", "relationship-streaks"]);
 
 /** How often a screen asks again after realtime missed an event. A change still arrives at once. */
 export const missedEventMs = 900_000;
@@ -20,6 +20,8 @@ export function queriesForRealtimeEvent(event: string): RealtimeRefresh[] {
       return [{ queryKey: ["moments"], exact: true }, { queryKey: ["moments", "streaks"] }, { queryKey: ["moments", "archive"] }];
     case "chat":
       return [{ queryKey: ["chat", "conversations"] }, { queryKey: ["chat", "messages"] }, { queryKey: ["chat", "reads"] }];
+    case "relationship-streaks":
+      return [{ queryKey: ["friends", "shared-relationships"], exact: true }];
     case "friends":
     case "groups":
       return [{ queryKey: [event] }, { queryKey: ["notes"] }];

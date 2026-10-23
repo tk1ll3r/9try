@@ -7,7 +7,7 @@ const now = new Date("2026-10-09T10:00:00Z");
 const at = (minutesAgo: number) => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
 const photo = (id: string, ownerId: string, minutesAgo: number, fields: Partial<Moment> = {}): Moment => ({
   id, ownerId, ownerName: ownerId, ownerAvatarUrl: null, path: `${ownerId}/${id}.jpg`, mode: null, caption: "", width: 1080, height: 1350,
-  createdAt: at(minutesAgo), expiresAt: at(minutesAgo - 24 * 60), audience: "friends", mine: ownerId === "me", seen: ownerId === "me", myReaction: null, views: 0, reactions: {}, ...fields,
+  createdAt: at(minutesAgo), expiresAt: at(minutesAgo - 24 * 60), audience: "friends", relationshipTag: null, mine: ownerId === "me", seen: ownerId === "me", myReaction: null, views: 0, reactions: {}, ...fields,
 });
 
 describe("photos of the day", () => {
@@ -18,19 +18,19 @@ describe("photos of the day", () => {
   it("stop being shown at the minute they end, whatever the server still returned", () => {
     expect(live(all, now.getTime()).map(moment => moment.id)).toEqual(["k-old", "k-new", "l-1", "mine"]);
   });
-  it("are ordered in the frame with what was not looked at first, then the newest", () => {
-    expect(frameOrder(all, now.getTime()).map(moment => moment.id)).toEqual(["k-new", "mine", "l-1", "k-old"]);
+  it("are ordered newest first regardless of seen state", () => {
+    expect(frameOrder(all, now.getTime()).map(moment => moment.id)).toEqual(["mine", "k-new", "l-1", "k-old"]);
   });
-  it("are grouped by person in the order they were taken: people with something new first, one's own last", () => {
+  it("are grouped by person in chronological order of each person's newest photo", () => {
     const people = byPerson(all, now.getTime());
     expect(people.map(person => [person.ownerId, person.unseen, person.moments.map(moment => moment.id)])).toEqual([
-      ["kha", 1, ["k-old", "k-new"]], ["lan", 0, ["l-1"]], ["me", 0, ["mine"]],
+      ["me", 0, ["mine"]], ["kha", 1, ["k-old", "k-new"]], ["lan", 0, ["l-1"]],
     ]);
   });
   it("opens the exact requested photo, or selects the first unseen photo for a person link", () => {
     const people = byPerson(all, now.getTime());
-    expect(openingMoment(people[0]).id).toBe("k-new");
-    expect(openingMoment(people[1]).id).toBe("l-1");
+    expect(openingMoment(people[1]).id).toBe("k-new");
+    expect(openingMoment(people[2]).id).toBe("l-1");
   });
   it("move a friend up on Mode: in full within the hour, less for a new one from earlier, least once looked at", () => {
     const signals = momentSignals([...all, photo("t-1", "thu", 200)], now);
@@ -68,7 +68,7 @@ describe("the photo repository", () => {
   const bucket = { upload: vi.fn(), remove: vi.fn(), createSignedUrls: vi.fn() };
   const from = vi.fn(() => bucket);
   const repository = () => new SupabaseMomentRepository({ rpc, storage: { from } } as unknown as SupabaseClient, "me");
-  const draft = { blob: new Blob(["jpeg"]), width: 1080, height: 810, mode: "coffee", caption: "Sáng nay", viewerIds: null as string[] | null, activateMode: false, modeMinutes: 120 };
+  const draft = { blob: new Blob(["jpeg"]), width: 1080, height: 810, mode: "coffee", caption: "Sáng nay", viewerIds: null as string[] | null, relationshipUserId: null as string | null, activateMode: false, modeMinutes: 120 };
 
   beforeEach(() => {
     rpc.mockReset().mockResolvedValue({ data: null, error: null });
@@ -84,7 +84,7 @@ describe("the photo repository", () => {
     expect(path).toMatch(/^me\/[0-9a-f-]{36}\.jpg$/);
     expect(blob).toBe(draft.blob);
     expect(options).toMatchObject({ contentType: "image/jpeg" });
-    expect(rpc).toHaveBeenCalledWith("post_moment", { p_id: path.slice(3, -4), p_width: 1080, p_height: 810, p_mode: "coffee", p_caption: "Sáng nay", p_viewer_ids: null, p_activate_mode: false, p_mode_minutes: 120 });
+    expect(rpc).toHaveBeenCalledWith("post_moment", { p_id: path.slice(3, -4), p_width: 1080, p_height: 810, p_mode: "coffee", p_caption: "Sáng nay", p_viewer_ids: null, p_activate_mode: false, p_mode_minutes: 120, p_relationship_user_id: null });
   });
   it("names the chosen friends when the photo is not for everyone, and never widens a list to everyone", async () => {
     await repository().post({ ...draft, viewerIds: ["kha", "lan"] });
@@ -141,5 +141,16 @@ describe("the photo repository", () => {
       { id: "p1", mine: true, seen: true, views: 2, reactions: { fire: 1 }, audience: "selected", mode: "coffee" },
       { id: "p2", mine: false, seen: false, myReaction: "heart", views: 0, reactions: {}, ownerName: "Kha" },
     ]);
+  });
+  it("loads a shared relationship label with the photo, for the feed and archive views", async () => {
+    rpc.mockResolvedValueOnce({ data: [
+      { id: "p1", owner_id: "me", owner_name: "Vy", owner_avatar_url: null, path: "me/p1.jpg", mode: null, caption: "", width: 1080, height: 810, created_at: at(5), expires_at: at(-1435), audience: "friends", seen: true, my_reaction: null },
+    ], error: null }).mockResolvedValueOnce({ data: [
+      { moment_id: "p1", partner_id: "kha", partner_name: "Kha", relationship: "Tình yêu" },
+    ], error: null });
+    const [moment] = await repository().list();
+    expect(moment.relationshipTag).toEqual({ userId: "kha", name: "Kha", relationship: "Tình yêu" });
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual(["list_moments", "list_moment_relationship_tags"]);
+    expect(rpc.mock.calls[1][1]).toEqual({ p_moment_ids: ["p1"] });
   });
 });

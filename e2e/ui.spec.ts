@@ -778,20 +778,16 @@ test("five screens in the bottom bar, every screen in the Menu, and child tabs o
   await page.goto("/habits");
   // A desktop: the five screens of the bottom bar first, then the others that stand on their own.
   const sidebar = page.getByRole("complementary").getByRole("navigation", { name: "Điều hướng chính" });
-  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Bản đồ", "Hôm nay", "Việc", "Bạn bè", "Nhóm", "Hoạt động", "Thống kê", "Chi tiêu", "Menu"]);
+  await expect(sidebar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Quan hệ", "Thói quen", "Ghi chú", "Nhóm", "Góp ý admin", "Menu"]);
   // The inbox and the person's own screens are in the top right corner on every screen.
   await expect(page.getByRole("link", { name: "Thông báo", exact: true })).toBeVisible();
   await expect(page.getByLabel("Tài khoản và cài đặt")).toBeVisible();
-  // "Thói quen" is open: its parent is marked in the sidebar, and the family is a strip of tabs.
-  await expect(sidebar.getByRole("link", { name: "Việc" })).toHaveAttribute("aria-current", "true");
+  // The habit page is a standalone screen in the plan section.
+  await expect(sidebar.getByRole("link", { name: "Thói quen" })).toHaveAttribute("aria-current", "page");
   const strip = page.getByRole("navigation", { name: "Trong màn này" });
-  await expect(strip.getByRole("link")).toHaveText(["Việc", "Thói quen", "Ghi chú"]);
-  await expect(strip.getByRole("link", { name: "Thói quen" })).toHaveAttribute("aria-current", "page");
-  await strip.getByRole("link", { name: "Ghi chú" }).click();
-  await expect(page).toHaveURL(/\/notes$/);
-  await expect(page.getByRole("heading", { name: "Ghi chú", level: 1 })).toBeVisible();
+  await expect(strip).toHaveCount(0);
 
-  const families: [string, string[]][] = [["/timetable", ["Lịch", "Thời khóa biểu", "Chia sẻ lịch"]], ["/free-time", ["Hoạt động", "Rảnh lúc nào?"]], ["/me/privacy", ["Hồ sơ", "Quyền riêng tư", "Cài đặt"]]];
+  const families: [string, string[]][] = [["/timetable", ["Lịch", "Thời khóa biểu", "Chia sẻ lịch"]], ["/me/privacy", ["Hồ sơ", "Quyền riêng tư", "Cài đặt"]]];
   for (const [path, tabs] of families) {
     await page.goto(path);
     await expect(strip.getByRole("link")).toHaveText(tabs);
@@ -804,11 +800,11 @@ test("five screens in the bottom bar, every screen in the Menu, and child tabs o
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
   const bar = page.getByRole("navigation", { name: "Điều hướng chính" }).last();
-  await expect(bar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Bản đồ", "Menu"]);
+  await expect(bar.getByRole("link")).toHaveText(["Mode", "Lịch", "Trò chuyện", "Quan hệ", "Menu"]);
   // "Ghi chú" is reached through the Menu, so the Menu is the lit tab; the row of the tab's other screens is gone.
   await expect(bar.getByRole("link", { name: "Menu" })).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("navigation", { name: "Trong mục này" })).toHaveCount(0);
-  await expect(strip.getByRole("link")).toHaveText(["Việc", "Thói quen", "Ghi chú"]);
+  await expect(strip).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Thông báo", exact: true })).toBeVisible();
   await expect(page.getByLabel("Tài khoản và cài đặt")).toBeVisible();
   await page.goto("/timetable");
@@ -819,16 +815,17 @@ test("five screens in the bottom bar, every screen in the Menu, and child tabs o
   await expect(page.getByRole("heading", { name: "Menu", level: 1 })).toBeVisible();
   await expect(bar.getByRole("link", { name: "Menu" })).toHaveAttribute("aria-current", "page");
   const part = (name: string) => page.getByRole("region", { name }).getByRole("link");
-  await expect(part("Hằng ngày")).toHaveText(["Mode", "Hôm nay"]);
-  await expect(part("Kế hoạch")).toHaveText(["Lịch", "Thời khóa biểu", "Chia sẻ lịch", "Việc", "Thói quen", "Ghi chú"]);
-  await expect(part("Cùng nhau")).toHaveText(["Trò chuyện", "Bạn bè", "Nhóm", "Hoạt động", "Rảnh lúc nào?", "Bản đồ"]);
-  await expect(part("Của bạn")).toHaveText(["Thống kê", "Chi tiêu", "Thống kê chi tiêu", "Sổ và lịch sử"]);
+  await expect(part("Hằng ngày")).toHaveText(["Mode"]);
+  await expect(part("Kế hoạch")).toHaveText(["Lịch", "Thời khóa biểu", "Chia sẻ lịch", "Thói quen", "Ghi chú"]);
+  await expect(part("Cùng nhau")).toHaveText(["Trò chuyện", "Quan hệ", "Bạn bè", "Vị trí", "Nhóm", "Góp ý admin"]);
+  await page.getByRole("region", { name: "Cùng nhau" }).getByRole("link", { name: "Quan hệ" }).click();
+  await expect(page.getByRole("navigation", { name: "Trong màn này" }).getByRole("link")).toHaveText(["Quan hệ", "Bạn bè", "Vị trí"]);
+  await expect(page.getByRole("region", { name: "Của bạn" })).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 700 });
   expect(await bar.getByRole("link").evaluateAll(links => links.every(link => link.scrollWidth <= link.clientWidth && link.getBoundingClientRect().height < 60))).toBe(true);
   await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole("region", { name: "Kế hoạch" }).getByRole("link", { name: "Việc" }).click();
-  await page.getByRole("navigation", { name: "Trong màn này" }).getByRole("link", { name: "Thói quen" }).click();
-  await expect(page.getByRole("heading", { name: "Thói quen", level: 1 })).toBeVisible();
+  await page.getByRole("navigation", { name: "Trong màn này" }).getByRole("link", { name: "Bạn bè" }).click();
+  await expect(page.getByRole("heading", { name: "Bạn bè", level: 1 })).toBeVisible();
 });
 
 test("Today has shortcuts to the screens a person uses most, and they choose which", async ({ page }) => {

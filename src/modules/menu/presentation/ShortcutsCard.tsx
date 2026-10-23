@@ -34,7 +34,7 @@ export function ShortcutsCard() {
     try { localStorage.setItem(keyOf(userId), JSON.stringify(next)); } catch { /* The choice then lasts for this visit only. */ }
   }
 
-  return <Card title={t("Lối tắt")} action={<Button variant="ghost" className="min-h-9 px-3 py-1.5" aria-pressed={editing} onClick={() => setEditing(!editing)}>{editing ? t("Xong") : t("Sửa")}</Button>}>
+  return <Card title={t("Lối tắt")} action={<Button variant="ghost" className="min-h-11 px-3 py-1.5" aria-pressed={editing} onClick={() => setEditing(!editing)}>{editing ? t("Xong") : t("Sửa")}</Button>}>
     {editing ? <>
       <p className="mb-3 text-sm text-[var(--muted)]">{t("Chọn tối đa {0} màn hình để mở nhanh từ đây. Đang chọn {1}.", shortcutLimit, shown.length)}</p>
       <ul className="flex flex-wrap gap-2">{screens.map(item => {

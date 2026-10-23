@@ -39,11 +39,11 @@ export function RoomBar({ room }: { room: Room }) {
     <span className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 font-semibold ${room.closed ? "bg-[var(--soft)]" : "bg-[var(--lime)] text-[var(--ink)]"}`}>{room.closed && <Lock size={13} />}{roomTime(room, Date.now())}</span>
     <Link to={roomSourcePath(room, me)} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 font-semibold underline">{room.source.kind === "meetup" ? t("Mở hoạt động") : room.source.kind === "event" ? t("Mở lịch") : t("Mở Mode")} <ExternalLink size={12} /></Link>
     <span className="ml-auto flex items-center">
-      <Popover label={t("Người trong phòng")} trigger={<><UsersRound size={15} /> {members.data?.length ?? room.memberCount}</>} triggerClassName="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold hover:bg-[var(--soft)]" panelClassName="w-64">
+      <Popover label={t("Người trong phòng")} trigger={<><UsersRound size={15} /> {members.data?.length ?? room.memberCount}</>} triggerClassName="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold hover:bg-[var(--soft)]" panelClassName="w-64">
         <ul aria-label={t("Người trong phòng")} className="grid gap-1 text-sm text-[var(--ink)]">{(members.data ?? []).map(person => <li key={person.userId} className="flex items-center gap-2 rounded-xl px-1.5 py-1">
           <Avatar name={person.displayName} src={person.avatarUrl} className="size-8 shrink-0 bg-[var(--ink)] text-xs font-bold text-[var(--paper)]" />
           <span className="min-w-0 flex-1 truncate font-semibold">{person.displayName}{person.isOwner && <span className="font-normal text-[var(--muted)]"> · {t("mở phòng")}</span>}</span>
-          {owner && !person.isOwner && <button type="button" aria-label={t("Mời {0} ra khỏi phòng", person.displayName)} disabled={pending} onClick={() => void remove(person.userId, person.displayName)} className="grid size-9 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--soft)]"><UserMinus size={15} /></button>}
+          {owner && !person.isOwner && <button type="button" aria-label={t("Mời {0} ra khỏi phòng", person.displayName)} disabled={pending} onClick={() => void remove(person.userId, person.displayName)} className="grid size-11 shrink-0 place-items-center rounded-xl text-[var(--muted)] hover:bg-[var(--soft)]"><UserMinus size={15} /></button>}
         </li>)}</ul>
       </Popover>
       <MoreMenu label={t("Thao tác với phòng")}>

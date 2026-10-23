@@ -7,7 +7,7 @@ import { registry } from "./modules";
 
 describe("module registry", () => {
   it("accepts only plain routes of registered modules as outside-supplied paths", () => {
-    for (const path of ["/", "/today", "/groups", "/groups/1234", "/invite/group/test_token-1", "/invite/friend/abc123", "/me/friends", "/notifications", "/calendar/shared/abc", "/habits", "/notes", "/me/privacy", "/me/organizer", "/stats", "/expenses", "/meetups", "/meetups/22222222-2222-4222-8222-222222222222", "/free-time", "/moments", "/moments/22222222-2222-4222-8222-222222222222", "/moments/22222222-2222-4222-8222-222222222222/33333333-2222-4222-8222-222222222222"]) expect(registry.safePath(path)).toBe(path);
+    for (const path of ["/", "/today", "/groups", "/groups/1234", "/invite/group/test_token-1", "/invite/friend/abc123", "/me/friends", "/me/relationships", "/notifications", "/calendar/shared/abc", "/habits", "/notes", "/me/privacy", "/me/organizer", "/stats", "/expenses", "/meetups", "/meetups/22222222-2222-4222-8222-222222222222", "/free-time", "/moments", "/moments/22222222-2222-4222-8222-222222222222", "/moments/22222222-2222-4222-8222-222222222222/33333333-2222-4222-8222-222222222222"]) expect(registry.safePath(path)).toBe(path);
     for (const path of ["//evil.test", "//groups", "https://evil.test", "/calendar?access_token=secret", "/unknown", "/invite/group/../../evil", "/groups/a/b"]) expect(registry.safePath(path)).toBe("/");
   });
   it("lets only a plain path into the emailed sign-in link, before the modules are loaded", () => {
@@ -16,7 +16,7 @@ describe("module registry", () => {
     expect(loginRedirect("https://app.test", "/groups/1234")).toBe("https://app.test/groups/1234");
   });
   it("has five screens in the bottom bar, Mode first and the Menu last", () => {
-    expect(primaryScreens(registry.navigation).map(item => item.to)).toEqual(["/", "/calendar", "/chat", "/me/location", "/menu"]);
+    expect(primaryScreens(registry.navigation).map(item => item.to)).toEqual(["/", "/calendar", "/chat", "/me/relationships", "/menu"]);
   });
   it("lists every screen in the Menu once, keeps top-bar screens in their own place, and gives each a route", () => {
     const listed = directory(registry.navigation).flatMap(part => part.items).map(item => item.to);

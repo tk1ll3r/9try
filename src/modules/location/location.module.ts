@@ -35,6 +35,6 @@ export const locationModule: FeatureModule<LocationServices> = {
   indicator: SharingIndicator,
   friendSignals: async ({ locations }, { now }) => locationSignals(await locations.listVisible(), now),
   privacy: LocationPrivacy,
-  navigation: [{ tab: "together", to: "/me/location", label: t("Bản đồ"), icon: MapPin, order: 40, primary: 4 }],
+  navigation: [{ tab: "together", to: "/me/location", label: t("Vị trí"), icon: MapPin, order: 12, parent: "/me/relationships" }],
   routes: [{ path: "me/location", ...lazyRoute(() => import("./presentation/LocationPage").then(m => ({ default: m.LocationPage }))) }],
 };

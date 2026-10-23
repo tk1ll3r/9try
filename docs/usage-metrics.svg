@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 330" role="img" aria-labelledby="title desc">
+  <title id="title">Gnouht Together usage snapshot</title>
+  <desc id="desc">Registered users grew from 28 on October 12 to 40 on October 16 and 43 on October 23, 2026. There were 81,068 app-host requests, averaging about 5,408 per day since launch.</desc>
+  <defs>
+    <linearGradient id="line" x1="0" x2="1">
+      <stop offset="0" stop-color="#8b7cff"/>
+      <stop offset="1" stop-color="#50e3c2"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" x2="1">
+      <stop offset="0" stop-color="#8b7cff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#50e3c2" stop-opacity=".02"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="330" rx="24" fill="#101625"/>
+  <text x="40" y="42" fill="#aeb8cc" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">GNOUHT TOGETHER · USAGE SNAPSHOT · 23 OCT 2026</text>
+  <text x="40" y="82" fill="#f5f7ff" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="700">Registered users</text>
+  <text x="40" y="104" fill="#8793aa" font-family="Inter,Arial,sans-serif" font-size="13">Production snapshots</text>
+
+  <line x1="84" y1="130" x2="600" y2="130" stroke="#293348" stroke-width="1"/>
+  <line x1="84" y1="185" x2="600" y2="185" stroke="#293348" stroke-width="1"/>
+  <line x1="84" y1="240" x2="600" y2="240" stroke="#293348" stroke-width="1"/>
+  <text x="48" y="134" fill="#758199" font-family="Inter,Arial,sans-serif" font-size="11">50</text>
+  <text x="48" y="189" fill="#758199" font-family="Inter,Arial,sans-serif" font-size="11">25</text>
+  <text x="56" y="244" fill="#758199" font-family="Inter,Arial,sans-serif" font-size="11">0</text>
+
+  <path d="M124 178.4 L342 152 L560 145.4 L560 240 L124 240 Z" fill="url(#glow)"/>
+  <path d="M124 178.4 L342 152 L560 145.4" fill="none" stroke="url(#line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="124" cy="178.4" r="6" fill="#8b7cff" stroke="#101625" stroke-width="3"/>
+  <circle cx="342" cy="152" r="6" fill="#70b7df" stroke="#101625" stroke-width="3"/>
+  <circle cx="560" cy="145.4" r="6" fill="#50e3c2" stroke="#101625" stroke-width="3"/>
+  <text x="124" y="162" text-anchor="middle" fill="#f5f7ff" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700">28</text>
+  <text x="342" y="136" text-anchor="middle" fill="#f5f7ff" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700">40</text>
+  <text x="560" y="129" text-anchor="middle" fill="#f5f7ff" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700">43</text>
+  <text x="124" y="270" text-anchor="middle" fill="#aeb8cc" font-family="Inter,Arial,sans-serif" font-size="12">12 Oct</text>
+  <text x="342" y="270" text-anchor="middle" fill="#aeb8cc" font-family="Inter,Arial,sans-serif" font-size="12">16 Oct</text>
+  <text x="560" y="270" text-anchor="middle" fill="#aeb8cc" font-family="Inter,Arial,sans-serif" font-size="12">23 Oct</text>
+
+  <line x1="650" y1="72" x2="650" y2="270" stroke="#293348" stroke-width="1"/>
+  <text x="694" y="100" fill="#aeb8cc" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="1.5">AVERAGE REQUESTS / DAY</text>
+  <text x="690" y="160" fill="#f5f7ff" font-family="Inter,Arial,sans-serif" font-size="44" font-weight="700">~5,408</text>
+  <text x="694" y="190" fill="#50e3c2" font-family="Inter,Arial,sans-serif" font-size="15" font-weight="600">81,068 total requests</text>
+  <text x="694" y="226" fill="#8793aa" font-family="Inter,Arial,sans-serif" font-size="12">Since first deploy · 8 Oct</text>
+  <text x="694" y="249" fill="#8793aa" font-family="Inter,Arial,sans-serif" font-size="12">Includes assets and automated traffic</text>
+  <text x="694" y="272" fill="#8793aa" font-family="Inter,Arial,sans-serif" font-size="12">Average uses a sampled historical baseline</text>
+</svg>

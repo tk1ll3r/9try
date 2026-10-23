@@ -20,7 +20,7 @@ export function OpenChatPage() {
   if (opened.data) return <Navigate to={`/chat/${opened.data}${handed ? `?${handed}` : ""}`} replace />;
   if (opened.isError) return <div role="alert" className="space-y-3 rounded-2xl bg-[var(--soft)] p-4 text-sm">
     <p className="text-[var(--danger)]">{errorMessage(opened.error, t("Không mở được cuộc trò chuyện."))}</p>
-    <Link to="/chat" className="font-semibold underline">{t("Về danh sách trò chuyện")}</Link>
+    <Link to="/chat" className="pressable inline-flex min-h-11 items-center rounded-xl bg-[var(--surface)] px-3 font-semibold">{t("Về danh sách trò chuyện")}</Link>
   </div>;
   return <p role="status">{t("Đang mở cuộc trò chuyện…")}</p>;
 }

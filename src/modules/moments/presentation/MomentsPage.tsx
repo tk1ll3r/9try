@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronLeft, ChevronRight, Eye, Images, MessageCircle, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../../../kernel/errors";
 import { useModule, useUserId } from "../../../kernel/session";
@@ -33,6 +33,7 @@ export function MomentsPage() {
   const now = useNow();
   const { run, pending, error } = useAction(momentsKey);
   const [asked, setAsked] = useState("");
+  const swipe = useRef<{ from: number; moved: boolean } | null>(null);
 
   const people = byPerson(moments.data ?? [], now);
   const person = wanted ? people.find(item => item.ownerId === wanted) : people[0];
@@ -51,14 +52,34 @@ export function MomentsPage() {
   useSeen(current);
   const viewers = useQuery({ queryKey: [...momentsKey, "viewers", current?.id], queryFn: () => repository.viewers(current!.id), enabled: !!current?.mine && asked === current.id });
 
+  // Lock URL to the specific moment ID so background query invalidation upon viewing
+  // does not re-sort people array out from underneath the active story viewer.
+  useEffect(() => {
+    if (!wanted && person && current) {
+      navigate(`/moments/${person.ownerId}/${current.id}`, { replace: true });
+    }
+  }, [wanted, person?.ownerId, current?.id]);
+
   function turn(step: number) {
     if (!person) return;
     const next = index + step;
     if (next >= 0 && next < person.moments.length) { navigate(`/moments/${person.ownerId}/${person.moments[next].id}`, { replace: true }); return; }
     // Past the last photo of one person comes the next person; before the first, the one before.
     const other = people[place + step];
-    if (other) navigate(`/moments/${other.ownerId}/${openingMoment(other).id}`, { replace: true });
+    if (other && other.moments.length > 0) {
+      const target = step < 0 ? other.moments[other.moments.length - 1] : openingMoment(other);
+      navigate(`/moments/${other.ownerId}/${target.id}`, { replace: true });
+    }
   }
+
+  const down = (event: React.PointerEvent) => { swipe.current = { from: event.clientX, moved: false }; };
+  const up = (event: React.PointerEvent) => {
+    const drag = swipe.current;
+    if (!drag) return;
+    const moved = event.clientX - drag.from;
+    if (Math.abs(moved) > 40) { drag.moved = true; turn(moved < 0 ? 1 : -1); }
+    window.setTimeout(() => { swipe.current = null; }, 0);
+  };
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if ((event.target as HTMLElement).closest("input, textarea, [role=dialog], [role=alertdialog]")) return;
@@ -118,6 +139,7 @@ export function MomentsPage() {
         <div className="min-w-0 flex-1"><b className="block truncate">{who(person.ownerName, person.mine)}</b><span className="text-xs text-[var(--muted)]">{t("{0} · ảnh {1}/{2}", ago(current.createdAt, now), index + 1, person.moments.length)}</span></div>
         <ModeChip mode={current.mode} label={current.modeLabel} icon={current.modeIcon} color={current.modeColor} className="!text-xs" />
       </div>
+      {current.relationshipTag && <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--soft)] px-3 py-1.5 text-sm font-semibold text-[var(--lime-strong)]">💞 <span className="truncate">{current.relationshipTag.relationship} · {current.relationshipTag.name}</span></p>}
       {current.caption && <p className="mt-2 break-words leading-6">{current.caption}</p>}
       {error && <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
 

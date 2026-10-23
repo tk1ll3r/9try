@@ -32,6 +32,7 @@ export const fixedTexts: Readonly<Record<string, string>> = {
   "Thông báo thử": "Test notification",
   "Thiết bị này nhận được thông báo đẩy của Gnouht.": "This device receives push notifications from Gnouht.",
   "Bạn có thông báo mới.": "You have a new notification.",
+  "Góp ý mới": "New feedback",
   // The one line the database writes for a message without words of its own, in the list of conversations and in a quoted reply.
   "Tin nhắn đã thu hồi": "This message was unsent",
   "Đã gửi ảnh": "Sent a photo",

@@ -16,7 +16,7 @@ export function StatsPage() {
       </div>
       <div role="group" aria-label={t("Khoảng thời gian")} className="flex gap-1 rounded-2xl bg-[var(--soft)] p-1">
         {periods.map(count => <button key={count} type="button" aria-pressed={days === count} onClick={() => setDays(count)}
-          className={`min-h-9 whitespace-nowrap rounded-xl px-3.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${days === count ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>{t("{0} ngày qua", count)}</button>)}
+          className={`min-h-11 whitespace-nowrap rounded-xl px-3.5 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${days === count ? "bg-[var(--surface)] text-[var(--ink)] shadow" : "text-[var(--muted)]"}`}>{t("{0} ngày qua", count)}</button>)}
       </div>
     </header>
     {/* Two columns on a wide screen, filled top to bottom so that a short card leaves no hole beside a tall one. */}
